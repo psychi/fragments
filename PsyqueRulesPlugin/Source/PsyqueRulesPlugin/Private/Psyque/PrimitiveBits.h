@@ -4,7 +4,7 @@
 /// @author Hillco Psychi (https://twitter.com/psychi)
 #pragma once
 
-#include "../BitAlgorithm.h"
+#include "./BitAlgorithm.h"
 
 namespace Psyque
 {
@@ -114,7 +114,7 @@ namespace Psyque
 template<typename TemplateValue, typename template_result = std::size_t>
 class Psyque::Hash::TPrimitiveBits
 {
-	private: using This = TPrimitiveBits;
+	private: using ThisClass = TPrimitiveBits;
 
 	//-------------------------------------------------------------------------
 	/// @brief ハッシュ関数の引数となるキー。
@@ -135,7 +135,7 @@ class Psyque::Hash::TPrimitiveBits
 	/// @brief ハッシュ関数の戻り値。
 	/// @details
 	/// template_result が std::size_t へ暗黙に型変換できるなら、
-	/// This は std::Hash のインタフェイスと互換性を持つ。
+	/// ThisClass は std::Hash のインタフェイスと互換性を持つ。
 	public: typedef template_result result_type;
 
 	//-------------------------------------------------------------------------
@@ -151,53 +151,53 @@ class Psyque::Hash::TPrimitiveBits
 	/// @brief キーに対応するハッシュ値を取得する。
 	/// @param[in] InKey キー。
 	/// @return InKey に対応するハッシュ値。
-	public: typename This::result_type operator()(
-		typename This::argument_type const InKey)
+	public: typename ThisClass::result_type operator()(
+		typename ThisClass::argument_type const InKey)
 	const PSYQUE_NOEXCEPT
 	{
-		return This::GetBits(
+		return ThisClass::GetBits(
 			InKey,
 			std::integral_constant<
-				typename This::EKind,
-				std::is_pointer<typename This::argument_type>::value?
+				typename ThisClass::EKind,
+				std::is_pointer<typename ThisClass::argument_type>::value?
 					EKind::POINTER:
-					std::is_floating_point<typename This::argument_type>::value?
+					std::is_floating_point<typename ThisClass::argument_type>::value?
 						EKind::Float: EKind::INTEGER>());
 	}
 
 	//-------------------------------------------------------------------------
 	/// @brief ポインタ値をそのままハッシュ値として使う。
 	private: template<typename template_pointer>
-	static typename This::result_type GetBits(
+	static typename ThisClass::result_type GetBits(
 		/// [in] InPointer ポインタ。
 		template_pointer const InPointer,
-		std::integral_constant<typename This::EKind, This::EKind::POINTER> const&)
+		std::integral_constant<typename ThisClass::EKind, ThisClass::EKind::POINTER> const&)
 	PSYQUE_NOEXCEPT
 	{
-		return reinterpret_cast<typename This::result_type>(InPointer);
+		return reinterpret_cast<typename ThisClass::result_type>(InPointer);
 	}
 
 	/// @brief 整数値をそのままハッシュ値として使う。
 	private: template<typename TemplateInteger>
-	static typename This::result_type GetBits(
+	static typename ThisClass::result_type GetBits(
 		/// [in] InInteger 整数。
 		TemplateInteger const InInteger,
-		std::integral_constant<typename This::EKind, This::EKind::INTEGER> const&)
+		std::integral_constant<typename ThisClass::EKind, ThisClass::EKind::INTEGER> const&)
 	PSYQUE_NOEXCEPT
 	{
-		return static_cast<typename This::result_type>(InInteger);
+		return static_cast<typename ThisClass::result_type>(InInteger);
 	}
 
 	/// @brief 浮動小数点数のビット表現をハッシュ値として使う。
 	private: template<typename TemplateFloat>
-	static typename This::result_type GetBits(
+	static typename ThisClass::result_type GetBits(
 		/// [in] 浮動小数点数。
 		TemplateFloat const InFloat,
-		std::integral_constant<typename This::EKind, This::EKind::Float> const&)
+		std::integral_constant<typename ThisClass::EKind, ThisClass::EKind::Float> const&)
 	PSYQUE_NOEXCEPT
 	{
 		Psyque::FloatBitset<TemplateFloat> const LocalValue(InFloat);
-		return static_cast<typename This::result_type>(LocalValue.Bitset);
+		return static_cast<typename ThisClass::result_type>(LocalValue.Bitset);
 	}
 
 }; // class Psyque::Hash::TPrimitiveBits

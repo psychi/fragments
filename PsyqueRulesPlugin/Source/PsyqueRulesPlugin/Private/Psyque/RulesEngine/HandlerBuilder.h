@@ -1,104 +1,104 @@
 ﻿/// @file
-/// @brief @copybrief Psyque::RuleEngine::THandlerBuilder
+/// @brief @copybrief Psyque::RulesEngine::THandlerBuilder
 /// @author Hillco Psychi (https://twitter.com/psychi)
 #pragma once
 
 /// @brief 文字列表で、条件式の識別値が記述されている属性の名前。
 /// @details
-///   Psyque::RuleEngine::THandlerBuilder で解析する文字列表で、
-///   Psyque::RuleEngine::TDriver::FEvaluator::FExpressionKey として解析する属性の名前。
-#ifndef PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_COLUMN_KEY
-#define PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_COLUMN_KEY "KEY"
-#endif // !defined(PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_COLUMN_KEY)
+///   Psyque::RulesEngine::THandlerBuilder で解析する文字列表で、
+///   Psyque::RulesEngine::TDriver::FEvaluator::FExpressionKey として解析する属性の名前。
+#ifndef PSYQUE_RULES_ENGINE_HANDLER_BUILDER_COLUMN_KEY
+#define PSYQUE_RULES_ENGINE_HANDLER_BUILDER_COLUMN_KEY "KEY"
+#endif // !defined(PSYQUE_RULES_ENGINE_HANDLER_BUILDER_COLUMN_KEY)
 
 /// @brief 文字列表で、挙動条件として解析する属性の名前。
-#ifndef PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_COLUMN_CONDITION
-#define PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_COLUMN_CONDITION "CONDITION"
-#endif // !defined(PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_COLUMN_CONDITION)
+#ifndef PSYQUE_RULES_ENGINE_HANDLER_BUILDER_COLUMN_CONDITION
+#define PSYQUE_RULES_ENGINE_HANDLER_BUILDER_COLUMN_CONDITION "CONDITION"
+#endif // !defined(PSYQUE_RULES_ENGINE_HANDLER_BUILDER_COLUMN_CONDITION)
 
 /// @brief 文字列表で、NULL条件が記述されている属性の名前。
 /// @details
-///   Psyque::RuleEngine::THandlerBuilder で解析する文字列表で、
-///   Psyque::RuleEngine::TDriver::FDispatcher::FHandler::EUnitCondition::Failed
+///   Psyque::RulesEngine::THandlerBuilder で解析する文字列表で、
+///   Psyque::RulesEngine::TDriver::FDispatcher::FHandler::EUnitCondition::Failed
 ///   として解析する文字列。
-#ifndef PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_CONDITION_NULL
-#define PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_CONDITION_NULL "NULL"
-#endif // !defined(PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_COLUMN_ARGUMENT)
+#ifndef PSYQUE_RULES_ENGINE_HANDLER_BUILDER_CONDITION_NULL
+#define PSYQUE_RULES_ENGINE_HANDLER_BUILDER_CONDITION_NULL "NULL"
+#endif // !defined(PSYQUE_RULES_ENGINE_HANDLER_BUILDER_COLUMN_ARGUMENT)
 
 /// @brief 文字列表で、Any条件が記述されている属性の名前。
 /// @details
-///   Psyque::RuleEngine::THandlerBuilder で解析する文字列表で、
-///   Psyque::RuleEngine::TDriver::FDispatcher::FHandler::EUnitCondition::Any
+///   Psyque::RulesEngine::THandlerBuilder で解析する文字列表で、
+///   Psyque::RulesEngine::TDriver::FDispatcher::FHandler::EUnitCondition::Any
 ///   として解析する文字列。
-#ifndef PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_CONDITION_ANY
-#define PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_CONDITION_ANY "Any"
-#endif // !defined(PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_COLUMN_ARGUMENT)
+#ifndef PSYQUE_RULES_ENGINE_HANDLER_BUILDER_CONDITION_ANY
+#define PSYQUE_RULES_ENGINE_HANDLER_BUILDER_CONDITION_ANY "Any"
+#endif // !defined(PSYQUE_RULES_ENGINE_HANDLER_BUILDER_COLUMN_ARGUMENT)
 
 /// @brief 文字列表で、条件挙動関数の優先順位が記述されている属性の名前。
 /// @details
-///   Psyque::RuleEngine::THandlerBuilder で解析する文字列表で、
-///   Psyque::RuleEngine::TDriver::FDispatcher::FHandler::FPriority
+///   Psyque::RulesEngine::THandlerBuilder で解析する文字列表で、
+///   Psyque::RulesEngine::TDriver::FDispatcher::FHandler::FPriority
 ///   として解析する属性の名前。
-#ifndef PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_COLUMN_PRIORITY
-#define PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_COLUMN_PRIORITY "PRIORITY"
-#endif // !defined(PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_COLUMN_PRIORITY)
+#ifndef PSYQUE_RULES_ENGINE_HANDLER_BUILDER_COLUMN_PRIORITY
+#define PSYQUE_RULES_ENGINE_HANDLER_BUILDER_COLUMN_PRIORITY "PRIORITY"
+#endif // !defined(PSYQUE_RULES_ENGINE_HANDLER_BUILDER_COLUMN_PRIORITY)
 
 /// @brief 文字列表で、条件挙動の種別として解析する属性の名前。
-#ifndef PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_COLUMN_KIND
-#define PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_COLUMN_KIND "KIND"
-#endif // !defined(PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_COLUMN_KIND)
+#ifndef PSYQUE_RULES_ENGINE_HANDLER_BUILDER_COLUMN_KIND
+#define PSYQUE_RULES_ENGINE_HANDLER_BUILDER_COLUMN_KIND "KIND"
+#endif // !defined(PSYQUE_RULES_ENGINE_HANDLER_BUILDER_COLUMN_KIND)
 
 /// @brief 文字列表で、代入演算する条件挙動の種別として解析する文字列。
-#ifndef PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_KIND_STATUS_ASSIGNMENT
-#define PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_KIND_STATUS_ASSIGNMENT "STATUS_ASSIGNMENT"
-#endif // !defined(PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_KIND_STATUS_ASSIGNMENT)
+#ifndef PSYQUE_RULES_ENGINE_HANDLER_BUILDER_KIND_STATUS_ASSIGNMENT
+#define PSYQUE_RULES_ENGINE_HANDLER_BUILDER_KIND_STATUS_ASSIGNMENT "STATUS_ASSIGNMENT"
+#endif // !defined(PSYQUE_RULES_ENGINE_HANDLER_BUILDER_KIND_STATUS_ASSIGNMENT)
 
 /// @brief 文字列表で、条件挙動の引数として解析する属性の名前。
-#ifndef PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_COLUMN_ARGUMENT
-#define PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_COLUMN_ARGUMENT "ARGUMENT"
-#endif // !defined(PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_COLUMN_ARGUMENT)
+#ifndef PSYQUE_RULES_ENGINE_HANDLER_BUILDER_COLUMN_ARGUMENT
+#define PSYQUE_RULES_ENGINE_HANDLER_BUILDER_COLUMN_ARGUMENT "ARGUMENT"
+#endif // !defined(PSYQUE_RULES_ENGINE_HANDLER_BUILDER_COLUMN_ARGUMENT)
 
 /// @brief 文字列表で、遅延種別をYieldとして解析する文字列。
 /// @details
-///   Psyque::RuleEngine::THandlerBuilder で解析する文字列表で、
-///   Psyque::RuleEngine::EAccumulationDelay::Yield として解析する文字列。
-#ifndef PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_DELAY_YIELD
-#define PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_DELAY_YIELD "Yield"
-#endif // !defined(PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_DELAY_YIELD)
+///   Psyque::RulesEngine::THandlerBuilder で解析する文字列表で、
+///   Psyque::RulesEngine::EAccumulationDelay::Yield として解析する文字列。
+#ifndef PSYQUE_RULES_ENGINE_HANDLER_BUILDER_DELAY_YIELD
+#define PSYQUE_RULES_ENGINE_HANDLER_BUILDER_DELAY_YIELD "Yield"
+#endif // !defined(PSYQUE_RULES_ENGINE_HANDLER_BUILDER_DELAY_YIELD)
 
 /// @brief 文字列表で、遅延種別をBlockとして解析する文字列。
 /// @details
-/// Psyque::RuleEngine::THandlerBuilder で解析する文字列表で、
-/// Psyque::RuleEngine::EAccumulationDelay::Block として解析する文字列。
-#ifndef PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_DELAY_BLOCK
-#define PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_DELAY_BLOCK "Block"
-#endif // !defined(PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_DELAY_BLOCK)
+/// Psyque::RulesEngine::THandlerBuilder で解析する文字列表で、
+/// Psyque::RulesEngine::EAccumulationDelay::Block として解析する文字列。
+#ifndef PSYQUE_RULES_ENGINE_HANDLER_BUILDER_DELAY_BLOCK
+#define PSYQUE_RULES_ENGINE_HANDLER_BUILDER_DELAY_BLOCK "Block"
+#endif // !defined(PSYQUE_RULES_ENGINE_HANDLER_BUILDER_DELAY_BLOCK)
 
 /// @brief 文字列表で、遅延種別をNonblockとして解析する文字列。
 /// @details
-///   Psyque::RuleEngine::THandlerBuilder で解析する文字列表で、
-///   Psyque::RuleEngine::EAccumulationDelay::Nonblock として解析する文字列。
-#ifndef PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_DELAY_NONBLOCK
-#define PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_DELAY_NONBLOCK "Nonblock"
-#endif // !defined(PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_DELAY_NONBLOCK)
+///   Psyque::RulesEngine::THandlerBuilder で解析する文字列表で、
+///   Psyque::RulesEngine::EAccumulationDelay::Nonblock として解析する文字列。
+#ifndef PSYQUE_RULES_ENGINE_HANDLER_BUILDER_DELAY_NONBLOCK
+#define PSYQUE_RULES_ENGINE_HANDLER_BUILDER_DELAY_NONBLOCK "Nonblock"
+#endif // !defined(PSYQUE_RULES_ENGINE_HANDLER_BUILDER_DELAY_NONBLOCK)
 
 /// @cond
 namespace Psyque
 {
-	namespace RuleEngine
+	namespace RulesEngine
 	{
 		class THandlerBuilder;
-	} // namespace RuleEngine
+	} // namespace RulesEngine
 } // namespace Psyque
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief 文字列表から条件挙動ハンドラを構築して登録する関数オブジェクト。
 /// @details TDriver::ExtendChunk の引数として使う。
-class Psyque::RuleEngine::THandlerBuilder
+class Psyque::RulesEngine::THandlerBuilder
 {
 	/// @brief this が指す値の型。
-	private: typedef THandlerBuilder This;
+	private: typedef THandlerBuilder ThisClass;
 
 	//-------------------------------------------------------------------------
 	/// @brief 条件挙動ハンドラの構築に使う文字列表の属性。
@@ -109,19 +109,19 @@ class Psyque::RuleEngine::THandlerBuilder
 		PSYQUE_NOEXCEPT:
 		Key(
 			InTable.FindAttribute(
-				PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_COLUMN_KEY)),
+				PSYQUE_RULES_ENGINE_HANDLER_BUILDER_COLUMN_KEY)),
 		Condition(
 			InTable.FindAttribute(
-				PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_COLUMN_CONDITION)),
+				PSYQUE_RULES_ENGINE_HANDLER_BUILDER_COLUMN_CONDITION)),
 		Priority(
 			InTable.FindAttribute(
-				PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_COLUMN_PRIORITY)),
+				PSYQUE_RULES_ENGINE_HANDLER_BUILDER_COLUMN_PRIORITY)),
 		Kind(
 			InTable.FindAttribute(
-				PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_COLUMN_KIND)),
+				PSYQUE_RULES_ENGINE_HANDLER_BUILDER_COLUMN_KIND)),
 		argument_(
 			InTable.FindAttribute(
-				PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_COLUMN_ARGUMENT))
+				PSYQUE_RULES_ENGINE_HANDLER_BUILDER_COLUMN_ARGUMENT))
 		{}
 
 		bool IsValid() const PSYQUE_NOEXCEPT
@@ -147,7 +147,7 @@ class Psyque::RuleEngine::THandlerBuilder
 	}; // class FTableAttribute
 
 	//-------------------------------------------------------------------------
-	/// @copydoc This::register_handlers
+	/// @copydoc ThisClass::register_handlers
 	public: template<
 		typename TemplateDispatcher,
 		typename TemplateHasher,
@@ -168,7 +168,7 @@ class Psyque::RuleEngine::THandlerBuilder
 		TemplateRelationTable const& InTable)
 	const
 	{
-		return This::register_handlers(
+		return ThisClass::register_handlers(
 			io_dispatcher, InHashFunction, OutAccumulator, InTable);
 	}
 
@@ -203,7 +203,7 @@ class Psyque::RuleEngine::THandlerBuilder
 				local_functions(io_dispatcher.get_allocator());
 
 		// 文字列表の属性を取得する。
-		typename This::FTableAttribute<TemplateRelationTable> const
+		typename ThisClass::FTableAttribute<TemplateRelationTable> const
 			LocalAttribute(InTable);
 		if (!LocalAttribute.IsValid())
 		{
@@ -239,7 +239,7 @@ class Psyque::RuleEngine::THandlerBuilder
 			// 条件挙動関数の優先順位を取得する。
 			typedef typename TemplateDispatcher::FHandler FHandler;
 			typename FHandler::FPriority local_priority(
-				PSYQUE_IF_THEN_ENGINE_DISPATCHER_FUNCTION_PRIORITY_DEFAULT);
+				PSYQUE_RULES_ENGINE_DISPATCHER_FUNCTION_PRIORITY_DEFAULT);
 			if (!InTable.parse_cell(
 					local_priority, i, LocalAttribute.Priority.first, true))
 			{
@@ -250,11 +250,11 @@ class Psyque::RuleEngine::THandlerBuilder
 
 			// 条件挙動関数を構築し、条件挙動ハンドラを条件挙動器に登録する。
 			auto LocalFunction(
-				This::build_function<FHandler>(
+				ThisClass::build_function<FHandler>(
 					InHashFunction, OutAccumulator, InTable, i, LocalAttribute));
 			if (io_dispatcher.RegisterHandler(
 					LocalExpressionKey,
-					This::BuildCondition<FHandler>(
+					ThisClass::BuildCondition<FHandler>(
 						InTable, i, LocalAttribute.Condition),
 					LocalFunction,
 					local_priority))
@@ -297,9 +297,9 @@ class Psyque::RuleEngine::THandlerBuilder
 		}
 		auto const LocalCondition(
 			TemplateHandler::MakeCondition(
-				This::ParseUnitCondition<TemplateHandler>(
+				ThisClass::ParseUnitCondition<TemplateHandler>(
 					InTable.FindCell(InRowNumber, InAttribute.first + 1)),
-				This::ParseUnitCondition<TemplateHandler>(
+				ThisClass::ParseUnitCondition<TemplateHandler>(
 					InTable.FindCell(InRowNumber, InAttribute.first))));
 		PSYQUE_ASSERT(LocalCondition != TemplateHandler::EUnitCondition::Invalid);
 		return LocalCondition;
@@ -345,7 +345,7 @@ class Psyque::RuleEngine::THandlerBuilder
 			}
 			else if (
 				local_string ==
-					PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_CONDITION_NULL)
+					PSYQUE_RULES_ENGINE_HANDLER_BUILDER_CONDITION_NULL)
 			{
 				return local_not?
 					TemplateHandler::EUnitCondition::NotFailed:
@@ -354,7 +354,7 @@ class Psyque::RuleEngine::THandlerBuilder
 			else if (
 				!local_not
 				&& local_string ==
-					PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_CONDITION_ANY)
+					PSYQUE_RULES_ENGINE_HANDLER_BUILDER_CONDITION_ANY)
 			{
 				return TemplateHandler::EUnitCondition::Any;
 			}
@@ -407,9 +407,9 @@ class Psyque::RuleEngine::THandlerBuilder
 			InRowNumber,
 			in_assignments.first + 1,
 			in_assignments.second - 1);
-		return This::create_status_assignment_function<TemplateHandler>(
+		return ThisClass::create_status_assignment_function<TemplateHandler>(
 			OutAccumulator,
-			This::parse_delay<TemplateAccumulator>(
+			ThisClass::parse_delay<TemplateAccumulator>(
 				typename TemplateRelationTable::String::TView(
 					InTable.FindCell(InRowNumber, in_assignments.first))),
 			local_assignments);
@@ -442,8 +442,8 @@ class Psyque::RuleEngine::THandlerBuilder
 				/// @todo OutAccumulator を参照渡しするのは危険。対策を考えたい。
 				[=, &OutAccumulator](
 					typename TemplateHandler::FExpressionKey const&,
-					Psyque::ETernary const,
-					Psyque::ETernary const)
+					EPsyqueTernary const,
+					EPsyqueTernary const)
 				{
 					OutAccumulator.Accumulate(in_assignments, InFrontDelay);
 				}):
@@ -471,16 +471,16 @@ class Psyque::RuleEngine::THandlerBuilder
 		/// [in] InTable の解析する行の番号。
 		typename TemplateRelationTable::FNumber const InRowNumber,
 		/// [in] InTable の属性。
-		typename This::FTableAttribute<TemplateRelationTable> const&
+		typename ThisClass::FTableAttribute<TemplateRelationTable> const&
 			InAttribute)
 	{
 		// 挙動関数の種類を取得する。
 		typename TemplateRelationTable::String::TView const LocalKindCell(
 			InTable.FindCell(InRowNumber, InAttribute.Kind.first));
 		if (LocalKindCell
-			== PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_KIND_STATUS_ASSIGNMENT)
+			== PSYQUE_RULES_ENGINE_HANDLER_BUILDER_KIND_STATUS_ASSIGNMENT)
 		{
-			return This::build_status_assignment_function<TemplateHandler>(
+			return ThisClass::build_status_assignment_function<TemplateHandler>(
 				InHashFunction,
 				OutAccumulator,
 				InTable,
@@ -499,18 +499,18 @@ class Psyque::RuleEngine::THandlerBuilder
 	static typename TemplateAccumulator::EDelay::Type parse_delay(
 		TemplateString const& InString)
 	{
-		if (InString == PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_DELAY_BLOCK)
+		if (InString == PSYQUE_RULES_ENGINE_HANDLER_BUILDER_DELAY_BLOCK)
 		{
 			return TemplateAccumulator::EDelay::Block;
 		}
-		if (InString == PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_DELAY_NONBLOCK)
+		if (InString == PSYQUE_RULES_ENGINE_HANDLER_BUILDER_DELAY_NONBLOCK)
 		{
 			return TemplateAccumulator::EDelay::Nonblock;
 		}
-		PSYQUE_ASSERT(InString == PSYQUE_IF_THEN_ENGINE_HANDLER_BUILDER_DELAY_YIELD);
+		PSYQUE_ASSERT(InString == PSYQUE_RULES_ENGINE_HANDLER_BUILDER_DELAY_YIELD);
 		return TemplateAccumulator::EDelay::Yield;
 	}
 
-}; // class Psyque::RuleEngine::THandlerBuilder
+}; // class Psyque::RulesEngine::THandlerBuilder
 
 // vim: set noexpandtab:

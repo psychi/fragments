@@ -1,0 +1,17 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "Psyque Rules Plugin",
+	"Description":
+		"This plug-in is a finite automaton to drive by if-then rules.",
+	"Category": "Gameplay",
+	"CreatedBy": "Hillco Psychi",
+	"CreatedByURL": "https://github.com/psychi",
+	"Modules": [
+		{
+			"Name": "PsyqueRulesPlugin",
+			"Type": "Runtime"
+		}
+	]
+}

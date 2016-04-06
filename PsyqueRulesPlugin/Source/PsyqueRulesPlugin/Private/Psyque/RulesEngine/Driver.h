@@ -1,12 +1,24 @@
 ﻿// Copyright (c) 2016, Hillco Psychi, All rights reserved.
 /// @file
-/// @brief @copybrief Psyque::RuleEngine::TDriver
+/// @brief @copybrief Psyque::RulesEngine::TDriver
 /// @author Hillco Psychi (https://twitter.com/psychi)
 #pragma once
 
-#ifndef PSYQUE_IF_THEN_ENGINE_DRIVER_CACHE_CAPACITY_DEFAULT
-#define PSYQUE_IF_THEN_ENGINE_DRIVER_CACHE_CAPACITY_DEFAULT 64
-#endif // !defined(PSYQUE_IF_THEN_ENGINE_DRIVER_CACHE_CAPACITY_DEFAULT)
+#if !defined(PSYQUE_RULES_ENGINE_DRIVER_CHUNK_CAPACITY_DEFAULT)
+#define PSYQUE_RULES_ENGINE_DRIVER_CHUNK_CAPACITY_DEFAULT 256
+#endif // !defined(PSYQUE_RULES_ENGINE_DRIVER_CHUNK_CAPACITY_DEFAULT)
+
+#if !defined(PSYQUE_RULES_ENGINE_DRIVER_STATUS_CAPACITY_DEFAULT)
+#define PSYQUE_RULES_ENGINE_DRIVER_STATUS_CAPACITY_DEFAULT 256
+#endif // !defined(PSYQUE_RULES_ENGINE_DRIVER_STATUS_CAPACITY_DEFAULT)
+
+#if !defined(PSYQUE_RULES_ENGINE_DRIVER_EXPRESSION_CAPACITY_DEFAULT)
+#define PSYQUE_RULES_ENGINE_DRIVER_EXPRESSION_CAPACITY_DEFAULT 256
+#endif // !defined(PSYQUE_RULES_ENGINE_DRIVER_EXPRESSION_CAPACITY_DEFAULT)
+
+#if !defined(PSYQUE_RULES_ENGINE_DRIVER_CACHE_CAPACITY_DEFAULT)
+#define PSYQUE_RULES_ENGINE_DRIVER_CACHE_CAPACITY_DEFAULT 256
+#endif // !defined(PSYQUE_RULES_ENGINE_DRIVER_CACHE_CAPACITY_DEFAULT)
 
 //#include "../string/csv_table.h"
 #include "./Reservoir.h"
@@ -21,10 +33,10 @@
 /// @cond
 namespace Psyque
 {
-	namespace RuleEngine
+	namespace RulesEngine
 	{
 		template<typename, typename, typename, typename, typename> class TDriver;
-	} // namespace RuleEngine
+	} // namespace RulesEngine
 } // namespace Psyque
 /// @endcond
 
@@ -37,7 +49,7 @@ template<> struct std::hash<FName>
 	std::size_t operator()(FName const& InKey) const
 	{
 		check(InKey.GetNumber() == 0);
-		return static_cast<uint32>(InKey.GetDisplayIndex());
+		return static_cast<std::size_t>(InKey.GetDisplayIndex());
 	}
 };
 
@@ -46,12 +58,12 @@ template<> struct std::hash<FName>
 /// @par 使い方の概略
 /// - TDriver::TDriver で駆動器を構築する。
 /// - TDriver::ExtendChunk で、状態値と条件式と条件挙動関数を登録する。
-///   - 状態値の登録のみしたい場合は This::RegisterStatus を呼び出す。
-///   - 条件式の登録のみしたい場合は This::Evaluator に対して
-///     This::FEvaluator::RegisterExpression を呼び出す。
+///   - 状態値の登録のみしたい場合は ThisClass::RegisterStatus を呼び出す。
+///   - 条件式の登録のみしたい場合は ThisClass::Evaluator に対して
+///     ThisClass::FEvaluator::RegisterExpression を呼び出す。
 ///   - 条件挙動関数の登録のみしたい場合は TDriver::RegisterHandler を呼び出す。
-/// - This::Accumulator に対して
-///   This::FAccumulator::Accumulate を呼び出し、状態値の変更を予約する。
+/// - ThisClass::Accumulator に対して
+///   ThisClass::FAccumulator::Accumulate を呼び出し、状態値の変更を予約する。
 /// - TDriver::Tick
 ///   を時間フレーム毎に呼び出す。状態値の変更と条件式の評価が行われ、
 ///   挙動条件に合致する条件挙動関数が呼び出される。
@@ -67,10 +79,10 @@ template<
 	typename TemplatePriority = int32,
 	typename TemplateHasher = std::hash<FName>,
 	typename TemplateAllocator = std::allocator<void*>>
-class Psyque::RuleEngine::TDriver
+class Psyque::RulesEngine::TDriver
 {
 	/// @brief this が指す値の型。
-	private: using This = TDriver;
+	private: using ThisClass = TDriver;
 
 	//-------------------------------------------------------------------------
 	// @copydoc Psyque::string::_private::flyweight_factory::FHasher
@@ -80,32 +92,55 @@ class Psyque::RuleEngine::TDriver
 
 	//-------------------------------------------------------------------------
 	/// @brief 駆動器で用いる状態貯蔵器の型。
-	public: using FReservoir = Psyque::RuleEngine::_private::TReservoir<
+	public: using FReservoir = Psyque::RulesEngine::_private::TReservoir<
 		TemplateUnsigned,
 		TemplateFloat,
-		typename This::FHasher::result_type,
-		typename This::FHasher::result_type,
-		typename This::FAllocator>;
+		typename ThisClass::FHasher::result_type,
+		typename ThisClass::FHasher::result_type,
+		typename ThisClass::FAllocator>;
 	/// @brief 駆動器で用いる状態変更器の型。
-	public: using FAccumulator = Psyque::RuleEngine::_private::TAccumulator<
-		typename This::FReservoir>;
+	public: using FAccumulator = Psyque::RulesEngine::_private::TAccumulator<
+		typename ThisClass::FReservoir>;
 	/// @brief 駆動器で用いる条件評価器の型。
-	public: using FEvaluator = Psyque::RuleEngine::_private::TEvaluator<
-		typename This::FReservoir, typename This::FHasher::result_type>;
+	public: using FEvaluator = Psyque::RulesEngine::_private::TEvaluator<
+		typename ThisClass::FReservoir, typename ThisClass::FHasher::result_type>;
 	/// @brief 駆動器で用いる条件挙動器の型。
-	public: using FDispatcher = Psyque::RuleEngine::_private::TDispatcher<
-		typename This::FEvaluator, TemplatePriority>;
+	public: using FDispatcher = Psyque::RulesEngine::_private::TDispatcher<
+		typename ThisClass::FEvaluator, TemplatePriority>;
 	/// @brief チャンクの識別値を表す型。
-	public: using FChunkKey = typename This::FReservoir::FChunkKey;
+	public: using FChunkKey = typename ThisClass::FReservoir::FChunkKey;
 
 	//-------------------------------------------------------------------------
 	/// @brief 駆動器で用いる条件挙動チャンクの型。
-	private: using FHandlerChunk = Psyque::RuleEngine::_private::THandlerChunk<
-		typename This::FDispatcher>;
+	private: using FHandlerChunk = Psyque::RulesEngine::_private::THandlerChunk<
+		typename ThisClass::FDispatcher>;
 
 	//-------------------------------------------------------------------------
 	/// @name 構築と代入
 	/// @{
+
+	/// @brief 空の駆動器を構築する。
+	public: TDriver():
+	Reservoir(
+		PSYQUE_RULES_ENGINE_DRIVER_CHUNK_CAPACITY_DEFAULT,
+		PSYQUE_RULES_ENGINE_DRIVER_STATUS_CAPACITY_DEFAULT,
+		ThisClass::FAllocator()),
+	Accumulator(
+		PSYQUE_RULES_ENGINE_DRIVER_CACHE_CAPACITY_DEFAULT, ThisClass::FAllocator()),
+	Evaluator(
+		PSYQUE_RULES_ENGINE_DRIVER_CHUNK_CAPACITY_DEFAULT,
+		PSYQUE_RULES_ENGINE_DRIVER_EXPRESSION_CAPACITY_DEFAULT,
+		ThisClass::FAllocator()),
+	Dispatcher(
+		PSYQUE_RULES_ENGINE_DRIVER_STATUS_CAPACITY_DEFAULT,
+		PSYQUE_RULES_ENGINE_DRIVER_EXPRESSION_CAPACITY_DEFAULT,
+		PSYQUE_RULES_ENGINE_DRIVER_CACHE_CAPACITY_DEFAULT,
+		ThisClass::FAllocator()),
+	HandlerChunks(ThisClass::FAllocator())
+	{
+		this->HandlerChunks.reserve(
+			PSYQUE_RULES_ENGINE_DRIVER_CHUNK_CAPACITY_DEFAULT);
+	}
 
 	/// @brief 空の駆動器を構築する。
 	public: TDriver(
@@ -116,12 +151,11 @@ class Psyque::RuleEngine::TDriver
 		/// [in] 条件式辞書の予約容量。
 		std::size_t const InExpressionCapacity,
 		/// [in] キャッシュの予約容量。
-		std::size_t const InCacheCapacity =
-			PSYQUE_IF_THEN_ENGINE_DRIVER_CACHE_CAPACITY_DEFAULT,
+		std::size_t const InCacheCapacity,
 		/// [in] 文字列ハッシュ関数オブジェクトの初期値。
-		typename This::FHasher InHashFunction = This::FHasher(),
+		typename ThisClass::FHasher InHashFunction = ThisClass::FHasher(),
 		/// [in] メモリ割当子の初期値。
-		typename This::FAllocator const& InAllocator = This::FAllocator()):
+		typename ThisClass::FAllocator const& InAllocator = ThisClass::FAllocator()):
 	Reservoir(InChunkCapacity, InStatusCapacity, InAllocator),
 	Accumulator(InCacheCapacity, InAllocator),
 	Evaluator(InChunkCapacity, InExpressionCapacity, InAllocator),
@@ -137,7 +171,7 @@ class Psyque::RuleEngine::TDriver
 	/// @brief ムーブ構築子。
 	public: TDriver(
 		/// [in,out] ムーブ元となるインスタンス。
-		This&& OutSource):
+		ThisClass&& OutSource):
 	Reservoir(MoveTemp(OutSource.Reservoir)),
 	Accumulator(MoveTemp(OutSource.Accumulator)),
 	Evaluator(MoveTemp(OutSource.Evaluator)),
@@ -148,9 +182,9 @@ class Psyque::RuleEngine::TDriver
 
 	/// @brief ムーブ代入演算子。
 	/// @return *this
-	public: This& operator=(
+	public: ThisClass& operator=(
 		/// [in,out] ムーブ元となるインスタンス。
-		This&& OutSource)
+		ThisClass&& OutSource)
 	{
 		this->Reservoir = MoveTemp(OutSource.Reservoir);
 		this->Accumulator = MoveTemp(OutSource.Accumulator);
@@ -172,7 +206,7 @@ class Psyque::RuleEngine::TDriver
 		std::size_t const InExpressionCapacity,
 		/// [in] キャッシュの予約容量。
 		std::size_t const InCacheCapacity =
-			PSYQUE_IF_THEN_ENGINE_DRIVER_CACHE_CAPACITY_DEFAULT)
+			PSYQUE_RULES_ENGINE_DRIVER_CACHE_CAPACITY_DEFAULT)
 	{
 		this->Reservoir.Rebuild(InChunkCapacity, InStatusCapacity);
 		//this->Accumulator.Rebuild(InCacheCapacity);
@@ -200,7 +234,7 @@ class Psyque::RuleEngine::TDriver
 		typename TemplateHandlerIntermediation>
 	void ExtendChunk(
 		/// [in] 追加するチャンクの識別値。
-		typename This::FChunkKey const InChunkKey,
+		typename ThisClass::FChunkKey const InChunkKey,
 
 		/// [in] 状態値を状態貯蔵器に登録する関数オブジェクト。
 		/// 以下に相当するメンバ関数を使えること。
@@ -277,7 +311,7 @@ class Psyque::RuleEngine::TDriver
 			InChunkKey,
 			this->Reservoir,
 			InExpressionIntermediation);
-		This::FHandlerChunk::Extend(
+		ThisClass::FHandlerChunk::Extend(
 			this->HandlerChunks,
 			InChunkKey,
 			InHandlerBuilder(
@@ -297,11 +331,11 @@ class Psyque::RuleEngine::TDriver
 		/// [in] 文字列表の構築に使う
 		/// Psyque::string::flyweight::factory の強参照。空ではないこと。
 		 typename Psyque::string::flyweight<
-			typename This::FHasher, typename This::FAllocator>
+			typename ThisClass::FHasher, typename ThisClass::FAllocator>
 		::factory::shared_ptr
 			const& in_string_factory,
 		/// [in] 追加するチャンクの識別値。
-		typename This::FChunkKey const InChunkKey,
+		typename ThisClass::FChunkKey const InChunkKey,
 		/// [in] 状態値CSV文字列。空文字列の場合は、状態値を追加しない。
 		Psyque::String::TView<
 			typename TemplateString::value_type,
@@ -326,23 +360,23 @@ class Psyque::RuleEngine::TDriver
 	{
 		using csv_table = Psyque::string::csv_table<
 			std::size_t, 
-			typename This::FHasher,
-			typename This::FAllocator>
+			typename ThisClass::FHasher,
+			typename ThisClass::FAllocator>
 		this->ExtendChunk(
 			InChunkKey,
-			Psyque::RuleEngine::TStatusBuilder(),
+			Psyque::RulesEngine::TStatusBuilder(),
 			csv_table::build_relation_table(
 				out_workspace,
 				in_string_factory,
 				in_status_csv,
 				in_status_attribute),
-			Psyque::RuleEngine::expression_builder(),
+			Psyque::RulesEngine::expression_builder(),
 			csv_table::build_relation_table(
 				out_workspace,
 				in_string_factory,
 				in_expression_csv,
 				in_expression_attribute),
-			Psyque::RuleEngine::handler_builder(),
+			Psyque::RulesEngine::handler_builder(),
 			csv_table::build_relation_table(
 				out_workspace,
 				in_string_factory,
@@ -353,11 +387,11 @@ class Psyque::RuleEngine::TDriver
 	/// @brief チャンクを削除する。
 	public: void RemoveChunk(
 		/// [in] 削除するチャンクの識別値。
-		typename This::FChunkKey const InChunkKey)
+		typename ThisClass::FChunkKey const InChunkKey)
 	{
 		this->Reservoir.RemoveChunk(InChunkKey);
 		this->Evaluator.RemoveChunk(InChunkKey);
-		This::FHandlerChunk::erase(this->HandlerChunks, InChunkKey);
+		ThisClass::FHandlerChunk::erase(this->HandlerChunks, InChunkKey);
 	}
 	/// @}
 	//-------------------------------------------------------------------------
@@ -366,15 +400,15 @@ class Psyque::RuleEngine::TDriver
 
 	/// @brief 条件挙動ハンドラを登録し、条件挙動関数を強参照する。
 	/// @sa
-	///   This::Tick で、 InExpressionKey に対応する条件式の評価が変化し
+	///   ThisClass::Tick で、 InExpressionKey に対応する条件式の評価が変化し
 	///   InCondition と合致すると、 InFunction の指す条件挙動関数が呼び出される。
 	/// @sa
 	///   InFunction の指す条件挙動関数が解体されると、それを弱参照している
 	///   FDispatcher::FHandler は自動的に削除される。明示的に削除するには、
-	///   This::Dispatcher に対して FDispatcher::UnregisterHandler を使う。
+	///   ThisClass::Dispatcher に対して FDispatcher::UnregisterHandler を使う。
 	/// @retval true
 	///   成功。 InFunction の指す条件挙動関数を弱参照する
-	///   FDispatcher::FHandler を構築して This::Dispatcher
+	///   FDispatcher::FHandler を構築して ThisClass::Dispatcher
 	///   に登録し、登録した条件挙動関数の強参照をチャンクに追加した。
 	/// @retval false
 	///   失敗。 FDispatcher::FHandler は構築されず、
@@ -386,21 +420,21 @@ class Psyque::RuleEngine::TDriver
 	///     InFunction の指す条件挙動関数が既に登録されていると、失敗する。
 	public: bool RegisterHandler(
 		/// [in] 条件挙動関数を追加するチャンクの識別値。
-		typename This::FChunkKey const InChunkKey,
+		typename ThisClass::FChunkKey const InChunkKey,
 		/// [in] InFunction の指す条件挙動関数に対応する
 		/// FEvaluator::FExpression の識別値。
-		typename This::FEvaluator::FExpressionKey const InExpressionKey,
+		typename ThisClass::FEvaluator::FExpressionKey const InExpressionKey,
 		/// [in] InFunction の指す条件挙動関数を呼び出す挙動条件。
 		/// FDispatcher::FHandler::MakeCondition から作る。
-		typename This::FDispatcher::FHandler::FCondition const InCondition,
+		typename ThisClass::FDispatcher::FHandler::FCondition const InCondition,
 		/// [in] 登録する FDispatcher::FHandler::FFunction を指すスマートポインタ。
 		/// InExpressionKey に対応する条件式の評価が変化して
 		/// InCondition に合致すると、呼び出される。
-		typename This::FDispatcher::FHandler::FFunctionSharedPtr InFunction,
+		typename ThisClass::FDispatcher::FHandler::FFunctionSharedPtr InFunction,
 		/// [in] InFunction の指す条件挙動関数の呼び出し優先順位。
 		/// 昇順に呼び出される。
-		typename This::FDispatcher::FHandler::FPriority const InPriority =
-			PSYQUE_IF_THEN_ENGINE_DISPATCHER_FUNCTION_PRIORITY_DEFAULT)
+		typename ThisClass::FDispatcher::FHandler::FPriority const InPriority =
+			PSYQUE_RULES_ENGINE_DISPATCHER_FUNCTION_PRIORITY_DEFAULT)
 	{
 		// 条件挙動関数を条件挙動器へ登録する。
 		auto const local_register_handler(
@@ -409,7 +443,7 @@ class Psyque::RuleEngine::TDriver
 		if (local_register_handler)
 		{
 			// 条件挙動関数を条件挙動チャンクへ追加する。
-			This::FHandlerChunk::Extend(
+			ThisClass::FHandlerChunk::Extend(
 				this->HandlerChunks, InChunkKey, MoveTemp(InFunction));
 		}
 		return local_register_handler;
@@ -421,7 +455,7 @@ class Psyque::RuleEngine::TDriver
 
 	/// @brief 状態貯蔵器を取得する。
 	/// @return *this が持つ状態貯蔵器。
-	public: typename This::FReservoir const& GetReservoir()
+	public: typename ThisClass::FReservoir const& GetReservoir()
 	const PSYQUE_NOEXCEPT
 	{
 		return this->Reservoir;
@@ -429,37 +463,36 @@ class Psyque::RuleEngine::TDriver
 
 	/// @brief 状態値を登録する。
 	/// @sa
-	/// - 登録した状態値を取得するには、 This::GetReservoir から
+	/// - 登録した状態値を取得するには、 ThisClass::GetReservoir から
 	///   FReservoir::FindStatus を呼び出す。
-	/// - 状態値の変更は This::Accumulator から
+	/// - 状態値の変更は ThisClass::Accumulator から
 	///   FAccumulator::Accumulate を呼び出して行う。
-	/// - This::RemoveChunk で、登録した状態値をチャンク毎に削除できる。
+	/// - ThisClass::RemoveChunk で、登録した状態値をチャンク毎に削除できる。
 	/// @retval true  成功。状態値を登録した。
 	/// @retval false 失敗。状態値は登録されなかった。
 	/// - InStatusKey に対応する状態値がすでに登録されていると失敗する。
 	public: template<typename TemplateValue>
 	bool RegisterStatus(
 		/// [in] 登録する状態値を格納する状態値ビット列チャンクの識別値。
-		typename This::FChunkKey const InChunkKey,
+		typename ThisClass::FChunkKey const InChunkKey,
 		/// [in] 登録する状態値の識別値。
-		typename This::FReservoir::FStatusKey const InStatusKey,
+		typename ThisClass::FReservoir::FStatusKey const InStatusKey,
 		/// [in] 登録する状態値の初期値。以下の型の値を登録できる。
 		/// - bool 型。
 		/// - C++ 組み込み整数型。
 		/// - C++ 組み込み浮動小数点数型。
 		TemplateValue const InValue)
 	{
-		return this->Reservoir.RegisterStatus(
-			InChunkKey, InStatusKey, InValue);
+		return this->Reservoir.RegisterStatus(InChunkKey, InStatusKey, InValue);
 	}
 
 	/// @brief 整数型の状態値を登録する。
 	/// @sa
-	/// - 登録した状態値を取得するには、 This::GetReservoir から
+	/// - 登録した状態値を取得するには、 ThisClass::GetReservoir から
 	///   FReservoir::FindStatus を呼び出す。
-	/// - 登録した状態値を書き換えるには、 This::Accumulator から
+	/// - 登録した状態値を書き換えるには、 ThisClass::Accumulator から
 	///   FAccumulator::Accumulate を呼び出す。
-	/// - This::RemoveChunk で、登録した状態値をチャンク毎に削除できる。
+	/// - ThisClass::RemoveChunk で、登録した状態値をチャンク毎に削除できる。
 	/// @retval true  成功。状態値を登録した。
 	/// @retval false 失敗。状態値は登録されなかった。
 	/// - InStatusKey に対応する状態値がすでに登録されていると失敗する。
@@ -471,9 +504,9 @@ class Psyque::RuleEngine::TDriver
 	public: template<typename TemplateValue>
 	bool RegisterStatus(
 		/// [in] 登録する状態値を格納する状態値ビット列チャンクの識別値。
-		typename This::FChunkKey const InChunkKey,
+		typename ThisClass::FChunkKey const InChunkKey,
 		/// [in] 登録する状態値の識別値。
-		typename This::FReservoir::FStatusKey const InStatusKey,
+		typename ThisClass::FReservoir::FStatusKey const InStatusKey,
 		/// [in] 登録する状態値の初期値。 C++ 組み込み整数型であること。
 		TemplateValue const InValue,
 		/// [in] 登録する状態値のビット幅。
@@ -481,6 +514,21 @@ class Psyque::RuleEngine::TDriver
 	{
 		return this->Reservoir.RegisterStatus(
 			InChunkKey, InStatusKey, InValue, InBitWidth);
+	}
+
+	/// @copydoc _private::TReservoir::AssignStatus(typename ThisClass::FStatusKey const, TemplateValue const&)
+	public: template<typename TemplateValue>
+	bool AssignStatus(
+		/// [in] 代入する状態値の識別値。
+		typename ThisClass::FReservoir::FStatusKey const InStatusKey,
+		/// [in] 状態値へ代入する値。以下の型の値を代入できる。
+		/// - bool 型。
+		/// - C++ 組み込み整数型。
+		/// - C++ 組み込み浮動小数点数型。
+		/// - ThisClass::FReservoir::FStatusValue 型。
+		TemplateValue const& InValue)
+	{
+		return this->Reservoir.AssignStatus(InStatusKey, InValue);
 	}
 
 	/// @brief 状態値を更新し、条件式を評価して、条件挙動関数を呼び出す。
@@ -493,57 +541,56 @@ class Psyque::RuleEngine::TDriver
 	/// @}
 	//-------------------------------------------------------------------------
 	/// @brief 駆動器で用いる状態貯蔵器。
-	private: typename This::FReservoir Reservoir;
-	/// @brief 駆動器で用いる状態変更器。
-	public: typename This::FAccumulator Accumulator;
-	/// @brief 駆動器で用いる条件評価器。
-	public: typename This::FEvaluator Evaluator;
-	/// @brief 駆動器で用いる条件挙動器。
-	public: typename This::FDispatcher Dispatcher;
-	/// @brief 駆動器で用いる条件挙動チャンクのコンテナ。
-	private: typename This::FHandlerChunk::FArray HandlerChunks;
-	/// @brief 駆動器で用いる文字列ハッシュ関数オブジェクト。
-	public: typename This::FHasher HashFunction;
+	private: typename ThisClass::FReservoir Reservoir;
 
-}; // class Psyque::RuleEngine::TDriver
+	/// @brief 駆動器で用いる状態変更器。
+	public: typename ThisClass::FAccumulator Accumulator;
+
+	/// @brief 駆動器で用いる条件評価器。
+	public: typename ThisClass::FEvaluator Evaluator;
+
+	/// @brief 駆動器で用いる条件挙動器。
+	public: typename ThisClass::FDispatcher Dispatcher;
+
+	/// @brief 駆動器で用いる条件挙動チャンクのコンテナ。
+	private: typename ThisClass::FHandlerChunk::FArray HandlerChunks;
+
+	/// @brief 駆動器で用いる文字列ハッシュ関数オブジェクト。
+	public: typename ThisClass::FHasher HashFunction;
+
+}; // class Psyque::RulesEngine::TDriver
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 namespace PsyqueTest
 {
-	inline void RuleEngine()
+	inline void RulesEngine()
 	{
-		using FDriver = Psyque::RuleEngine::TDriver<>;
-		FDriver LocalDriver(256, 256, 256);
+		using FDriver = Psyque::RulesEngine::TDriver<>;
+		FDriver LocalDriver;
 
-		auto const LocalStatusJson(
-			StaticCastSharedRef<TJsonReader<>>(
-				FJsonStringReader::Create(
-					TEXT(
-						"["
-						"  [\"status_bool\",     true],"
-						"  [\"status_signed\",   -128, -8],"
-						"  [\"status_unsigned\", 1023, 10],"
-						"  [\"status_float\",     0.5]"
-						"]"))));
-		auto const LocalExpressionJson(
-			StaticCastSharedRef<TJsonReader<>>(
-				FJsonStringReader::Create(
-					TEXT(
-						"["
-						"  [\"expression#0\", \"AND\", \"STATUS_COMPARISON\"],"
-						"  [\"expression#1\", \"OR\",  \"STATUS_COMPARISON\"]"
-						"]"))));
-		auto const LocalHandlerJson(
-			StaticCastSharedRef<TJsonReader<>>(
-				FJsonStringReader::Create(TEXT("DUMMY"))));
+		FString const LocalStatusJson(
+			TEXT(
+				"["
+				"  [\"status_bool\",     true],"
+				"  [\"status_signed\",   -128, -8],"
+				"  [\"status_unsigned\", 1023, 10],"
+				"  [\"status_float\",     0.5]"
+				"]"));
+		FString const LocalExpressionJson(
+			TEXT(
+				"["
+				"  [\"expression#0\", \"AND\", \"STATUS_COMPARISON\"],"
+				"  [\"expression#1\", \"OR\",  \"STATUS_COMPARISON\"]"
+				"]"));
+		FString const LocalHandlerJson((TEXT("DUMMY")));
 		FName const LocalChunkName(TEXT("PsyqueTest"));
 		LocalDriver.ExtendChunk(
 			LocalDriver.HashFunction(LocalChunkName),
-			Psyque::RuleEngine::TStatusBuilder(),
+			Psyque::RulesEngine::TStatusBuilder(),
 			LocalStatusJson,
-			Psyque::RuleEngine::TExpressionBuilder(),
+			Psyque::RulesEngine::TExpressionBuilder(),
 			LocalExpressionJson,
-			Psyque::RuleEngine::TStatusBuilder(),
+			Psyque::RulesEngine::TStatusBuilder(),
 			LocalHandlerJson);
 
 		auto const LocalEmpyStatus(
@@ -555,29 +602,29 @@ namespace PsyqueTest
 			LocalDriver.GetReservoir().FindStatus(
 				LocalDriver.HashFunction(TEXT("status_bool"))));
 		check(
-			Psyque::ETernary::True == LocalBoolStatus.Compare(
-				Psyque::RuleEngine::EStatusComparison::Equal, true));
+			EPsyqueKleene::TernaryTrue == LocalBoolStatus.Compare(
+				Psyque::RulesEngine::EStatusComparison::Equal, true));
 
 		auto const LocalSignedStatus(
 			LocalDriver.GetReservoir().FindStatus(
 				LocalDriver.HashFunction(TEXT("status_signed"))));
 		check(
-			Psyque::ETernary::True == LocalSignedStatus.Compare(
-				Psyque::RuleEngine::EStatusComparison::Equal, -128));
+			EPsyqueKleene::TernaryTrue == LocalSignedStatus.Compare(
+				Psyque::RulesEngine::EStatusComparison::Equal, -128));
 
 		auto const LocalUnsignedStatus(
 			LocalDriver.GetReservoir().FindStatus(
 				LocalDriver.HashFunction(TEXT("status_unsigned"))));
 		check(
-			Psyque::ETernary::True == LocalUnsignedStatus.Compare(
-				Psyque::RuleEngine::EStatusComparison::Equal, 1023));
+			EPsyqueKleene::TernaryTrue == LocalUnsignedStatus.Compare(
+				Psyque::RulesEngine::EStatusComparison::Equal, 1023));
 
 		auto const LocalFloatStatus(
 			LocalDriver.GetReservoir().FindStatus(
 				LocalDriver.HashFunction(TEXT("status_float"))));
 		check(
-			Psyque::ETernary::True == LocalFloatStatus.Compare(
-				Psyque::RuleEngine::EStatusComparison::Equal, 0.5f));
+			EPsyqueKleene::TernaryTrue == LocalFloatStatus.Compare(
+				Psyque::RulesEngine::EStatusComparison::Equal, 0.5f));
 
 		LocalDriver.Tick();
 		LocalDriver.RemoveChunk(LocalDriver.HashFunction(LocalChunkName));

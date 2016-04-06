@@ -1,10 +1,9 @@
 ﻿// Copyright (c) 2016, Hillco Psychi, All rights reserved.
 /// @file
-/// @brief @copybrief Psyque::RuleEngine::_private::TAccumulator
+/// @brief @copybrief Psyque::RulesEngine::_private::TAccumulator
 /// @author Hillco Psychi (https://twitter.com/psychi)
 #pragma once
 
-#include "Containers/Array.h"
 #include <cstdint>
 #include <vector>
 #include "../Assert.h"
@@ -13,13 +12,13 @@
 /// @cond
 namespace Psyque
 {
-	namespace RuleEngine
+	namespace RulesEngine
 	{
 		namespace _private
 		{
 			template<typename> class TAccumulator;
 		} // namespace _private
-	} // namespace RuleEngine
+	} // namespace RulesEngine
 } // namespace Psyque
 /// @endcond
 
@@ -31,32 +30,32 @@ namespace Psyque
 ///     によって決める予約系列が同じなら、予約順となることが保証される。
 ///     予約系列が異なると、予約順となることは保証されない。
 /// - TAccumulator::_flush で、予約した状態変更が実際に適用される。
-///   - 1度の This::_flush
+///   - 1度の ThisClass::_flush
 ///     で1つの状態値に対し複数回の状態変更が予約されていると、
 ///     初回の状態変更のみが適用され、2回目以降の状態変更が次回の
-///     This::_flush まで遅延する場合がある。
+///     ThisClass::_flush まで遅延する場合がある。
 ///   - 遅延するかどうかは、
-///     This::Accumulate に渡す EAccumulationDelay によって決まる。
+///     ThisClass::Accumulate に渡す EAccumulationDelay によって決まる。
 /// @tparam TemplateReservoir @copydoc TAccumulator::FReservoir
 template<typename TemplateReservoir>
-class Psyque::RuleEngine::_private::TAccumulator
+class Psyque::RulesEngine::_private::TAccumulator
 {
-	private: using This = TAccumulator; ///< @copydoc TReservoir::This
+	private: using ThisClass = TAccumulator; ///< @copydoc TReservoir::ThisClass
 
 	//-------------------------------------------------------------------------
 	/// @brief 状態変更を適用する TReservoir の型。
 	public: using FReservoir = TemplateReservoir;
 
 	/// @brief 状態変更器で使うメモリ割当子の型。
-	public: using FAllocator = typename This::FReservoir::FAllocator;
+	public: using FAllocator = typename ThisClass::FReservoir::FAllocator;
 
 	//-------------------------------------------------------------------------
 	/// @brief 状態変更予約のコンテナ。
 	private: using FStatusArray = std::vector<
 		std::pair<
-			typename This::FReservoir::FStatusAssignment,
+			typename ThisClass::FReservoir::FStatusAssignment,
 			typename EAccumulationDelay>,
-		typename This::FAllocator>;
+		typename ThisClass::FAllocator>;
 
 	//-------------------------------------------------------------------------
 	/// @name 構築と代入
@@ -65,9 +64,9 @@ class Psyque::RuleEngine::_private::TAccumulator
 	/// @brief 空の状態変更器を構築する。
 	public: explicit TAccumulator(
 		/// [in] 状態値の予約数。
-		typename This::FStatusArray::size_type const InStatusCapacity,
+		typename ThisClass::FStatusArray::size_type const InStatusCapacity,
 		/// [in] 使用するメモリ割当子の初期値。
-		typename This::FAllocator const& InAllocator = FAllocator()):
+		typename ThisClass::FAllocator const& InAllocator = FAllocator()):
 	AccumulatedStatuses(InAllocator),
 	DelayStatuses(InAllocator)
 	{
@@ -79,16 +78,16 @@ class Psyque::RuleEngine::_private::TAccumulator
 	/// @brief ムーブ構築子。
 	public: TAccumulator(
 		/// [in,out] ムーブ元となるインスタンス。
-		This&& OutSource):
+		ThisClass&& OutSource):
 	AccumulatedStatuses(MoveTemp(OutSource.AccumulatedStatuses)),
 	DelayStatuses(MoveTemp(OutSource.DelayStatuses))
 	{}
 
 	/// @brief ムーブ代入演算子。
 	/// @return *this
-	public: This& operator=(
+	public: ThisClass& operator=(
 		/// [in,out] ムーブ元となるインスタンス。
-		This&& OutSource)
+		ThisClass&& OutSource)
 	{
 		this->AccumulatedStatuses = MoveTemp(OutSource.AccumulatedStatuses);
 		this->DelayStatuses = MoveTemp(OutSource.DelayStatuses);
@@ -98,7 +97,7 @@ class Psyque::RuleEngine::_private::TAccumulator
 
 	/// @brief 状態変更器で使われているメモリ割当子を取得する。
 	/// @return 状態変更器で使われているメモリ割当子。
-	public: typename This::FAllocator get_allocator()
+	public: typename ThisClass::FAllocator get_allocator()
 	const PSYQUE_NOEXCEPT
 	{
 		return this->AccumulatedStatuses.get_allocator();
@@ -116,20 +115,20 @@ class Psyque::RuleEngine::_private::TAccumulator
 	}
 
 	/// @brief 状態変更を予約する。
-	/// @sa 実際の状態変更は This::_flush で適用される。
+	/// @sa 実際の状態変更は ThisClass::_flush で適用される。
 	/// @warning
 	/// 1つの予約系列で TReservoir::AssignStatus に失敗が発生すると、
 	/// その予約系列の以降の状態変更はキャンセルされ、次の予約系列に移行する。
 	public: void Accumulate(
 		/// [in] 予約する状態変更。
-		typename This::FReservoir::FStatusAssignment const& InAssignment,
+		typename ThisClass::FReservoir::FStatusAssignment const& InAssignment,
 		/// [in] 予約系列の切り替えと遅延方法の指定。
 		typename EAccumulationDelay const InDelay)
 	{
 		this->AccumulatedStatuses.emplace_back(InAssignment, InDelay);
 	}
 
-	/// @copydoc This::Accumulate
+	/// @copydoc ThisClass::Accumulate
 	public: template<typename TemplateAssignmentArray>
 	void Accumulate(
 		/// [in] 予約する TReservoir::FStatusAssignment のコンテナ。
@@ -145,49 +144,49 @@ class Psyque::RuleEngine::_private::TAccumulator
 		}
 	}
 
-	/// @copydoc This::Accumulate
+	/// @copydoc ThisClass::Accumulate
 	public: template<typename TemplateValue>
 	void Accumulate(
 		/// [in] 変更する状態値の識別値。
-		typename This::FReservoir::FStatusKey const InKey,
+		typename ThisClass::FReservoir::FStatusKey const InKey,
 		/// [in] 状態値に設定する値。
 		TemplateValue const InValue,
 		/// [in] 予約系列の切り替えと遅延方法の指定。
 		typename EAccumulationDelay const InDelay)
 	{
 		this->Accumulate(
-			typename This::FReservoir::FStatusAssignment(
+			typename ThisClass::FReservoir::FStatusAssignment(
 				InKey,
-				RuleEngine::EStatusAssignment::Copy,
-				typename This::FReservoir::FStatusValue(InValue)),
+				RulesEngine::EStatusAssignment::Copy,
+				typename ThisClass::FReservoir::FStatusValue(InValue)),
 			InDelay);
 	}
 
-	/// @copydoc This::Accumulate
+	/// @copydoc ThisClass::Accumulate
 	public: template<typename TemplateValue>
 	void Accumulate(
 		/// [in] 変更する状態値の識別値。
-		typename This::FReservoir::FStatusKey const InKey,
+		typename ThisClass::FReservoir::FStatusKey const InKey,
 		/// [in] 代入演算子の種別。
-		typename RuleEngine::EStatusAssignment const InOperator,
+		typename RulesEngine::EStatusAssignment const InOperator,
 		/// [in] 代入演算子の右辺。
 		TemplateValue const InValue,
 		/// [in] 予約系列の切り替えと遅延方法の指定。
 		typename EAccumulationDelay const InDelay)
 	{
 		this->Accumulate(
-			typename This::FReservoir::FStatusAssignment(
+			typename ThisClass::FReservoir::FStatusAssignment(
 				InKey,
 				InOperator,
-				typename This::FReservoir::FStatusValue(InValue)),
+				typename ThisClass::FReservoir::FStatusValue(InValue)),
 			InDelay);
 	}
 
-	/// @brief Psyque::RuleEngine 管理者以外は、この関数は使用禁止。
-	/// @details This::Accumulate で予約した状態変更を、実際に適用する。
+	/// @brief Psyque::RulesEngine 管理者以外は、この関数は使用禁止。
+	/// @details ThisClass::Accumulate で予約した状態変更を、実際に適用する。
 	public: void _flush(
 		/// [in,out] 状態変更を適用する状態貯蔵器。
-		typename This::FReservoir& OutReservoir)
+		typename ThisClass::FReservoir& OutReservoir)
 	{
 		auto const LocalEnd(this->AccumulatedStatuses.cend());
 		for (auto i(this->AccumulatedStatuses.cbegin()); i != LocalEnd;)
@@ -200,7 +199,7 @@ class Psyque::RuleEngine::_private::TAccumulator
 			{
 				if (LocalFlush
 					&& OutReservoir.FindTransition(j->first.GetKey())
-						== Psyque::ETernary::True)
+						== EPsyqueKleene::TernaryTrue)
 				{
 					// すでに状態変更されていたら、今回は状態変更しない。
 					LocalFlush = false;
@@ -244,10 +243,10 @@ class Psyque::RuleEngine::_private::TAccumulator
 	/// @}
 	//-------------------------------------------------------------------------
 	/// @brief 予約された状態変更のコンテナ。
-	private: typename This::FStatusArray AccumulatedStatuses;
+	private: typename ThisClass::FStatusArray AccumulatedStatuses;
 	/// @brief 次回以降に遅延させる状態変更のコンテナ。
-	private: typename This::FStatusArray DelayStatuses;
+	private: typename ThisClass::FStatusArray DelayStatuses;
 
-}; // class Psyque::RuleEngine::_private::TAccumulator
+}; // class Psyque::RulesEngine::_private::TAccumulator
 
 // vim: set noexpandtab:

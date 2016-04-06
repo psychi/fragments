@@ -26,7 +26,7 @@ DOXYFILE_ENCODING      = UTF-8
 # identify the project. Note that if you do not use Doxywizard you need 
 # to put quotes around the project name if it contains spaces.
 
-PROJECT_NAME           = "Psyque libraries"
+PROJECT_NAME           = "Psyque Plugin for Unreal Engine"
 
 # The PROJECT_NUMBER tag can be used to enter a project or revision number. 
 # This could be handy for archiving the generated documentation or 
@@ -678,13 +678,29 @@ WARN_LOGFILE           =
 # with spaces.
 
 INPUT                  = \
-                         ./Assert.h \
-                         ./Config.h \
-                         ./RuleEngine/Reservoir.h \
-                         ./RuleEngine/StatusChunk.h \
-                         ./RuleEngine/StatusOperation.h \
-                         ./RuleEngine/StatusProperty.h \
-                         ./RuleEngine/StatusValue.h \
+                         ./Source/PsyqueRulesPlugin/Private/Psyque/Assert.h \
+                         ./Source/PsyqueRulesPlugin/Private/Psyque/Config.h \
+                         ./Source/PsyqueRulesPlugin/Private/Psyque/BitAlgorithm.h \
+                         ./Source/PsyqueRulesPlugin/Private/Psyque/RulesEngine/Enum.h \
+                         ./Source/PsyqueRulesPlugin/Private/Psyque/RulesEngine/StatusChunk.h \
+                         ./Source/PsyqueRulesPlugin/Private/Psyque/RulesEngine/StatusOperation.h \
+                         ./Source/PsyqueRulesPlugin/Private/Psyque/RulesEngine/StatusProperty.h \
+                         ./Source/PsyqueRulesPlugin/Private/Psyque/RulesEngine/StatusValue.h \
+                         ./Source/PsyqueRulesPlugin/Private/Psyque/RulesEngine/StatusChunk.h \
+                         ./Source/PsyqueRulesPlugin/Private/Psyque/RulesEngine/Reservoir.h \
+                         ./Source/PsyqueRulesPlugin/Private/Psyque/RulesEngine/Accumulator.h \
+                         ./Source/PsyqueRulesPlugin/Private/Psyque/RulesEngine/Expression.h \
+                         ./Source/PsyqueRulesPlugin/Private/Psyque/RulesEngine/Evaluator.h \
+                         ./Source/PsyqueRulesPlugin/Private/Psyque/RulesEngine/Handler.h \
+                         ./Source/PsyqueRulesPlugin/Private/Psyque/RulesEngine/StatusMonitor.h \
+                         ./Source/PsyqueRulesPlugin/Private/Psyque/RulesEngine/ExpressionMonitor.h \
+                         ./Source/PsyqueRulesPlugin/Private/Psyque/RulesEngine/Dispatcher.h \
+                         ./Source/PsyqueRulesPlugin/Private/Psyque/RulesEngine/HandlerChunk.h \
+                         ./Source/PsyqueRulesPlugin/Private/Psyque/RulesEngine/StatusBuilder.h \
+                         ./Source/PsyqueRulesPlugin/Private/Psyque/RulesEngine/ExpressionBuilder.h \
+                         ./Source/PsyqueRulesPlugin/Private/Psyque/RulesEngine/HandlerBuilder.h \
+                         ./Source/PsyqueRulesPlugin/Private/Psyque/RulesEngine/Driver.h \
+                         ./Source/PsyqueRulesPlugin/Classes/PsyqueRulesEngine.h \
 
 
 # This tag can be used to specify the character encoding of the source files 

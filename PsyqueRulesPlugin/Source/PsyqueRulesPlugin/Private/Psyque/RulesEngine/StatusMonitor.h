@@ -1,6 +1,6 @@
 ﻿// Copyright (c) 2016, Hillco Psychi, All rights reserved.
 /// @file
-/// @brief @copybrief Psyque::RuleEngine::_private::TStatusMonitor
+/// @brief @copybrief Psyque::RulesEngine::_private::TStatusMonitor
 /// @author Hillco Psychi (https://twitter.com/psychi)
 #pragma once
 
@@ -10,13 +10,13 @@
 /// @cond
 namespace Psyque
 {
-	namespace RuleEngine
+	namespace RulesEngine
 	{
 		namespace _private
 		{
 			template<typename> class TStatusMonitor;
 		} // namespace _private
-	} // namespace RuleEngine
+	} // namespace RulesEngine
 } // namespace Psyque
 /// @endcond
 
@@ -25,19 +25,19 @@ namespace Psyque
 /// @details 状態値が変化した際に、条件式の評価を更新するために使う。
 /// @tparam TemplateExpressionKeyArray @copydoc TStatusMonitor::ExpressionKeys
 template<typename TemplateExpressionKeyArray>
-class Psyque::RuleEngine::_private::TStatusMonitor
+class Psyque::RulesEngine::_private::TStatusMonitor
 {
-	private: using This = TStatusMonitor; ///< @copydoc TDispatcher::This
+	private: using ThisClass = TStatusMonitor; ///< @copydoc TDispatcher::ThisClass
 
 	//-------------------------------------------------------------------------
-	/// @copydoc This::ExpressionKeys
+	/// @copydoc ThisClass::ExpressionKeys
 	public: using FExpressionKeyArray = TemplateExpressionKeyArray;
 
 	//-------------------------------------------------------------------------
 	/// @brief 状態監視器を構築する。
 	public: explicit TStatusMonitor(
 		/// [in] メモリ割当子の初期値。
-		typename This::FExpressionKeyArray::allocator_type const&
+		typename ThisClass::FExpressionKeyArray::allocator_type const&
 			InAllocator):
 	ExpressionKeys(InAllocator),
 	LastExistence(false)
@@ -47,16 +47,16 @@ class Psyque::RuleEngine::_private::TStatusMonitor
 	/// @brief ムーブ構築子。
 	public: TStatusMonitor(
 		/// [in,out] ムーブ元となるインスタンス。
-		This&& OutSource):
+		ThisClass&& OutSource):
 	ExpressionKeys(MoveTemp(OutSource.ExpressionKeys)),
 	LastExistence(MoveTemp(OutSource.LastExistence))
 	{}
 
 	/// @brief ムーブ代入演算子。
 	/// @return *this
-	public: This& operator=(
+	public: ThisClass& operator=(
 		/// [in,out] ムーブ元となるインスタンス。
-		This&& OutSource)
+		ThisClass&& OutSource)
 	{
 		this->ExpressionKeys = MoveTemp(OutSource.ExpressionKeys);
 		this->LastExistence = MoveTemp(OutSource.LastExistence);
@@ -72,7 +72,7 @@ class Psyque::RuleEngine::_private::TStatusMonitor
 		/// [in] 参照する FExpressionMonitor の辞書。
 		template_container const& InExpressionMonitors)
 	{
-		return This::ShrinkExpressionKeys(
+		return ThisClass::ShrinkExpressionKeys(
 			this->ExpressionKeys, InExpressionMonitors);
 	}
 
@@ -90,7 +90,7 @@ class Psyque::RuleEngine::_private::TStatusMonitor
 		/// TStatusMonitor の辞書。
 		TemplateStatusMonitorMap& OutStatusMonitors,
 		/// [in] 登録する FEvaluator::FExpressionKey 。
-		typename This::FExpressionKeyArray::value_type const&
+		typename ThisClass::FExpressionKeyArray::value_type const&
 			InExpressionKey,
 		/// [in] 要素条件を走査する FEvaluator::FExpression 。
 		TemplateExpression const& InExpression,
@@ -107,8 +107,8 @@ class Psyque::RuleEngine::_private::TStatusMonitor
 			auto const LocalEmplace(
 				OutStatusMonitors.emplace(
 					InExpressionElements.at(i).GetKey(),
-					This(OutStatusMonitors.get_allocator())));
-			This::insert_expression_key(
+					ThisClass(OutStatusMonitors.get_allocator())));
+			ThisClass::insert_expression_key(
 				LocalEmplace.first->second.ExpressionKeys,
 				InExpressionKey);
 		}
@@ -149,9 +149,9 @@ class Psyque::RuleEngine::_private::TStatusMonitor
 	/// @retval false 同じ識別値の条件式がすでに登録されていたので、何もしなかった。
 	private: static bool insert_expression_key(
 		/// [in,out] 状態変化を通知する条件式の識別値を挿入するコンテナ。
-		typename This::FExpressionKeyArray& OutExpressionKeys,
+		typename ThisClass::FExpressionKeyArray& OutExpressionKeys,
 		/// [in] 状態変化を通知する FEvaluator::FExpressionKey 。
-		typename This::FExpressionKeyArray::value_type const&
+		typename ThisClass::FExpressionKeyArray::value_type const&
 			InExpressionKey)
 	{
 		auto const LocalLowerBound(
@@ -174,7 +174,7 @@ class Psyque::RuleEngine::_private::TStatusMonitor
 	private: template<typename TemplateExpressionMonitorMap>
 	static bool ShrinkExpressionKeys(
 		/// [in,out] 整理する条件式識別値のコンテナ。
-		typename This::FExpressionKeyArray& OutExpressionKeys,
+		typename ThisClass::FExpressionKeyArray& OutExpressionKeys,
 		/// [in] 参照する FExpressionMonitor の辞書。
 		TemplateExpressionMonitorMap const& InExpressions)
 	{
@@ -199,11 +199,11 @@ class Psyque::RuleEngine::_private::TStatusMonitor
 		/// [in,out] 状態変化を通知する FExpressionMonitor の辞書。
 		TemplateExpressionMonitorMap& OutExpressionMonitors,
 		/// [in] FReservoir::FindTransition の戻り値。
-		Psyque::ETernary const InTransition)
+		EPsyqueKleene const InTransition)
 	{
 		// 状態変化を検知する。
-		auto const LocalExistence(InTransition != Psyque::ETernary::Unknown);
-		if (InTransition == Psyque::ETernary::True
+		auto const LocalExistence(InTransition != EPsyqueKleene::TernaryUnknown);
+		if (InTransition == EPsyqueKleene::TernaryTrue
 			|| LocalExistence != this->LastExistence)
 		{
 			TemplateExpressionMonitorMap::mapped_type::NotifyStatusTransition(
@@ -214,10 +214,10 @@ class Psyque::RuleEngine::_private::TStatusMonitor
 
 	//-------------------------------------------------------------------------
 	/// @brief 評価の更新を要求する TEvaluator::FExpressionKey のコンテナ。
-	private: typename This::FExpressionKeyArray ExpressionKeys;
+	private: typename ThisClass::FExpressionKeyArray ExpressionKeys;
 	/// @brief 前回の NotifyTransition で、状態値が存在したか。
 	private: bool LastExistence;
 
-}; // class Psyque::RuleEngine::_private::TStatusMonitor
+}; // class Psyque::RulesEngine::_private::TStatusMonitor
 
 // vim: set noexpandtab:

@@ -1,19 +1,19 @@
 ﻿// Copyright (c) 2016, Hillco Psychi, All rights reserved.
 /// @file
-/// @brief @copybrief Psyque::RuleEngine::_private::THandlerChunk
+/// @brief @copybrief Psyque::RulesEngine::_private::THandlerChunk
 /// @author Hillco Psychi (https://twitter.com/psychi)
 #pragma once
 
 /// @cond
 namespace Psyque
 {
-	namespace RuleEngine
+	namespace RulesEngine
 	{
 		namespace _private
 		{
 			template<typename> class THandlerChunk;
 		} // namespace _private
-	} // namespace RuleEngine
+	} // namespace RulesEngine
 } // namespace Psyque
 /// @endcond
 
@@ -21,19 +21,19 @@ namespace Psyque
 /// @brief 条件挙動チャンク。条件式の評価が変化した際に呼び出す関数を保持する。
 /// @tparam THandlerChunk::FDispather
 template<typename TemplateDispatcher>
-class Psyque::RuleEngine::_private::THandlerChunk
+class Psyque::RulesEngine::_private::THandlerChunk
 {
-	private: using This = THandlerChunk; ///< @copydoc TDispatcher::This
+	private: using ThisClass = THandlerChunk; ///< @copydoc TDispatcher::ThisClass
 
 	//-------------------------------------------------------------------------
 	/// @brief _private::FDispather を表す型。
 	public: using FDispather = TemplateDispatcher;
 	/// @brief 条件挙動チャンクのコンテナを表す型。
 	public: using FArray = std::vector<
-		This, typename This::FDispather::FAllocator>;
+		ThisClass, typename ThisClass::FDispather::FAllocator>;
 	/// @brief 条件挙動チャンクの識別値を表す型。
 	public: using FKey =
-		typename This::FDispather::FEvaluator::FReservoir::FChunkKey;
+		typename ThisClass::FDispather::FEvaluator::FReservoir::FChunkKey;
 
 	//-------------------------------------------------------------------------
 	/// @copydoc Functions
@@ -74,7 +74,7 @@ class Psyque::RuleEngine::_private::THandlerChunk
 	/// @brief ムーブ構築子。
 	public: THandlerChunk(
 		/// [in,out] ムーブ元となるインスタンス。
-		This&& OutSource):
+		ThisClass&& OutSource):
 	Functions(MoveTemp(OutSource.Functions)),
 	Key(MoveTemp(OutSource.Key))
 	{}
@@ -82,9 +82,9 @@ class Psyque::RuleEngine::_private::THandlerChunk
 	/** @brief ムーブ代入演算子。
 		@return *this
 	 */
-	public: This& operator=(
+	public: ThisClass& operator=(
 		/// [in,out] ムーブ元となるインスタンス。
-		This&& OutSource)
+		ThisClass&& OutSource)
 	{
 		this->Functions = MoveTemp(OutSource.Functions);
 		this->Key = MoveTemp(OutSource.Key);
@@ -104,11 +104,11 @@ class Psyque::RuleEngine::_private::THandlerChunk
 	/// @retval false 失敗。 THandler::FFunction を追加しなかった。
 	public: static bool Extend(
 		/// [in,out] THandler::FFunction を追加する条件挙動チャンクのコンテナ。
-		typename This::FArray& OutChunks,
+		typename ThisClass::FArray& OutChunks,
 		/// [in] THandler::FFunction を追加する条件挙動チャンクの識別値。
-		typename This::FKey const InKey,
+		typename ThisClass::FKey const InKey,
 		/// [in] 条件挙動チャンクに追加する THandler::FFunctionSharedPtr 。
-		typename This::FDispather::FHandler::FFunctionSharedPtr InFunction)
+		typename ThisClass::FDispather::FHandler::FFunctionSharedPtr InFunction)
 	{
 		if (InFunction.get() == nullptr)
 		{
@@ -116,7 +116,7 @@ class Psyque::RuleEngine::_private::THandlerChunk
 		}
 
 		// 条件挙動関数を条件挙動チャンクに追加する。
-		This::Equip(OutChunks, InKey).Functions.push_back(
+		ThisClass::Equip(OutChunks, InKey).Functions.push_back(
 			MoveTemp(InFunction));
 		return true;
 	}
@@ -126,16 +126,16 @@ class Psyque::RuleEngine::_private::THandlerChunk
 	public: template<typename TemplateFunctionContainer>
 	static std::size_t Extend(
 		/// [in,out] FHandler::FFunction を追加する条件挙動チャンクのコンテナ。
-		typename This::FArray& OutChunks,
+		typename ThisClass::FArray& OutChunks,
 		/// [in] FHandler::FFunction を追加する条件挙動チャンクの識別値。
-		typename This::FKey const InKey,
+		typename ThisClass::FKey const InKey,
 		/// [in] 条件挙動チャンクに追加する
 		/// FHandler::FFunctionSharedPtr のコンテナ。
 		TemplateFunctionContainer InFunctions)
 	{
 		// 条件挙動関数を条件挙動チャンクに追加する。
 		auto& local_chunk_functions(
-			This::Equip(OutChunks, InKey).Functions);
+			ThisClass::Equip(OutChunks, InKey).Functions);
 		local_chunk_functions.reserve(
 			local_chunk_functions.size() + InFunctions.size());
 		std::size_t local_count(0);
@@ -155,16 +155,16 @@ class Psyque::RuleEngine::_private::THandlerChunk
 	/// @retval false InKey に対応する条件挙動チャンクがコンテナになかった。
 	public: static bool erase(
 		/// [in,out] 条件挙動チャンクを削除するコンテナ。
-		typename This::FArray& OutChunks,
+		typename ThisClass::FArray& OutChunks,
 		/// [in] 削除する条件挙動チャンクの識別値。
-		typename This::FKey const InKey)
+		typename ThisClass::FKey const InKey)
 	{
 		auto const LocalLowerBound(
 			std::lower_bound(
 				OutChunks.begin(),
 				OutChunks.end(),
 				InKey,
-				typename This::FKeyLess()));
+				typename ThisClass::FKeyLess()));
 		if (LocalLowerBound == OutChunks.end()
 			|| LocalLowerBound->Key != InKey)
 		{
@@ -178,20 +178,20 @@ class Psyque::RuleEngine::_private::THandlerChunk
 	/// @brief 空の条件挙動チャンクを構築する。
 	private: THandlerChunk(
 		/// [in] 条件挙動チャンクの識別値。
-		typename This::FKey const InKey,
+		typename ThisClass::FKey const InKey,
 		/// [in] メモリ割当子の初期値。
-		typename This::FDispather::FAllocator const& InAllocator):
+		typename ThisClass::FDispather::FAllocator const& InAllocator):
 	Functions(InAllocator),
 	Key(InKey)
 	{}
 
 	/// @brief 条件挙動チャンクを用意する。
 	/// @return 用意した条件挙動チャンク。
-	private: static This& Equip(
+	private: static ThisClass& Equip(
 		/// [in,out] 条件挙動チャンクのコンテナ。
-		typename This::FArray& OutChunks,
+		typename ThisClass::FArray& OutChunks,
 		/// [in] 用意する条件挙動チャンクの識別値。
-		typename This::FKey const InKey)
+		typename ThisClass::FKey const InKey)
 	{
 		// 条件挙動関数を追加する条件挙動チャンクを用意する。
 		auto const LocalLowerBound(
@@ -199,21 +199,21 @@ class Psyque::RuleEngine::_private::THandlerChunk
 				OutChunks.begin(),
 				OutChunks.end(),
 				InKey,
-				typename This::FKeyLess()));
+				typename ThisClass::FKeyLess()));
 		return LocalLowerBound != OutChunks.end()
 		&& LocalLowerBound->Key == InKey?
 			*LocalLowerBound:
 			*OutChunks.insert(
 				LocalLowerBound,
-				This(InKey, OutChunks.get_allocator()));
+				ThisClass(InKey, OutChunks.get_allocator()));
 	}
 
 	//-------------------------------------------------------------------------
 	/// @brief FHandler::FFunctionSharedPtr のコンテナ。
-	private: typename This::FunctionSharedPtrArray Functions;
+	private: typename ThisClass::FunctionSharedPtrArray Functions;
 	/// @brief 条件挙動チャンクの識別値。
-	private: typename This::FKey Key;
+	private: typename ThisClass::FKey Key;
 
-}; // class Psyque::RuleEngine::THandlerChunk
+}; // class Psyque::RulesEngine::THandlerChunk
 
 // vim: set noexpandtab:

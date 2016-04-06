@@ -1,17 +1,16 @@
 ﻿// Copyright (c) 2016, Hillco Psychi, All rights reserved.
 /// @file
-/// @brief @copybrief Psyque::RuleEngine::_private::TExpression
+/// @brief @copybrief Psyque::RulesEngine::_private::TExpression
 /// @author Hillco Psychi (https://twitter.com/psychi)
 #pragma once
 
-#include <cstdint>
-#include "../Assert.h"
+#include "./Assert.h"
 #include "./Enum.h"
 
 /// @cond
 namespace Psyque
 {
-	namespace RuleEngine
+	namespace RulesEngine
 	{
 		namespace _private
 		{
@@ -20,18 +19,18 @@ namespace Psyque
 			template<typename> class TStatusTransition;
 			template<typename, typename, typename> class TExpressionChunk;
 		} // namespace _private
-	} // namespace RuleEngine
+	} // namespace RulesEngine
 } // namespace Psyque
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// @brief 条件式。
+/// @brief 状態値を参照する条件式。
 /// @tparam TemplateChunkKey     @copydoc TExpression::FChunkKey
 /// @tparam TemplateElementIndex @copydoc TExpression::FElementIndex
 template<typename TemplateChunkKey, typename TemplateElementIndex>
-class Psyque::RuleEngine::_private::TExpression
+class Psyque::RulesEngine::_private::TExpression
 {
-	private: using This = TExpression; ///< @copydoc TEvaluator::This
+	private: using ThisClass = TExpression; ///< @copydoc TEvaluator::ThisClass
 
 	//-------------------------------------------------------------------------
 	/// @brief 要素条件チャンクの識別値を表す型。
@@ -42,16 +41,16 @@ class Psyque::RuleEngine::_private::TExpression
 	//-------------------------------------------------------------------------
 	/// @brief 条件式を構築する。
 	public: TExpression(
-		/// [in] This::ChunkKey の初期値。
-		typename This::FChunkKey InChunkKey,
-		/// [in] This::Logic の初期値。
-		RuleEngine::EExpressionLogic const InLogic,
-		/// [in] This::Kind の初期値。
-		RuleEngine::EExpressionKind const InKind,
-		/// [in] This::BeginIndex の初期値。
-		typename This::FElementIndex const InBeginIndex,
-		/// [in] This::EndIndex の初期値。
-		typename This::FElementIndex const InEndIndex)
+		/// [in] ThisClass::ChunkKey の初期値。
+		typename ThisClass::FChunkKey InChunkKey,
+		/// [in] ThisClass::Logic の初期値。
+		RulesEngine::EExpressionLogic const InLogic,
+		/// [in] ThisClass::Kind の初期値。
+		RulesEngine::EExpressionKind const InKind,
+		/// [in] ThisClass::BeginIndex の初期値。
+		typename ThisClass::FElementIndex const InBeginIndex,
+		/// [in] ThisClass::EndIndex の初期値。
+		typename ThisClass::FElementIndex const InEndIndex)
 	PSYQUE_NOEXCEPT:
 	ChunkKey(MoveTemp(InChunkKey)),
 	BeginIndex((PSYQUE_ASSERT(InBeginIndex <= InEndIndex), InBeginIndex)),
@@ -69,29 +68,29 @@ class Psyque::RuleEngine::_private::TExpression
 	}
 
 	/// @brief 条件式が格納されている要素条件チャンクの識別値を取得する。
-	/// @return @copydoc This::ChunkKey
-	public: typename This::FChunkKey const GetChunkKey() const PSYQUE_NOEXCEPT
+	/// @return @copydoc ThisClass::ChunkKey
+	public: typename ThisClass::FChunkKey const GetChunkKey() const PSYQUE_NOEXCEPT
 	{
 		return this->ChunkKey;
 	}
 
 	/// @brief 条件式が使う要素条件チャンクの先頭インデクス番号を取得する。
-	/// @return @copydoc This::BeginIndex
-	public: typename This::FElementIndex GetBeginIndex() const PSYQUE_NOEXCEPT
+	/// @return @copydoc ThisClass::BeginIndex
+	public: typename ThisClass::FElementIndex GetBeginIndex() const PSYQUE_NOEXCEPT
 	{
 		return this->BeginIndex;
 	}
 
 	/// @brief 条件式が使う要素条件チャンクの末尾インデクス番号を取得する。
-	/// @return @copydoc This::EndIndex
-	public: typename This::FElementIndex GetEndIndex() const PSYQUE_NOEXCEPT
+	/// @return @copydoc ThisClass::EndIndex
+	public: typename ThisClass::FElementIndex GetEndIndex() const PSYQUE_NOEXCEPT
 	{
 		return this->EndIndex;
 	}
 
 	/// @brief 条件式の種類を取得する。
-	/// @return @copydoc This::Kind
-	public: RuleEngine::EExpressionKind GetKind() const PSYQUE_NOEXCEPT
+	/// @return @copydoc ThisClass::Kind
+	public: RulesEngine::EExpressionKind GetKind() const PSYQUE_NOEXCEPT
 	{
 		return this->Kind;
 	}
@@ -103,7 +102,7 @@ class Psyque::RuleEngine::_private::TExpression
 	public: template<
 		typename TemplateElementArray,
 		typename TemplateElementEvaluator>
-	Psyque::ETernary Evaluate(
+	EPsyqueKleene Evaluate(
 		/// [in] 評価に用いる要素条件のコンテナ。
 		TemplateElementArray const& InElements,
 		/// [in] 要素条件を評価する関数オブジェクト。
@@ -116,72 +115,72 @@ class Psyque::RuleEngine::_private::TExpression
 		{
 			// 条件式が空か、範囲外の要素条件を参照している。
 			check(this->IsEmpty());
-			return Psyque::ETernary::Unknown;
+			return EPsyqueKleene::TernaryUnknown;
 		}
 		auto const LocalEnd(InElements.begin() + this->EndIndex);
-		auto const LocalAnd(this->Logic == RuleEngine::EExpressionLogic::And);
+		auto const LocalAnd(this->Logic == RulesEngine::EExpressionLogic::And);
 		for (auto i(InElements.begin() + this->BeginIndex); i != LocalEnd; ++i)
 		{
 			auto const LocalEvaluation(InEvaluator(*i));
-			if (LocalEvaluation == Psyque::ETernary::Unknown)
+			if (LocalEvaluation == EPsyqueKleene::TernaryUnknown)
 			{
-				return Psyque::ETernary::Unknown;
+				return EPsyqueKleene::TernaryUnknown;
 			}
-			else if (LocalEvaluation == Psyque::ETernary::True)
+			else if (LocalEvaluation == EPsyqueKleene::TernaryTrue)
 			{
 				if (!LocalAnd)
 				{
-					return Psyque::ETernary::True;
+					return EPsyqueKleene::TernaryTrue;
 				}
 			}
 			else if (LocalAnd)
 			{
-				return Psyque::ETernary::False;
+				return EPsyqueKleene::TernaryFalse;
 			}
 		}
-		return static_cast<Psyque::ETernary>(LocalAnd);
+		return static_cast<EPsyqueKleene>(LocalAnd);
 	}
 
 	//-------------------------------------------------------------------------
 	/// @brief 要素条件チャンクに対応する識別値。
-	private: typename This::FChunkKey ChunkKey;
+	private: typename ThisClass::FChunkKey ChunkKey;
 	/// @brief 条件式が使う要素条件の先頭インデクス番号。
-	private: typename This::FElementIndex BeginIndex;
+	private: typename ThisClass::FElementIndex BeginIndex;
 	/// @brief 条件式が使う要素条件の末尾インデクス番号。
-	private: typename This::FElementIndex EndIndex;
+	private: typename ThisClass::FElementIndex EndIndex;
 	/// @brief 条件式の要素条件を結合する論理演算子。
-	private: RuleEngine::EExpressionLogic Logic;
+	private: RulesEngine::EExpressionLogic Logic;
 	/// @brief 条件式の種類。
-	private: RuleEngine::EExpressionKind Kind;
+	private: RulesEngine::EExpressionKind Kind;
 
-}; // class Psyque::RuleEngine::_private::TExpression
+}; // class Psyque::RulesEngine::_private::TExpression
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief 複合条件式の要素条件。
-/// @tparam TemplateExpressionKey @copydoc Psyque::RuleEngine::_private::TEvaluator::FExpressionKey
+/// @tparam TemplateExpressionKey @copydoc Psyque::RulesEngine::_private::TEvaluator::FExpressionKey
 template<typename TemplateExpressionKey>
-class Psyque::RuleEngine::_private::TSubExpression
+class Psyque::RulesEngine::_private::TSubExpression
 {
-	private: using This = TSubExpression; ///< @copydoc TEvaluator::This
+	private: using ThisClass = TSubExpression; ///< @copydoc TEvaluator::ThisClass
 
 	/// @brief 複合条件式の要素条件を構築する。
 	public: PSYQUE_CONSTEXPR TSubExpression(
-		/// [in] This::Key の初期値。
+		/// [in] ThisClass::Key の初期値。
 		TemplateExpressionKey InKey,
-		/// [in] This::FCondition の初期値。
+		/// [in] ThisClass::FCondition の初期値。
 		bool const InCondition)
 	PSYQUE_NOEXCEPT:
 	Key(MoveTemp(InKey)),
 	Condition(InCondition)
 	{}
 
-	public: PSYQUE_CONSTEXPR TemplateExpressionKey const GetKey()
+	public: TemplateExpressionKey const PSYQUE_CONSTEXPR GetKey()
 	const PSYQUE_NOEXCEPT
 	{
 		return this->Key;
 	}
 
-	public: PSYQUE_CONSTEXPR bool CompareCondition(bool InCondition)
+	public: bool PSYQUE_CONSTEXPR CompareCondition(bool InCondition)
 	const PSYQUE_NOEXCEPT
 	{
 		return InCondition == this->Condition;
@@ -192,19 +191,19 @@ class Psyque::RuleEngine::_private::TSubExpression
 	/// @brief 結合する際の条件。
 	private: bool Condition;
 
-}; // class Psyque::RuleEngine::_private::TSubExpression
+}; // class Psyque::RulesEngine::_private::TSubExpression
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief 状態変化条件式の要素条件。
-/// @tparam TemplateStatusKey @copydoc Psyque::RuleEngine::_private::TReservoir::FStatusKey
+/// @tparam TemplateStatusKey @copydoc Psyque::RulesEngine::_private::TReservoir::FStatusKey
 template<typename TemplateStatusKey>
-class Psyque::RuleEngine::_private::TStatusTransition
+class Psyque::RulesEngine::_private::TStatusTransition
 {
-	private: using This = TStatusTransition; ///< @copydoc TEvaluator::This
+	private: using ThisClass = TStatusTransition; ///< @copydoc TEvaluator::ThisClass
 
 	/// @brief 状態変化条件式の要素条件を構築する。
 	public: PSYQUE_CONSTEXPR TStatusTransition(
-		/// [in] This::Key の初期値。
+		/// [in] ThisClass::Key の初期値。
 		TemplateStatusKey InKey)
 	PSYQUE_NOEXCEPT: Key(MoveTemp(InKey))
 	{}
@@ -218,7 +217,7 @@ class Psyque::RuleEngine::_private::TStatusTransition
 	/// @brief 変化を検知する状態値の識別値。
 	private: TemplateStatusKey Key;
 
-}; // class Psyque::RuleEngine::_private::TStatusTransition
+}; // class Psyque::RulesEngine::_private::TStatusTransition
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief 要素条件チャンク。
@@ -229,9 +228,9 @@ template<
 	typename TemplateSubExpressionArray,
 	typename TemplateStatusTransitionArray,
 	typename TemplateStatusComparisonArray>
-class Psyque::RuleEngine::_private::TExpressionChunk
+class Psyque::RulesEngine::_private::TExpressionChunk
 {
-	private: using This = TExpressionChunk; ///< @copydoc TEvaluator::This
+	private: using ThisClass = TExpressionChunk; ///< @copydoc TEvaluator::ThisClass
 
 	//-------------------------------------------------------------------------
 	/// @brief 複合条件式の要素条件のコンテナの型。
@@ -245,7 +244,7 @@ class Psyque::RuleEngine::_private::TExpressionChunk
 	/// @brief 空の要素条件チャンクを構築する。
 	public: explicit TExpressionChunk(
 		/// [in] メモリ割当子の初期値。
-		typename This::FSubExpressionArray::allocator_type const& InAllocator):
+		typename ThisClass::FSubExpressionArray::allocator_type const& InAllocator):
 	SubExpressions(InAllocator),
 	StatusTransitions(InAllocator),
 	StatusComparisons(InAllocator)
@@ -255,7 +254,7 @@ class Psyque::RuleEngine::_private::TExpressionChunk
 	/// @brief ムーブ構築子。
 	public: TExpressionChunk(
 		/// [in,out] ムーブ元となるインスタンス。
-		This&& OutSource):
+		ThisClass&& OutSource):
 	SubExpressions(MoveTemp(OutSource.SubExpressions)),
 	StatusTransitions(MoveTemp(OutSource.StatusTransitions)),
 	StatusComparisons(MoveTemp(OutSource.StatusComparisons))
@@ -263,9 +262,9 @@ class Psyque::RuleEngine::_private::TExpressionChunk
 
 	/// @brief ムーブ代入演算子。
 	/// @return *this
-	public: This& operator=(
+	public: ThisClass& operator=(
 		/// [in,out] ムーブ元となるインスタンス。
-		This&& OutSource)
+		ThisClass&& OutSource)
 	{
 		if (this != &OutSource)
 		{
@@ -279,12 +278,12 @@ class Psyque::RuleEngine::_private::TExpressionChunk
 
 	//-------------------------------------------------------------------------
 	/// @brief 複合条件式で使う要素条件のコンテナ。
-	public: typename This::FSubExpressionArray SubExpressions;
+	public: typename ThisClass::FSubExpressionArray SubExpressions;
 	/// @brief 状態変化条件式で使う要素条件のコンテナ。
-	public: typename This::FStatusTransitionArray StatusTransitions;
+	public: typename ThisClass::FStatusTransitionArray StatusTransitions;
 	/// @brief 状態比較条件式で使う要素条件のコンテナ。
-	public: typename This::FStatusComparisonArray StatusComparisons;
+	public: typename ThisClass::FStatusComparisonArray StatusComparisons;
 
-}; // class Psyque::RuleEngine::_private::TExpressionChunk
+}; // class Psyque::RulesEngine::_private::TExpressionChunk
 
 // vim: set noexpandtab:

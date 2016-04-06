@@ -1,29 +1,28 @@
 ﻿// Copyright (c) 2016, Hillco Psychi, All rights reserved.
 /// @file
-/// @brief @copybrief Psyque::RuleEngine::TStatusBuilder
+/// @brief @copybrief Psyque::RulesEngine::TStatusBuilder
 /// @author Hillco Psychi (https://twitter.com/psychi)
 #pragma once
 
-#include "Dom/JsonValue.h"
-#include "Serialization/JsonSerializer.h"
+#include "Json.h"
 
 /// @cond
 namespace Psyque
 {
-	namespace RuleEngine
+	namespace RulesEngine
 	{
 		class TStatusBuilder;
-	} // namespace RuleEngine
+	} // namespace RulesEngine
 } // namespace Psyque
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief 文字列表から状態値を構築する関数オブジェクト。
 /// @details  TDriver::ExtendChunk の引数として使う。
-class Psyque::RuleEngine::TStatusBuilder
+class Psyque::RulesEngine::TStatusBuilder
 {
 	/// @brief this が指す値の型。
-	private: using This = TStatusBuilder;
+	private: using ThisClass = TStatusBuilder;
 
 	//-------------------------------------------------------------------------
 	/// @brief 中間表現を解析して状態値を構築し、状態貯蔵器へ登録する。
@@ -43,16 +42,13 @@ class Psyque::RuleEngine::TStatusBuilder
 		TemplateIntermediation const& InIntermediation)
 	const
 	{
-		return This::RegisterStatuses(
+		return ThisClass::RegisterStatuses(
 			OutReservoir, InHashFunction, InChunkKey, InIntermediation);
 	}
 
 	/// @brief JSONを解析して状態値を構築し、状態貯蔵器へ登録する。
 	/// @return 登録した状態値の数。
-	public: template<
-		typename TemplateReservoir,
-		typename TemplateHasher,
-		typename TemplateChar>
+	public: template<typename TemplateReservoir, typename TemplateHasher>
 	static std::size_t RegisterStatuses(
 		/// [in,out] 状態値を登録する TDriver::FReservoir インスタンス。
 		TemplateReservoir& OutReservoir,
@@ -60,17 +56,37 @@ class Psyque::RuleEngine::TStatusBuilder
 		TemplateHasher const& InHashFunction,
 		/// [in] 状態値を登録するチャンクの識別値。
 		typename TemplateReservoir::FChunkKey const InChunkKey,
-		/// [in] 状態値が記述されているJSON解析器。
-		TSharedRef<TJsonReader<TemplateChar>> const& InJsonReader)
+		/// [in] JSON形式で状態値が記述されている文字列。
+		FString const& InJsonFormatString)
 	{
+		auto const LocalJsonReader(
+			StaticCastSharedRef<TJsonReader<TCHAR>>(
+				FJsonStringReader::Create(InJsonFormatString)));
 		TArray<TSharedPtr<FJsonValue>> LocalJsonArray;
-		if (!FJsonSerializer::Deserialize(InJsonReader, LocalJsonArray))
+		if (FJsonSerializer::Deserialize(LocalJsonReader, LocalJsonArray))
 		{
-			//UE_LOG();
-			return 0;
+			return ThisClass::RegisterStatuses(
+				OutReservoir, InHashFunction, InChunkKey, LocalJsonArray);
 		}
+		//UE_LOG();
+		return 0;
+	}
+
+	/// @brief JSONを解析して状態値を構築し、状態貯蔵器へ登録する。
+	/// @return 登録した状態値の数。
+	public: template<typename TemplateReservoir, typename TemplateHasher>
+	static std::size_t RegisterStatuses(
+		/// [in,out] 状態値を登録する TDriver::FReservoir インスタンス。
+		TemplateReservoir& OutReservoir,
+		/// [in] 文字列からハッシュ値を作る TDriver::FHasher インスタンス。
+		TemplateHasher const& InHashFunction,
+		/// [in] 状態値を登録するチャンクの識別値。
+		typename TemplateReservoir::FChunkKey const InChunkKey,
+		/// [in] 状態値が記述されているJSON値の配列。
+		TArray<TSharedPtr<FJsonValue>> const& InJsonArray)
+	{
 		std::size_t LocalCount(0);
-		for (auto const& LocalJsonValue: LocalJsonArray)
+		for (auto const& LocalJsonValue: InJsonArray)
 		{
 			// 下位要素が要素数2以上の配列か判定する。
 			auto const LocalRow(LocalJsonValue.Get());
@@ -98,7 +114,7 @@ class Psyque::RuleEngine::TStatusBuilder
 			auto const LocalStatusValue(LocalColumns[1].Get());
 			if (LocalStatusValue != nullptr)
 			{
-				LocalCount += This::RegisterStatus(
+				LocalCount += ThisClass::RegisterStatus(
 					OutReservoir,
 					InHashFunction,
 					InChunkKey,
@@ -144,14 +160,14 @@ class Psyque::RuleEngine::TStatusBuilder
 			{
 				// 状態値のビット幅を取り出す。
 				int64 LocalBitWidth;
-				if (!This::ExtractInteger(LocalBitWidth, *InStatusBitWidth))
+				if (!ThisClass::ExtractInteger(LocalBitWidth, *InStatusBitWidth))
 				{
 					return false;
 				}
 
 				// 初期値となる整数を取り出す。
 				int64 LocalInteger;
-				if (!This::ExtractInteger(LocalInteger, InStatusValue))
+				if (!ThisClass::ExtractInteger(LocalInteger, InStatusValue))
 				{
 					return false;
 				}
@@ -201,6 +217,6 @@ class Psyque::RuleEngine::TStatusBuilder
 		return false;
 	}
 
-}; // class Psyque::RuleEngine::TStatusBuilder
+}; // class Psyque::RulesEngine::TStatusBuilder
 
 // vim: set noexpandtab:

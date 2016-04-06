@@ -1,6 +1,6 @@
 ﻿// Copyright (c) 2016, Hillco Psychi, All rights reserved.
 /// @file
-/// @brief @copybrief Psyque::RuleEngine::_private::TEvaluator
+/// @brief @copybrief Psyque::RulesEngine::_private::TEvaluator
 /// @author Hillco Psychi (https://twitter.com/psychi)
 #pragma once
 
@@ -12,13 +12,13 @@
 /// @cond
 namespace Psyque
 {
-	namespace RuleEngine
+	namespace RulesEngine
 	{
 		namespace _private
 		{
 			template<typename, typename> class TEvaluator;
 		} // namespace _private
-	} // namespace RuleEngine
+	} // namespace RulesEngine
 } // namespace Psyque
 /// @endcond
 
@@ -30,55 +30,55 @@ namespace Psyque
 /// @tparam TemplateReservoir     @copydoc TEvaluator::FReservoir
 /// @tparam TemplateExpressionKey @copydoc TEvaluator::FExpressionKey
 template<typename TemplateReservoir, typename TemplateExpressionKey>
-class Psyque::RuleEngine::_private::TEvaluator
+class Psyque::RulesEngine::_private::TEvaluator
 {
-	private: using This = TEvaluator; ///< @copydoc RuleEngine::TDriver::This
+	private: using ThisClass = TEvaluator; ///< @copydoc RulesEngine::TDriver::ThisClass
 
 	//-------------------------------------------------------------------------
 	/// @brief 条件評価器で使う TReservoir の型。
 	public: using FReservoir = TemplateReservoir;
 	/// @brief 条件評価器で使うメモリ割当子の型。
-	public: using FAllocator = typename This::FReservoir::FAllocator;
+	public: using FAllocator = typename ThisClass::FReservoir::FAllocator;
 
 	//-------------------------------------------------------------------------
 	/// @brief 条件評価器で使う条件式の識別値。
 	public: using FExpressionKey = TemplateExpressionKey;
 	/// @brief 条件評価器で使う条件式。
-	public: using FExpression = Psyque::RuleEngine::_private::TExpression<
+	public: using FExpression = Psyque::RulesEngine::_private::TExpression<
 		typename TemplateReservoir::FChunkKey, uint32>;
 
 	//-------------------------------------------------------------------------
 	/// @brief 条件式が参照する要素条件チャンク。
-	public: using FChunk = Psyque::RuleEngine::_private::TExpressionChunk<
+	public: using FChunk = Psyque::RulesEngine::_private::TExpressionChunk<
 		std::vector<
-			Psyque::RuleEngine::_private::TSubExpression<
-				typename This::FExpressionKey>,
+			Psyque::RulesEngine::_private::TSubExpression<
+				typename ThisClass::FExpressionKey>,
 			typename TEvaluator::FAllocator>,
 		std::vector<
-			Psyque::RuleEngine::_private::TStatusTransition<
-				typename This::FReservoir::FStatusKey>,
-			typename This::FAllocator>,
+			Psyque::RulesEngine::_private::TStatusTransition<
+				typename ThisClass::FReservoir::FStatusKey>,
+			typename ThisClass::FAllocator>,
 		std::vector<
-			typename This::FReservoir::FStatusComparison,
-			typename This::FAllocator>>;
+			typename ThisClass::FReservoir::FStatusComparison,
+			typename ThisClass::FAllocator>>;
 	/// @brief 要素条件チャンクの識別値。
-	public: using FChunkKey = typename This::FReservoir::FChunkKey;
+	public: using FChunkKey = typename ThisClass::FReservoir::FChunkKey;
 
 	//-------------------------------------------------------------------------
 	/// @brief 条件式の辞書。
 	private: using FExpressionMap = std::unordered_map<
-		typename This::FExpressionKey,
-		typename This::FExpression,
-		Psyque::Hash::TPrimitiveBits<typename This::FExpressionKey>,
-		std::equal_to<typename This::FExpressionKey>,
-		typename This::FAllocator>;
+		typename ThisClass::FExpressionKey,
+		typename ThisClass::FExpression,
+		Psyque::Hash::TPrimitiveBits<typename ThisClass::FExpressionKey>,
+		std::equal_to<typename ThisClass::FExpressionKey>,
+		typename ThisClass::FAllocator>;
 	/// @brief 要素条件チャンクの辞書。
 	private: using FChunkMap = std::unordered_map<
-		typename This::FChunkKey,
-		typename This::FChunk,
-		Psyque::Hash::TPrimitiveBits<typename This::FChunkKey>,
-		std::equal_to<typename This::FChunkKey>,
-		typename This::FAllocator>;
+		typename ThisClass::FChunkKey,
+		typename ThisClass::FChunk,
+		Psyque::Hash::TPrimitiveBits<typename ThisClass::FChunkKey>,
+		std::equal_to<typename ThisClass::FChunkKey>,
+		typename ThisClass::FAllocator>;
 
 	//-------------------------------------------------------------------------
 	/// @name 構築と代入
@@ -91,17 +91,17 @@ class Psyque::RuleEngine::_private::TEvaluator
 		/// [in] 条件式辞書のバケット数。
 		std::size_t const InExpressionCapacity,
 		/// [in] メモリ割当子の初期値。
-		typename This::FAllocator const& InAllocator =
-			typename This::FAllocator()):
+		typename ThisClass::FAllocator const& InAllocator =
+			typename ThisClass::FAllocator()):
 	Chunks(
 		InChunkCapacity,
-		typename This::FChunkMap::hasher(),
-		typename This::FChunkMap::key_equal(),
+		typename ThisClass::FChunkMap::hasher(),
+		typename ThisClass::FChunkMap::key_equal(),
 		InAllocator),
 	Expressions(
 		InExpressionCapacity,
-		typename This::FExpressionMap::hasher(),
-		typename This::FExpressionMap::key_equal(),
+		typename ThisClass::FExpressionMap::hasher(),
+		typename ThisClass::FExpressionMap::key_equal(),
 		InAllocator)
 	{}
 
@@ -109,16 +109,16 @@ class Psyque::RuleEngine::_private::TEvaluator
 	/// @brief ムーブ構築子。
 	public: TEvaluator(
 		/// [in,out] ムーブ元となるインスタンス。
-		This&& OutSource):
+		ThisClass&& OutSource):
 	Chunks(MoveTemp(OutSource.Chunks)),
 	Expressions(MoveTemp(OutSource.Expressions))
 	{}
 
 	/// @brief ムーブ代入演算子。
 	/// @return *this
-	public: This& operator=(
+	public: ThisClass& operator=(
 		/// [in,out] ムーブ元となるインスタンス。
-		This&& OutSource)
+		ThisClass&& OutSource)
 	{
 		this->Chunks = MoveTemp(OutSource.Chunks);
 		this->Expressions = MoveTemp(OutSource.Expressions);
@@ -128,7 +128,7 @@ class Psyque::RuleEngine::_private::TEvaluator
 
 	/// @brief 条件評価器で使われているメモリ割当子を取得する。
 	/// @return *this で使われているメモリ割当子のコピー。
-	public: typename This::FAllocator get_allocator()
+	public: typename ThisClass::FAllocator get_allocator()
 	const PSYQUE_NOEXCEPT
 	{
 		return this->Expressions.get_allocator();
@@ -160,7 +160,7 @@ class Psyque::RuleEngine::_private::TEvaluator
 	/// @retval false InExpressionKey に対応する条件式は *this に登録されてない。
 	public: bool IsRegistered(
 		/// [in] 判定する状態値に対応する識別値。
-		typename This::FExpressionKey const InExpressionKey)
+		typename ThisClass::FExpressionKey const InExpressionKey)
 	const
 	{
 		return this->Expressions.find(InExpressionKey)
@@ -168,8 +168,8 @@ class Psyque::RuleEngine::_private::TEvaluator
 	}
 
 	/// @brief 条件式を登録する。
-	/// @sa This::EvaluateExpression で、登録した条件式を評価できる。
-	/// @sa This::RemoveChunk で、登録した条件式をチャンク単位で削除できる。
+	/// @sa ThisClass::EvaluateExpression で、登録した条件式を評価できる。
+	/// @sa ThisClass::RemoveChunk で、登録した条件式をチャンク単位で削除できる。
 	/// @retval true 成功。条件式を *this に登録した。
 	/// @retval false
 	///   失敗。条件式は登録されなかった。
@@ -178,18 +178,18 @@ class Psyque::RuleEngine::_private::TEvaluator
 	public: template<typename TemplateIterator>
 	bool RegisterExpression(
 		/// [in] 条件式を登録する要素条件チャンクの識別値。
-		typename This::FChunkKey const InChunkKey,
+		typename ThisClass::FChunkKey const InChunkKey,
 		/// [in] 登録する条件式の識別値。
-		typename This::FExpressionKey const InExpressionKey,
+		typename ThisClass::FExpressionKey const InExpressionKey,
 		/// [in] 要素条件を結合する論理演算子。
-		RuleEngine::EExpressionLogic const InLogic,
+		RulesEngine::EExpressionLogic const InLogic,
 		/// [in] 登録する条件式の要素条件コンテナの先頭を指す反復子。
 		TemplateIterator const& InBeginIterator,
 		/// [in] 登録する条件式の要素条件コンテナの末尾を指す反復子。
 		TemplateIterator const& InEndIterator)
 	{
 		check(
-			This::IsValidElements(
+			ThisClass::IsValidElements(
 				InBeginIterator, InEndIterator, this->Expressions));
 		if (InBeginIterator == InEndIterator
 			|| this->IsRegistered(InExpressionKey))
@@ -201,16 +201,16 @@ class Psyque::RuleEngine::_private::TEvaluator
 		auto const local_emplace_chunk(
 			this->Chunks.emplace(
 				InChunkKey,
-				typename This::FChunkMap::mapped_type(
+				typename ThisClass::FChunkMap::mapped_type(
 					this->Chunks.get_allocator())));
 		auto const local_element_kind(
-			This::MakeElementKind(
+			ThisClass::MakeElementKind(
 				local_emplace_chunk.first->second, *InBeginIterator));
 
 		// 要素条件を挿入する。
 		auto& local_elements(*local_element_kind.second);
 		auto const local_begin_index(
-			static_cast<typename This::FExpression::FElementIndex>(
+			static_cast<typename ThisClass::FExpression::FElementIndex>(
 				local_elements.size()));
 		check(local_begin_index == local_elements.size());
 		local_elements.insert(
@@ -220,12 +220,12 @@ class Psyque::RuleEngine::_private::TEvaluator
 		auto const local_emplace_expression(
 			this->Expressions.emplace(
 				InExpressionKey,
-				typename This::FExpressionMap::mapped_type(
+				typename ThisClass::FExpressionMap::mapped_type(
 					InChunkKey,
 					InLogic,
 					local_element_kind.first,
 					local_begin_index,
-					static_cast<typename This::FExpression::FElementIndex>(
+					static_cast<typename ThisClass::FExpression::FElementIndex>(
 						local_elements.size()))));
 		check(
 			local_emplace_expression.second
@@ -237,8 +237,8 @@ class Psyque::RuleEngine::_private::TEvaluator
 	}
 
 	/// @brief 条件式を登録する。
-	/// @sa This::EvaluateExpression で、登録した条件式を評価できる。
-	/// @sa This::RemoveChunk で、登録した条件式をチャンク単位で削除できる。
+	/// @sa ThisClass::EvaluateExpression で、登録した条件式を評価できる。
+	/// @sa ThisClass::RemoveChunk で、登録した条件式をチャンク単位で削除できる。
 	/// @retval true 成功。条件式を *this に登録した。
 	/// @retval false
 	///   失敗。条件式は登録されなかった。
@@ -247,11 +247,11 @@ class Psyque::RuleEngine::_private::TEvaluator
 	public: template<typename template_element_container>
 	bool RegisterExpression(
 		/// [in] 条件式を登録する要素条件チャンクの識別値。
-		typename This::FChunkKey const InChunkKey,
+		typename ThisClass::FChunkKey const InChunkKey,
 		/// [in] 登録する条件式の識別値。
-		typename This::FExpressionKey const InExpressionKey,
+		typename ThisClass::FExpressionKey const InExpressionKey,
 		/// [in] 要素条件を結合する論理演算子。
-		RuleEngine::EExpressionLogic const InLogic,
+		RulesEngine::EExpressionLogic const InLogic,
 		/// [in] 登録する条件式の要素条件コンテナ。
 		template_element_container const& InElements)
 	{
@@ -264,8 +264,8 @@ class Psyque::RuleEngine::_private::TEvaluator
 	}
 
 	/// @brief 状態値を比較する条件式を登録する。
-	/// @sa This::EvaluateExpression で、登録した条件式を評価できる。
-	/// @sa This::RemoveChunk で、登録した条件式をチャンク単位で削除できる。
+	/// @sa ThisClass::EvaluateExpression で、登録した条件式を評価できる。
+	/// @sa ThisClass::RemoveChunk で、登録した条件式をチャンク単位で削除できる。
 	/// @retval true
 	///   成功。条件式を *this に登録した。
 	///   条件式を登録した要素条件チャンクの識別値は、 InComparison.GetKey()
@@ -277,11 +277,11 @@ class Psyque::RuleEngine::_private::TEvaluator
 	///		InReservoir にないと失敗する。
 	public: bool RegisterExpression(
 		/// [in] 条件式が参照する状態貯蔵器。
-		typename This::FReservoir const InReservoir,
+		typename ThisClass::FReservoir const InReservoir,
 		/// [in] 登録する条件式の識別値。
-		typename This::FExpressionKey const InExpressionKey,
+		typename ThisClass::FExpressionKey const InExpressionKey,
 		/// [in] 登録する状態比較要素条件。
-		typename This::FReservoir::FStatusComparison const& InComparison)
+		typename ThisClass::FReservoir::FStatusComparison const& InComparison)
 	{
 		auto const LocalStatusProperty(
 			InReservoir.FindProperty(InComparison.GetKey()));
@@ -289,14 +289,14 @@ class Psyque::RuleEngine::_private::TEvaluator
 			&& this->RegisterExpression(
 				LocalStatusProperty.GetChunkKey(),
 				InExpressionKey,
-				RuleEngine::EExpressionLogic::And,
+				RulesEngine::EExpressionLogic::And,
 				&InComparison,
 				&InComparison + 1);
 	}
 
 	/// @brief 論理型の状態値を比較する条件式を登録する。
-	/// @sa This::EvaluateExpression で、登録した条件式を評価できる。
-	/// @sa This::RemoveChunk で、登録した条件式をチャンク単位で削除できる。
+	/// @sa ThisClass::EvaluateExpression で、登録した条件式を評価できる。
+	/// @sa ThisClass::RemoveChunk で、登録した条件式をチャンク単位で削除できる。
 	/// @retval true
 	///   成功。条件式を *this に登録した。
 	///   条件式を登録した要素条件チャンクの識別値は、 InStatusKey
@@ -307,59 +307,59 @@ class Psyque::RuleEngine::_private::TEvaluator
 	///   - InStatusKey に対応する状態値が論理型以外だと失敗する。
 	public: bool RegisterExpression(
 		/// [in] 条件式が参照する状態貯蔵器。
-		typename This::FReservoir const& InReservoir,
+		typename ThisClass::FReservoir const& InReservoir,
 		/// [in] 登録する条件式の識別値。
-		typename This::FExpressionKey const InExpressionKey,
+		typename ThisClass::FExpressionKey const InExpressionKey,
 		/// [in] 評価する論理型の状態値の識別値。
-		typename This::FReservoir::FStatusKey const InStatusKey,
+		typename ThisClass::FReservoir::FStatusKey const InStatusKey,
 		/// [in] 条件となる論理値。
 		bool const InCondition)
 	{
 		return
-			InReservoir.FindKind(InStatusKey) == RuleEngine::EStatusKind::Bool
+			InReservoir.FindKind(InStatusKey) == RulesEngine::EStatusKind::Bool
 			&& this->RegisterExpression(
 				InReservoir,
 				InExpressionKey,
-				typename This::FReservoir::FStatusComparison(
+				typename ThisClass::FReservoir::FStatusComparison(
 					InStatusKey,
 					InCondition?
-						This::FReservoir::FStatusValue::EComparison::NotEqual:
-						This::FReservoir::FStatusValue::EComparison::Equal,
-					typename This::FReservoir::FStatusValue(false)));
+						ThisClass::FReservoir::FStatusValue::EComparison::NotEqual:
+						ThisClass::FReservoir::FStatusValue::EComparison::Equal,
+					typename ThisClass::FReservoir::FStatusValue(false)));
 	}
 
 	/// @brief 条件式を取得する。
 	/// @return
-	///   InExpressionKey に対応する This::FExpression のコピー。
-	///   該当する条件式がない場合は This::FExpression::IsEmpty
+	///   InExpressionKey に対応する ThisClass::FExpression のコピー。
+	///   該当する条件式がない場合は ThisClass::FExpression::IsEmpty
 	///   が真となる値を返す。
-	public: typename This::FExpression FindExpression(
+	public: typename ThisClass::FExpression FindExpression(
 		/// [in] 取得する条件式に対応する識別値。
-		typename This::FExpressionKey const InExpressionKey)
+		typename ThisClass::FExpressionKey const InExpressionKey)
 	const
 	{
 		auto const LocalFind(this->Expressions.find(InExpressionKey));
 		return LocalFind != this->Expressions.end()?
 			LocalFind->second:
-			typename This::FExpression(
-				typename This::FChunkKey(),
-				RuleEngine::EExpressionLogic::Or,
-				RuleEngine::EExpressionKind::SubExpression,
+			typename ThisClass::FExpression(
+				typename ThisClass::FChunkKey(),
+				RulesEngine::EExpressionLogic::Or,
+				RulesEngine::EExpressionKind::SubExpression,
 				0,
 				0);
 	}
 
 	/// @brief 登録されている条件式を評価する。
-	/// @sa This::RegisterExpression で、条件式を登録できる。
+	/// @sa ThisClass::RegisterExpression で、条件式を登録できる。
 	/// @return 条件式の評価結果。
-	/// - 条件式が登録されていないと、 Psyque::ETernary::Unknown となる。
+	/// - 条件式が登録されていないと、 EPsyqueKleene::TernaryUnknown となる。
 	/// - 条件式が参照する状態値が登録されていないと、
-	///   Psyque::ETernary::Unknown となる。
-	public: Psyque::ETernary EvaluateExpression(
+	///   EPsyqueKleene::TernaryUnknown となる。
+	public: EPsyqueKleene EvaluateExpression(
 		/// [in] 評価する条件式に対応する識別値。
-		typename This::FExpressionKey const InExpressionKey,
+		typename ThisClass::FExpressionKey const InExpressionKey,
 		/// [in] 条件式が参照する状態貯蔵器。
-		typename This::FReservoir const& InReservoir)
+		typename ThisClass::FReservoir const& InReservoir)
 	const
 	{
 		// 条件式の辞書から、該当する条件式を検索する。
@@ -367,7 +367,7 @@ class Psyque::RuleEngine::_private::TEvaluator
 			this->Expressions.find(InExpressionKey));
 		if (local_expression_iterator == this->Expressions.end())
 		{
-			return Psyque::ETernary::Unknown;
+			return EPsyqueKleene::TernaryUnknown;
 		}
 		auto const& LocalExpression(local_expression_iterator->second);
 		auto const LocalChunk(
@@ -376,53 +376,53 @@ class Psyque::RuleEngine::_private::TEvaluator
 		{
 			// 条件式があれば、要素条件チャンクもあるはず。
 			check(false);
-			return Psyque::ETernary::Unknown;
+			return EPsyqueKleene::TernaryUnknown;
 		}
 
 		// 条件式の種別によって評価方法を分岐する。
 		switch (LocalExpression.GetKind())
 		{
 			// 複合条件式を評価する。
-			case RuleEngine::EExpressionKind::SubExpression:
+			case RulesEngine::EExpressionKind::SubExpression:
 			using FSubExpression =
-				typename This::FChunk::FSubExpressionArray::value_type;
+				typename ThisClass::FChunk::FSubExpressionArray::value_type;
 			return LocalExpression.Evaluate(
 				LocalChunk->SubExpressions,
 				[&InReservoir, this](FSubExpression const& InExpression)
-				->Psyque::ETernary
+				->EPsyqueKleene
 				{
 					auto const LocalEvaluateExpression(
 						this->EvaluateExpression(
 							InExpression.GetKey(), InReservoir));
-					if (LocalEvaluateExpression == Psyque::ETernary::Unknown)
+					if (LocalEvaluateExpression == EPsyqueKleene::TernaryUnknown)
 					{
-						return Psyque::ETernary::Unknown;
+						return EPsyqueKleene::TernaryUnknown;
 					}
-					return static_cast<Psyque::ETernary>(
+					return static_cast<EPsyqueKleene>(
 						InExpression.CompareCondition(
-							LocalEvaluateExpression == Psyque::ETernary::True));
+							LocalEvaluateExpression == EPsyqueKleene::TernaryTrue));
 				});
 
 			// 状態変化条件式を評価する。
-			case RuleEngine::EExpressionKind::StatusTransition:
+			case RulesEngine::EExpressionKind::StatusTransition:
 			using FStatusTransition =
-				typename This::FChunk::FStatusTransitionArray::value_type;
+				typename ThisClass::FChunk::FStatusTransitionArray::value_type;
 			return LocalExpression.Evaluate(
 				LocalChunk->StatusTransitions,
 				[&InReservoir](FStatusTransition const& InTransition)
-				->Psyque::ETernary
+				->EPsyqueKleene
 				{
 					return InReservoir.FindTransition(InTransition.GetKey());
 				});
 
 			// 状態比較条件式を評価する。
-			case RuleEngine::EExpressionKind::StatusComparison:
+			case RulesEngine::EExpressionKind::StatusComparison:
 			using FStatusComparison =
-				typename This::FChunk::FStatusComparisonArray::value_type;
+				typename ThisClass::FChunk::FStatusComparisonArray::value_type;
 			return LocalExpression.Evaluate(
 				LocalChunk->StatusComparisons,
 				[&InReservoir](FStatusComparison const& InComparison)
-				->Psyque::ETernary
+				->EPsyqueKleene
 				{
 					return InReservoir.CompareStatus(InComparison);
 				});
@@ -430,7 +430,7 @@ class Psyque::RuleEngine::_private::TEvaluator
 			// 条件式の種別が未知だった。
 			default:
 			check(false);
-			return Psyque::ETernary::Unknown;
+			return EPsyqueKleene::TernaryUnknown;
 		}
 	}
 	/// @}
@@ -441,7 +441,7 @@ class Psyque::RuleEngine::_private::TEvaluator
 	/// @brief 要素条件チャンクを予約する。
 	public: void ReserveChunk(
 		/// [in] 予約する要素条件チャンクに対応する識別値。
-		typename This::FChunkKey const InChunkKey,
+		typename ThisClass::FChunkKey const InChunkKey,
 		/// [in] 複合条件式の要素条件の予約数。
 		std::size_t const InSubExpressionCapacity,
 		/// [in] 状態変更条件式の要素条件の予約数。
@@ -449,7 +449,7 @@ class Psyque::RuleEngine::_private::TEvaluator
 		/// [in] 状態比較条件式の要素条件の予約数。
 		std::size_t const InStatusComparisonCapacity)
 	{
-		This::ReserveChunk(
+		ThisClass::ReserveChunk(
 			this->Chunks,
 			InChunkKey,
 			InSubExpressionCapacity,
@@ -462,7 +462,7 @@ class Psyque::RuleEngine::_private::TEvaluator
 	/// @retval false 失敗。 InChunkKey に対応するチャンクがない。
 	public: bool RemoveChunk(
 		/// [in] 破棄する要素条件チャンクに対応する識別値。
-		typename This::FChunkKey const InChunkKey)
+		typename ThisClass::FChunkKey const InChunkKey)
 	{
 		// 要素条件チャンクを削除する。
 		if (this->Chunks.erase(InChunkKey) == 0)
@@ -488,13 +488,13 @@ class Psyque::RuleEngine::_private::TEvaluator
 	}
 
 	/// @brief 要素条件チャンクを取得する。
-	/// @warning Psyque::RuleEngine 管理者以外は、この関数は使用禁止。
+	/// @warning Psyque::RulesEngine 管理者以外は、この関数は使用禁止。
 	/// @return
 	/// InChunkKey に対応する要素条件チャンクを指すポインタ。
 	/// 該当する要素条件チャンクがない場合は nullptr を返す。
-	public: typename This::FChunk const* _find_chunk(
+	public: typename ThisClass::FChunk const* _find_chunk(
 		/// [in] 取得する要素条件チャンクに対応する識別値。
-		typename This::FChunkKey const InChunkKey)
+		typename ThisClass::FChunkKey const InChunkKey)
 	const
 	{
 		auto const local_iterator(this->Chunks.find(InChunkKey));
@@ -504,38 +504,38 @@ class Psyque::RuleEngine::_private::TEvaluator
 	/// @}
 	//-------------------------------------------------------------------------
 	private: static std::pair<
-		 RuleEngine::EExpressionKind,
-		 typename This::FChunk::FSubExpressionArray*>
+		 RulesEngine::EExpressionKind,
+		 typename ThisClass::FChunk::FSubExpressionArray*>
 	MakeElementKind(
-		typename This::FChunk& InChunk,
-		typename This::FChunk::FSubExpressionArray::value_type const&)
+		typename ThisClass::FChunk& InChunk,
+		typename ThisClass::FChunk::FSubExpressionArray::value_type const&)
 	{
 		return std::make_pair(
-			RuleEngine::EExpressionKind::SubExpression,
+			RulesEngine::EExpressionKind::SubExpression,
 			&InChunk.SubExpressions);
 	}
 
 	private: static std::pair<
-		 RuleEngine::EExpressionKind,
-		 typename This::FChunk::FStatusTransitionArray*>
+		 RulesEngine::EExpressionKind,
+		 typename ThisClass::FChunk::FStatusTransitionArray*>
 	MakeElementKind(
-		typename This::FChunk& InChunk,
-		typename This::FChunk::FStatusTransitionArray::value_type const&)
+		typename ThisClass::FChunk& InChunk,
+		typename ThisClass::FChunk::FStatusTransitionArray::value_type const&)
 	{
 		return std::make_pair(
-			RuleEngine::EExpressionKind::StatusTransition,
+			RulesEngine::EExpressionKind::StatusTransition,
 			&InChunk.StatusTransitions);
 	}
 
 	private: static std::pair<
-		 RuleEngine::EExpressionKind,
-		 typename This::FChunk::FStatusComparisonArray*>
+		 RulesEngine::EExpressionKind,
+		 typename ThisClass::FChunk::FStatusComparisonArray*>
 	MakeElementKind(
-		typename This::FChunk& InChunk,
-		typename This::FChunk::FStatusComparisonArray::value_type const&)
+		typename ThisClass::FChunk& InChunk,
+		typename ThisClass::FChunk::FStatusComparisonArray::value_type const&)
 	{
 		return std::make_pair(
-			RuleEngine::EExpressionKind::StatusComparison,
+			RulesEngine::EExpressionKind::StatusComparison,
 			&InChunk.StatusComparisons);
 	}
 
@@ -544,11 +544,11 @@ class Psyque::RuleEngine::_private::TEvaluator
 	static bool IsValidElements(
 		TemplateElementIterator const& InBeginIterator,
 		TemplateElementIterator const& InEndIterator,
-		typename This::FExpressionMap const& InExpressions)
+		typename ThisClass::FExpressionMap const& InExpressions)
 	{
 		for (auto i(InBeginIterator); i != InEndIterator; ++i)
 		{
-			if (!This::IsValidElement(*i, InExpressions))
+			if (!ThisClass::IsValidElement(*i, InExpressions))
 			{
 				return false;
 			}
@@ -557,9 +557,9 @@ class Psyque::RuleEngine::_private::TEvaluator
 	}
 
 	private: static bool IsValidElement(
-		typename This::FChunk::FSubExpressionArray::value_type const&
+		typename ThisClass::FChunk::FSubExpressionArray::value_type const&
 			InSubExpression,
-		typename This::FExpressionMap const& InExpressions)
+		typename ThisClass::FExpressionMap const& InExpressions)
 	{
 		// 要素条件にある条件式がすでにあることを確認する。
 		auto const local_validation(
@@ -572,18 +572,18 @@ class Psyque::RuleEngine::_private::TEvaluator
 	private: template<typename TemplateElement>
 	static bool IsValidElement(
 		TemplateElement const&,
-		typename This::FExpressionMap const&)
+		typename ThisClass::FExpressionMap const&)
 	{
 		return true;
 	}
 
 	//-------------------------------------------------------------------------
 	/// @brief 要素条件チャンクを予約する。
-	private: static typename This::FChunk& ReserveChunk(
+	private: static typename ThisClass::FChunk& ReserveChunk(
 		/// [in] 予約する要素条件チャンクの辞書。
-		typename This::FChunkMap& OutChunks,
+		typename ThisClass::FChunkMap& OutChunks,
 		/// [in] 予約するチャンクに対応する識別値。
-		typename This::FChunkKey const InChunkKey,
+		typename ThisClass::FChunkKey const InChunkKey,
 		/// [in] 複合条件式の要素条件の予約数。
 		std::size_t const InSubExpressionCapacity,
 		/// [in] 状態変更条件式の要素条件の予約数。
@@ -594,7 +594,7 @@ class Psyque::RuleEngine::_private::TEvaluator
 		auto const LocalEmplace(
 			OutChunks.emplace(
 				InChunkKey,
-				typename This::FChunkMap::mapped_type(
+				typename ThisClass::FChunkMap::mapped_type(
 					OutChunks.get_allocator())));
 		auto& LocalChunk(LocalEmplace.first->second);
 		LocalChunk.SubExpressions.reserve(InSubExpressionCapacity);
@@ -605,10 +605,10 @@ class Psyque::RuleEngine::_private::TEvaluator
 
 	//-------------------------------------------------------------------------
 	/// @brief 要素条件チャンクの辞書。
-	private: typename This::FChunkMap Chunks;
+	private: typename ThisClass::FChunkMap Chunks;
 	/// @brief 条件式の辞書。
-	private: typename This::FExpressionMap Expressions;
+	private: typename ThisClass::FExpressionMap Expressions;
 
-}; // class Psyque::RuleEngine::_private::TEvaluator
+}; // class Psyque::RulesEngine::_private::TEvaluator
 
 // vim: set noexpandtab:

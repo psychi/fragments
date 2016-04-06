@@ -1,110 +1,109 @@
 ﻿/// @file
-/// @brief @copybrief Psyque::RuleEngine::TExpressionBuilder
+/// @brief @copybrief Psyque::RulesEngine::TExpressionBuilder
 /// @author Hillco Psychi (https://twitter.com/psychi)
 #pragma once
 
-#include "Dom/JsonValue.h"
-#include "Serialization/JsonSerializer.h"
-#include "../Assert.h"
+#include "Json.h"
+#include "./Assert.h"
 
 /// @brief 文字列表で、条件式の識別値が記述されている属性の名前。
 /// @details
-/// Psyque::RuleEngine::TExpressionBuilder で解析する文字列表で、
-/// Psyque::RuleEngine::TDriver::FEvaluator::FExpressionKey
+/// Psyque::RulesEngine::TExpressionBuilder で解析する文字列表で、
+/// Psyque::RulesEngine::TDriver::FEvaluator::FExpressionKey
 /// として解析する属性の名前。
-#ifndef PSYQUE_IF_THEN_ENGINE_EXPRESSION_BUILDER_COLUMN_KEY
-#define PSYQUE_IF_THEN_ENGINE_EXPRESSION_BUILDER_COLUMN_KEY "KEY"
-#endif // !defined(PSYQUE_IF_THEN_ENGINE_EXPRESSION_BUILDER_COLUMN_KEY)
+#ifndef PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_COLUMN_KEY
+#define PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_COLUMN_KEY "KEY"
+#endif // !defined(PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_COLUMN_KEY)
 
 /// @brief 文字列表で、条件式の論理演算子が記述されている属性の名前。
 /// @details
-/// Psyque::RuleEngine::TExpressionBuilder で解析する文字列表で、
-/// Psyque::RuleEngine::EExpressionLogic
+/// Psyque::RulesEngine::TExpressionBuilder で解析する文字列表で、
+/// Psyque::RulesEngine::EExpressionLogic
 /// として解析する属性の名前。
-#ifndef PSYQUE_IF_THEN_ENGINE_EXPRESSION_BUILDER_COLUMN_LOGIC
-#define PSYQUE_IF_THEN_ENGINE_EXPRESSION_BUILDER_COLUMN_LOGIC "LOGIC"
-#endif // !defined(PSYQUE_IF_THEN_ENGINE_EXPRESSION_BUILDER_COLUMN_LOGIC)
+#ifndef PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_COLUMN_LOGIC
+#define PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_COLUMN_LOGIC "LOGIC"
+#endif // !defined(PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_COLUMN_LOGIC)
 
 /// @brief 文字列表で、条件式の種別が記述されている属性の名前。
 /// @details
-/// Psyque::RuleEngine::TExpressionBuilder で解析する文字列表で、
-/// Psyque::RuleEngine::EExpressionKind
+/// Psyque::RulesEngine::TExpressionBuilder で解析する文字列表で、
+/// Psyque::RulesEngine::EExpressionKind
 /// として解析する属性の名前。
-#ifndef PSYQUE_IF_THEN_ENGINE_EXPRESSION_BUILDER_COLUMN_KIND
-#define PSYQUE_IF_THEN_ENGINE_EXPRESSION_BUILDER_COLUMN_KIND "KIND"
-#endif // !defined(PSYQUE_IF_THEN_ENGINE_EXPRESSION_BUILDER_COLUMN_KIND)
+#ifndef PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_COLUMN_KIND
+#define PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_COLUMN_KIND "KIND"
+#endif // !defined(PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_COLUMN_KIND)
 
 /// @brief 文字列表で、条件式の要素条件が記述されている属性の名前。
 /// @details
-/// Psyque::RuleEngine::TExpressionBuilder で解析する文字列表で、
-/// Psyque::RuleEngine::TDriver::FEvaluator::FExpression
+/// Psyque::RulesEngine::TExpressionBuilder で解析する文字列表で、
+/// Psyque::RulesEngine::TDriver::FEvaluator::FExpression
 /// の要素条件として解析する属性の名前。
-#ifndef PSYQUE_IF_THEN_ENGINE_EXPRESSION_BUILDER_COLUMN_ELEMENT
-#define PSYQUE_IF_THEN_ENGINE_EXPRESSION_BUILDER_COLUMN_ELEMENT "ELEMENT"
-#endif // !defined(PSYQUE_IF_THEN_ENGINE_EXPRESSION_BUILDER_COLUMN_ELEMENT)
+#ifndef PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_COLUMN_ELEMENT
+#define PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_COLUMN_ELEMENT "ELEMENT"
+#endif // !defined(PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_COLUMN_ELEMENT)
 
 /// @brief 文字列表で、条件式の論理和演算子に対応する文字列。
 /// @details
-/// Psyque::RuleEngine::TExpressionBuilder で解析する文字列表で、
-/// Psyque::RuleEngine::EExpressionLogic::Or
+/// Psyque::RulesEngine::TExpressionBuilder で解析する文字列表で、
+/// Psyque::RulesEngine::EExpressionLogic::Or
 /// として解析する文字列。
-#ifndef PSYQUE_IF_THEN_ENGINE_EXPRESSION_BUILDER_LOGIC_OR
-#define PSYQUE_IF_THEN_ENGINE_EXPRESSION_BUILDER_LOGIC_OR "Or"
-#endif // !defined(PSYQUE_IF_THEN_ENGINE_EXPRESSION_BUILDER_LOGIC_OR)
+#ifndef PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_LOGIC_OR
+#define PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_LOGIC_OR "Or"
+#endif // !defined(PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_LOGIC_OR)
 
 /// @brief 文字列表で、条件式の論理積演算子に対応する文字列。
 /// @details
-/// Psyque::RuleEngine::TExpressionBuilder で解析する文字列表で、
-/// Psyque::RuleEngine::EExpressionLogic::And
+/// Psyque::RulesEngine::TExpressionBuilder で解析する文字列表で、
+/// Psyque::RulesEngine::EExpressionLogic::And
 /// として解析する文字列。
-#ifndef PSYQUE_IF_THEN_ENGINE_EXPRESSION_BUILDER_LOGIC_AND
-#define PSYQUE_IF_THEN_ENGINE_EXPRESSION_BUILDER_LOGIC_AND "And"
-#endif // !defined(PSYQUE_IF_THEN_ENGINE_EXPRESSION_BUILDER_LOGIC_AND)
+#ifndef PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_LOGIC_AND
+#define PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_LOGIC_AND "And"
+#endif // !defined(PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_LOGIC_AND)
 
 /// @brief 文字列表で、複合条件式の種別に対応する文字列。
 /// @details
-/// Psyque::RuleEngine::TExpressionBuilder で解析する文字列表で、
-/// Psyque::RuleEngine::EExpressionKind::SubExpression
+/// Psyque::RulesEngine::TExpressionBuilder で解析する文字列表で、
+/// Psyque::RulesEngine::EExpressionKind::SubExpression
 /// として解析する文字列。
-#ifndef PSYQUE_IF_THEN_ENGINE_EXPRESSION_BUILDER_KIND_SUB_EXPRESSION
-#define PSYQUE_IF_THEN_ENGINE_EXPRESSION_BUILDER_KIND_SUB_EXPRESSION "SubExpression"
-#endif // !defined(PSYQUE_IF_THEN_ENGINE_EXPRESSION_BUILDER_KIND_SUB_EXPRESSION)
+#ifndef PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_KIND_SUB_EXPRESSION
+#define PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_KIND_SUB_EXPRESSION "SubExpression"
+#endif // !defined(PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_KIND_SUB_EXPRESSION)
 
 /// @brief 文字列表で、状態変化条件式の種別に対応する文字列。
 /// @details
-/// Psyque::RuleEngine::TExpressionBuilder で解析する文字列表で、
-/// Psyque::RuleEngine::EExpressionKind::StatusTransition
+/// Psyque::RulesEngine::TExpressionBuilder で解析する文字列表で、
+/// Psyque::RulesEngine::EExpressionKind::StatusTransition
 /// として解析する文字列。
-#ifndef PSYQUE_IF_THEN_ENGINE_EXPRESSION_BUILDER_KIND_STATUS_TRANSITION
-#define PSYQUE_IF_THEN_ENGINE_EXPRESSION_BUILDER_KIND_STATUS_TRANSITION "StatusTransition"
-#endif // !define(PSYQUE_IF_THEN_ENGINE_EXPRESSION_BUILDER_KIND_STATUS_TRANSITION)
+#ifndef PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_KIND_STATUS_TRANSITION
+#define PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_KIND_STATUS_TRANSITION "StatusTransition"
+#endif // !define(PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_KIND_STATUS_TRANSITION)
 
 /// @brief 文字列表で、状態比較条件式の種別に対応する文字列。
 /// @details
-/// Psyque::RuleEngine::TExpressionBuilder で解析する文字列表で、
-/// Psyque::RuleEngine::EExpressionKind::StatusComparison
+/// Psyque::RulesEngine::TExpressionBuilder で解析する文字列表で、
+/// Psyque::RulesEngine::EExpressionKind::StatusComparison
 /// として解析する文字列。
-#ifndef PSYQUE_IF_THEN_ENGINE_EXPRESSION_BUILDER_KIND_STATUS_COMPARISON
-#define PSYQUE_IF_THEN_ENGINE_EXPRESSION_BUILDER_KIND_STATUS_COMPARISON "StatusComparison"
-#endif // !define(PSYQUE_IF_THEN_ENGINE_EXPRESSION_BUILDER_KIND_STATUS_COMPARISON)
+#ifndef PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_KIND_STATUS_COMPARISON
+#define PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_KIND_STATUS_COMPARISON "StatusComparison"
+#endif // !define(PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_KIND_STATUS_COMPARISON)
 
 /// @cond
 namespace Psyque
 {
-	namespace RuleEngine
+	namespace RulesEngine
 	{
 		class TExpressionBuilder;
 		class TExpressionBuilder_;
-	} // namespace RuleEngine
+	} // namespace RulesEngine
 } // namespace Psyque
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief 文字列表から条件式を構築して登録する関数オブジェクト。
-/// @details Psyque::RuleEngine::TDriver::ExtendChunk の引数として使う。
-class Psyque::RuleEngine::TExpressionBuilder
+/// @details Psyque::RulesEngine::TDriver::ExtendChunk の引数として使う。
+class Psyque::RulesEngine::TExpressionBuilder
 {
-	private: using This = TExpressionBuilder; ///< @copydoc TDriver::This
+	private: using ThisClass = TExpressionBuilder; ///< @copydoc TDriver::ThisClass
 
 	//-------------------------------------------------------------------------
 	/// @brief 中間表現を解析して条件式を構築し、条件評価器に登録する。
@@ -126,7 +125,7 @@ class Psyque::RuleEngine::TExpressionBuilder
 		TemplateIntermediation const& InIntermediation)
 	const
 	{
-		return This::RegisterExpressions(
+		return ThisClass::RegisterExpressions(
 			OutEvaluator,
 			InHashFunction,
 			InChunkKey,
@@ -173,14 +172,14 @@ class Psyque::RuleEngine::TExpressionBuilder
 		return LocalCount;
 	}
 
-}; // class Psyque::RuleEngine::TExpressionBuilder
+}; // class Psyque::RulesEngine::TExpressionBuilder
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief 文字列表から条件式を構築して登録する関数オブジェクト。
-/// @details Psyque::RuleEngine::TDriver::ExtendChunk の引数として使う。
-class Psyque::RuleEngine::TExpressionBuilder_
+/// @details Psyque::RulesEngine::TDriver::ExtendChunk の引数として使う。
+class Psyque::RulesEngine::TExpressionBuilder_
 {
-	private: using This = TExpressionBuilder_; ///< @copydoc TDriver::This
+	private: using ThisClass = TExpressionBuilder_; ///< @copydoc TDriver::ThisClass
 
 	//-------------------------------------------------------------------------
 	/// @brief 条件式の文字列表の属性。
@@ -192,16 +191,16 @@ class Psyque::RuleEngine::TExpressionBuilder_
 		PSYQUE_NOEXCEPT:
 		Key(
 			InTable.FindAttribute(
-				PSYQUE_IF_THEN_ENGINE_EXPRESSION_BUILDER_COLUMN_KEY)),
+				PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_COLUMN_KEY)),
 		Logic(
 			InTable.FindAttribute(
-				PSYQUE_IF_THEN_ENGINE_EXPRESSION_BUILDER_COLUMN_LOGIC)),
+				PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_COLUMN_LOGIC)),
 		Kind(
 			InTable.FindAttribute(
-				PSYQUE_IF_THEN_ENGINE_EXPRESSION_BUILDER_COLUMN_KIND)),
+				PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_COLUMN_KIND)),
 		Elements(
 			InTable.FindAttribute(
-				PSYQUE_IF_THEN_ENGINE_EXPRESSION_BUILDER_COLUMN_ELEMENT))
+				PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_COLUMN_ELEMENT))
 		{}
 
 		public: bool IsValid() const PSYQUE_NOEXCEPT
@@ -243,7 +242,7 @@ class Psyque::RuleEngine::TExpressionBuilder_
 		TemplateIntermediation const& InIntermediation)
 	const
 	{
-		return This::RegisterExpressions(
+		return ThisClass::RegisterExpressions(
 			OutEvaluator,
 			InHashFunction,
 			InChunkKey,
@@ -271,7 +270,7 @@ class Psyque::RuleEngine::TExpressionBuilder_
 		TemplateRelationTable const& InTable)
 	{
 		// 文字列表の属性を取得する。
-		This::FTableAttribute<TemplateRelationTable> const
+		ThisClass::FTableAttribute<TemplateRelationTable> const
 			LocalAttribute(InTable);
 		if (!LocalAttribute.IsValid())
 		{
@@ -307,7 +306,7 @@ class Psyque::RuleEngine::TExpressionBuilder_
 				InHashFunction(InTable.FindCell(i, LocalAttribute.Key.first)));
 			if (LocalExpressionKey != local_empty_key
 				&& !OutEvaluator.IsRegistered(LocalExpressionKey)
-				&& This::RegisterExpression(
+				&& ThisClass::RegisterExpression(
 					OutEvaluator,
 					InHashFunction,
 					local_workspace,
@@ -372,17 +371,17 @@ class Psyque::RuleEngine::TExpressionBuilder_
 		// 要素条件の論理演算子を、文字列表から取得する。
 		auto const& local_logic_cell(
 			InTable.FindCell(InRowNumber, InLogic.first));
-		RuleEngine::EExpressionLogic local_logic;
+		RulesEngine::EExpressionLogic local_logic;
 		if (local_logic_cell ==
-				PSYQUE_IF_THEN_ENGINE_EXPRESSION_BUILDER_LOGIC_AND)
+				PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_LOGIC_AND)
 		{
-			local_logic = RuleEngine::EExpressionLogic::And;
+			local_logic = RulesEngine::EExpressionLogic::And;
 		}
 		else if (
 			local_logic_cell ==
-				PSYQUE_IF_THEN_ENGINE_EXPRESSION_BUILDER_LOGIC_OR)
+				PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_LOGIC_OR)
 		{
-			local_logic = RuleEngine::EExpressionLogic::Or;
+			local_logic = RulesEngine::EExpressionLogic::Or;
 		}
 		else
 		{
@@ -397,10 +396,10 @@ class Psyque::RuleEngine::TExpressionBuilder_
 			InTable.FindCell(InRowNumber, InKind.first));
 		auto const local_elements_end(InElements.first + InElements.second);
 		if (LocalKindCell ==
-				PSYQUE_IF_THEN_ENGINE_EXPRESSION_BUILDER_KIND_SUB_EXPRESSION)
+				PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_KIND_SUB_EXPRESSION)
 		{
 			// 複合条件式の要素条件を構築して登録する。
-			return This::RegisterExpression(
+			return ThisClass::RegisterExpression(
 				OutEvaluator,
 				InHashFunction,
 				io_workspace.SubExpressions,
@@ -415,10 +414,10 @@ class Psyque::RuleEngine::TExpressionBuilder_
 		}
 		else if (
 			LocalKindCell ==
-				PSYQUE_IF_THEN_ENGINE_EXPRESSION_BUILDER_KIND_STATUS_TRANSITION)
+				PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_KIND_STATUS_TRANSITION)
 		{
 			// 状態変化条件式の要素条件を構築して登録する。
-			return This::RegisterExpression(
+			return ThisClass::RegisterExpression(
 				OutEvaluator,
 				InHashFunction,
 				io_workspace.StatusTransitions,
@@ -433,10 +432,10 @@ class Psyque::RuleEngine::TExpressionBuilder_
 		}
 		else if (
 			LocalKindCell ==
-				PSYQUE_IF_THEN_ENGINE_EXPRESSION_BUILDER_KIND_STATUS_COMPARISON)
+				PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_KIND_STATUS_COMPARISON)
 		{
 			// 状態比較条件式の要素条件を構築して登録する。
-			return This::RegisterExpression(
+			return ThisClass::RegisterExpression(
 				OutEvaluator,
 				InHashFunction,
 				io_workspace.StatusComparisons,
@@ -458,7 +457,7 @@ class Psyque::RuleEngine::TExpressionBuilder_
 	}
 
 	//-------------------------------------------------------------------------
-	/// @copydoc This::RegisterExpression
+	/// @copydoc ThisClass::RegisterExpression
 	private: template<
 		typename TemplateEvaluator,
 		typename template_element_container,
@@ -476,8 +475,8 @@ class Psyque::RuleEngine::TExpressionBuilder_
 		typename TemplateEvaluator::FChunkKey const& InChunkKey,
 		/// [in] 登録する条件式の識別値。
 		typename TemplateEvaluator::FExpressionKey const& InExpressionKey,
-		/// [in] 登録する条件式の RuleEngine::EExpressionLogic 。
-		RuleEngine::EExpressionLogic const InLogic,
+		/// [in] 登録する条件式の RulesEngine::EExpressionLogic 。
+		RulesEngine::EExpressionLogic const InLogic,
 		/// [in] 要素条件が参照する値。
 		template_element_server const& InElements,
 		/// [in] 解析する Psyque::string::TRelationTable 。
@@ -494,7 +493,7 @@ class Psyque::RuleEngine::TExpressionBuilder_
 		for (
 			auto i(in_column_begin);
 			i < in_column_end;
-			i += This::build_element<TemplateEvaluator>(
+			i += ThisClass::build_element<TemplateEvaluator>(
 				OutElements,
 				InHashFunction,
 				InElements,
@@ -629,6 +628,6 @@ class Psyque::RuleEngine::TExpressionBuilder_
 		return 3;
 	}
 
-}; // class Psyque::RuleEngine::TExpressionBuilder
+}; // class Psyque::RulesEngine::TExpressionBuilder
 
 // vim: set noexpandtab:

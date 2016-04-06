@@ -1,45 +1,28 @@
 ﻿// Copyright (c) 2016, Hillco Psychi, All rights reserved.
 /// @file
-/// @brief @copybrief Psyque::RuleEngine::_private::TStatusProperty
+/// @brief 列挙型の一覧。
 /// @author Hillco Psychi (https://twitter.com/psychi)
 #pragma once
 
 namespace Psyque
 {
 	//-------------------------------------------------------------------------
-	/// @brief クリーネの3値論理による真理値。
-	UENUM(BlueprintType)
-	enum class ETernary: uint8
-	{
-		False = 0,     ///< 偽。
-		True = 1,      ///< 真。
-		Unknown = 255, ///< 未定義。
-	};
-	static_assert(
-		static_cast<int8>(ETernary::False) == false
-		&& static_cast<int8>(ETernary::True) == true
-		&& static_cast<int8>(ETernary::Unknown) < 0,
-		"");
-
-	//-------------------------------------------------------------------------
 	/// @brief if-then規則で駆動する有限状態機械。
-	namespace RuleEngine
+	namespace RulesEngine
 	{
 		//---------------------------------------------------------------------
 		/// @brief 状態値の型の種別。
-		UENUM(BlueprintType)
-		enum class EStatusKind: uint8
+		enum class EStatusKind: int8
 		{
-			Signed = 254, ///< 符号あり整数。
-			Float = 255,  ///< 浮動小数点数。
-			Empty = 0,    ///< 空。
-			Bool = 1,     ///< 論理値。
-			Unsigned = 2, ///< 符号なし整数。
+			Empty    =  0, ///< 空。
+			Bool     =  1, ///< 論理値。
+			Unsigned =  2, ///< 符号なし整数。
+			Signed   = -2, ///< 符号あり整数。
+			Float    = -1, ///< 浮動小数点数。
 		};
 
 		//---------------------------------------------------------------------
 		/// @brief 状態値の大小関係。
-		UENUM(BlueprintType)
 		enum class EStatusOrder: int8
 		{
 			Failed = -2, ///< 比較に失敗。
@@ -50,7 +33,6 @@ namespace Psyque
 
 		//---------------------------------------------------------------------
 		/// @brief 状態値を比較する演算子の種類。
-		UENUM(BlueprintType)
 		enum class EStatusComparison: uint8
 		{
 			Equal,        ///< 等価。
@@ -79,7 +61,6 @@ namespace Psyque
 
 		//---------------------------------------------------------------------
 		/// @brief 条件式の要素条件を結合する論理演算子を表す列挙型。
-		UENUM(BlueprintType)
 		enum class EExpressionLogic: uint8
 		{
 			Or,  ///< 論理和。
@@ -88,7 +69,6 @@ namespace Psyque
 
 		//---------------------------------------------------------------------
 		/// @brief 条件式の種類を表す列挙型。
-		UENUM(BlueprintType)
 		enum class EExpressionKind: uint8
 		{
 			SubExpression,    ///< 複合条件式。
@@ -104,7 +84,6 @@ namespace Psyque
 		///   2回目以降の状態変更の遅延方法を決める。
 		///   EAccumulationDelay::Follow と
 		///   EAccumulationDelay::Yield の使用を推奨する。
-		UENUM(BlueprintType)
 		enum class EAccumulationDelay: uint8
 		{
 			/// 予約系列を切り替えず、
@@ -138,10 +117,10 @@ namespace Psyque
 		};
 
 		//---------------------------------------------------------------------
-		/// @brief Psyque::RuleEngine の管理者以外は、直接アクセス禁止。
+		/// @brief Psyque::RulesEngine の管理者以外は、直接アクセス禁止。
 		namespace _private {}
 
-	} // namespace RuleEngine
+	} // namespace RulesEngine
 } // namespace Psyque
 
 // vim: set noexpandtab:

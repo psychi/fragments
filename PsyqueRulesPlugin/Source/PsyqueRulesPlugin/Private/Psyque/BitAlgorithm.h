@@ -69,7 +69,7 @@ template<typename TemplateFloat>
 union Psyque::TFloatBitset
 {
 	private:
-	using This = TFloatBitset;
+	using ThisClass = TFloatBitset;
 
 	public:
 	/// @brief 浮動小数点数の型。
@@ -85,20 +85,20 @@ union Psyque::TFloatBitset
 		sizeof(TemplateFloat) == sizeof(FBitset),
 		"sizeof(TemplateFloat) is not equal sizeof(FBitset).");
 
-	explicit TFloatBitset(typename This::FFloat const InFloat)
+	explicit TFloatBitset(typename ThisClass::FFloat const InFloat)
 	PSYQUE_NOEXCEPT
 	{
 		this->Float = InFloat;
 	}
 
-	explicit TFloatBitset(typename This::FBitset const InBitset)
+	explicit TFloatBitset(typename ThisClass::FBitset const InBitset)
 	PSYQUE_NOEXCEPT
 	{
 		this->Bitset = InBitset;
 	}
 
-	typename This::FFloat Float;   ///< 浮動小数点数の値。
-	typename This::FBitset Bitset; ///< 浮動小数点数のビット列。
+	typename ThisClass::FFloat Float;   ///< 浮動小数点数の値。
+	typename ThisClass::FBitset Bitset; ///< 浮動小数点数のビット列。
 
 }; // union Psyque::TFloatBitset
 
@@ -108,14 +108,14 @@ union Psyque::TFloatBitset
 /// http://d.hatena.ne.jp/siokoshou/20090704#p1
 class Psyque::_private::FTrailing0Bits
 {
-	using This = FTrailing0Bits;
+	using ThisClass = FTrailing0Bits;
 
 	enum: uint64 {HASH = 0x03F566ED27179461ul};
 
 	public:
 	FTrailing0Bits()
 	{
-		uint64 LocalHash(This::HASH);
+		uint64 LocalHash(ThisClass::HASH);
 		for (uint8 i(0); i < this->Counts.size(); ++i)
 		{
 			this->Counts[LocalHash >> 58] = i;
@@ -132,7 +132,7 @@ class Psyque::_private::FTrailing0Bits
 	const
 	{
 		return InValue != 0?
-			this->Counts[This::ComputeIndex(InValue)]:
+			this->Counts[ThisClass::ComputeIndex(InValue)]:
 			sizeof(TemplateValue) * CHAR_BIT;
 	}
 
@@ -140,7 +140,7 @@ class Psyque::_private::FTrailing0Bits
 	static unsigned ComputeIndex(int64 const InValue)
 	{
 		return static_cast<unsigned>(
-			(static_cast<uint64>(InValue & -InValue) * This::HASH) >> 58);
+			(static_cast<uint64>(InValue & -InValue) * ThisClass::HASH) >> 58);
 	}
 
 	private:
@@ -155,21 +155,21 @@ namespace Psyque
 	namespace _private
 	{
 		template<typename TemplateBits>
-		PSYQUE_CONSTEXPR bool IsValidBitShift(SIZE_T const InBitShift)
+		bool PSYQUE_CONSTEXPR IsValidBitShift(SIZE_T const InBitShift)
 		PSYQUE_NOEXCEPT
 		{
 			return InBitShift < sizeof(TemplateBits) * CHAR_BIT;
 		}
 
 		template<typename TemplateBits>
-		PSYQUE_CONSTEXPR bool IsValidBitWidth(SIZE_T const InBitWidth)
+		bool PSYQUE_CONSTEXPR IsValidBitWidth(SIZE_T const InBitWidth)
 		PSYQUE_NOEXCEPT
 		{
 			return InBitWidth <= sizeof(TemplateBits) * CHAR_BIT;
 		}
 
 		template<typename TemplateBits>
-		PSYQUE_CONSTEXPR bool IsValidBitWidth(
+		bool PSYQUE_CONSTEXPR IsValidBitWidth(
 			SIZE_T const InBitPosition,
 			SIZE_T const InBitWidth)
 		PSYQUE_NOEXCEPT
@@ -209,7 +209,7 @@ namespace Psyque
 	/// @brief 整数を左ビットシフトする。
 	/// @return 左ビットシフトした値。
 	template<typename TemplateBits>
-	PSYQUE_CONSTEXPR TemplateBits ShiftLeftBitwise(
+	TemplateBits PSYQUE_CONSTEXPR ShiftLeftBitwise(
 		/// [in] ビットシフトする値。
 		TemplateBits const InBits,
 		/// [in] シフトするビット数。
@@ -227,7 +227,7 @@ namespace Psyque
 	/// http://hexadrive.sblo.jp/article/56575654.html
 	/// @return 左ビットシフトした値。
 	template<typename TemplateBits>
-	PSYQUE_CONSTEXPR TemplateBits ShiftLeftBitwiseFast(
+	TemplateBits PSYQUE_CONSTEXPR ShiftLeftBitwiseFast(
 		/// [in] ビットシフトする値。
 		TemplateBits const InBits,
 		/// [in] シフトするビット数。
@@ -243,7 +243,7 @@ namespace Psyque
 	/// @brief 整数を右ビットシフトする。
 	/// @return 右ビットシフトした値。
 	template<typename TemplateBits>
-	PSYQUE_CONSTEXPR TemplateBits ShiftRightBitwise(
+	TemplateBits PSYQUE_CONSTEXPR ShiftRightBitwise(
 		/// [in] ビットシフトする値。
 		TemplateBits const InBits,
 		/// [in] シフトするビット数。
@@ -264,7 +264,7 @@ namespace Psyque
 	/// http://hexadrive.sblo.jp/article/56575654.html
 	/// @return 右ビットシフトした値。
 	template<typename TemplateBits>
-	PSYQUE_CONSTEXPR TemplateBits ShiftRightBitwiseFast(
+	TemplateBits PSYQUE_CONSTEXPR ShiftRightBitwiseFast(
 		/// [in] ビットシフトする値。
 		TemplateBits const InBits,
 		/// [in] シフトするビット数。
@@ -286,7 +286,7 @@ namespace Psyque
 	/// ただし InPosition がsizeof(int)以上だった場合、
 	/// InBits をそのまま返す。
 	template<typename TemplateBits>
-	PSYQUE_CONSTEXPR TemplateBits ResetBit(
+	TemplateBits PSYQUE_CONSTEXPR ResetBit(
 		/// [in] ビット集合として扱う整数値。
 		TemplateBits const InBits,
 		/// [in] 設定するビットの位置。
@@ -301,7 +301,7 @@ namespace Psyque
 	/// 指定されたビット位置に0を設定した整数値。
 	/// ただし InPosition が sizeof(int) 以上だった場合、未定義。
 	template<typename TemplateBits>
-	PSYQUE_CONSTEXPR TemplateBits ResetBitFast(
+	TemplateBits PSYQUE_CONSTEXPR ResetBitFast(
 		/// [in] ビット集合として扱う整数値。
 		TemplateBits const InBits,
 		/// [in] 設定するビットの位置。
@@ -318,7 +318,7 @@ namespace Psyque
 	/// ただし InPosition が sizeof(int) 以上だった場合、
 	/// InBits をそのまま返す。
 	template<typename TemplateBits>
-	PSYQUE_CONSTEXPR TemplateBits SetBit(
+	TemplateBits PSYQUE_CONSTEXPR SetBit(
 		/// [in] ビット集合として扱う整数値。
 		TemplateBits const InBits,
 		/// [in] 設定するビットの位置。
@@ -333,7 +333,7 @@ namespace Psyque
 	/// 指定されたビット位置に1を設定した整数値。
 	/// ただし InPosition が sizeof(int) 以上だった場合、未定義。
 	template<typename TemplateBits>
-	PSYQUE_CONSTEXPR TemplateBits SetBitFast(
+	TemplateBits PSYQUE_CONSTEXPR SetBitFast(
 		/// [in] ビット集合として扱う整数値。
 		TemplateBits const InBits,
 		/// [in] 設定するビットの位置。
@@ -350,7 +350,7 @@ namespace Psyque
 	/// ただし InPosition が sizeof(int) 以上だった場合、
 	/// InBits をそのまま返す。
 	template<typename TemplateBits>
-	PSYQUE_CONSTEXPR TemplateBits SetBit(
+	TemplateBits PSYQUE_CONSTEXPR SetBit(
 		/// [in] ビット集合として扱う整数値。
 		TemplateBits const InBits,
 		/// [in] 設定するビットの位置。
@@ -368,7 +368,7 @@ namespace Psyque
 	/// 指定されたビット位置に InValue を設定した整数値。
 	/// ただし InPosition が sizeof(int) 以上だった場合、未定義。
 	template<typename TemplateBits>
-	PSYQUE_CONSTEXPR TemplateBits SetBitFast(
+	TemplateBits PSYQUE_CONSTEXPR SetBitFast(
 		/// [in] ビット集合として扱う整数値。
 		TemplateBits const InBits,
 		/// [in] 設定するビットの位置。
@@ -387,7 +387,7 @@ namespace Psyque
 	/// ただし InPosition がsizeof(int)以上だった場合、
 	/// InBits をそのまま返す。
 	template<typename TemplateBits>
-	PSYQUE_CONSTEXPR TemplateBits FlipBit(
+	TemplateBits PSYQUE_CONSTEXPR FlipBit(
 		/// [in] ビット集合として扱う整数値。
 		TemplateBits const InBits,
 		/// [in] 反転するビットの位置。
@@ -402,7 +402,7 @@ namespace Psyque
 	/// 指定されたビット位置の値を反転した整数値。
 	/// ただし InPosition が sizeof(int) 以上だった場合、未定義。
 	template<typename TemplateBits>
-	PSYQUE_CONSTEXPR TemplateBits FlipBitFast(
+	TemplateBits PSYQUE_CONSTEXPR FlipBitFast(
 		/// [in] ビット集合として扱う整数値。
 		TemplateBits const InBits,
 		/// [in] 反転するビットの位置。
@@ -918,7 +918,7 @@ namespace Psyque
 	/// - InBits が有符号整数型なら、符号ビットを返す。
 	/// - InBits が無符号整数型なら、falseを返す。
 	template<typename TemplateBits>
-	PSYQUE_CONSTEXPR bool Is1Bit(
+	bool PSYQUE_CONSTEXPR Is1Bit(
 		/// [in] ビット集合として扱う整数値。
 		TemplateBits const InBits,
 		/// [in] 取得するビットの位置。
@@ -932,7 +932,7 @@ namespace Psyque
 	/// @return 指定された位置のビット値。
 	/// ただし InPosition が sizeof(int) 以上だった場合、未定義。
 	template<typename TemplateBits>
-	PSYQUE_CONSTEXPR bool Is1BitFast(
+	bool PSYQUE_CONSTEXPR Is1BitFast(
 		/// [in] ビット集合として扱う整数値。
 		TemplateBits const InBits,
 		/// [in] 取得するビットの位置。
@@ -996,7 +996,7 @@ namespace Psyque
 	/// @brief ビットマスクを作る。
 	/// @return ビット幅が InBitWidth のビットマスク。
 	template<typename TemplateBits>
-	PSYQUE_CONSTEXPR TemplateBits MakeBitMask(
+	TemplateBits PSYQUE_CONSTEXPR MakeBitMask(
 		/// [in] ビットマスクのビット幅。
 		SIZE_T const InBitWidth)
 	{
@@ -1006,7 +1006,7 @@ namespace Psyque
 	/// @brief 指定されたビット範囲を取得する。
 	/// @return ビット範囲。
 	template<typename TemplateBits>
-	PSYQUE_CONSTEXPR TemplateBits EmbossBitField(
+	TemplateBits PSYQUE_CONSTEXPR EmbossBitField(
 		/// [in] ビット集合として扱う整数値。
 		TemplateBits const InBits,
 		/// [in] 取得するビット範囲のビット位置。
@@ -1026,7 +1026,7 @@ namespace Psyque
 	/// @brief 指定されたビット範囲の値を取得する。
 	/// @return ビット範囲の値。
 	template<typename TemplateBits>
-	PSYQUE_CONSTEXPR TemplateBits GetBitset(
+	TemplateBits PSYQUE_CONSTEXPR GetBitset(
 		/// [in] ビット集合として扱う整数値。
 		TemplateBits const InBits,
 		/// [in] 取得するビット範囲のビット位置。
@@ -1045,7 +1045,7 @@ namespace Psyque
 	/// @brief 指定されたビット範囲を0にする。
 	/// @return 指定されたビット範囲を0にした整数値。
 	template<typename TemplateBits>
-	PSYQUE_CONSTEXPR TemplateBits ResetBitField(
+	TemplateBits PSYQUE_CONSTEXPR ResetBitField(
 		/// [in] InBits		 ビット集合として扱う整数値。
 		TemplateBits const InBits,
 		/// [in] 設定するビット範囲のビット位置。
@@ -1065,7 +1065,7 @@ namespace Psyque
 	/// @brief 指定されたビット範囲に値を埋め込む。
 	/// @return 指定されたビット位置に InValue を埋め込んだ整数値。
 	template<typename TemplateBits>
-	PSYQUE_CONSTEXPR TemplateBits SetBitset(
+	TemplateBits PSYQUE_CONSTEXPR SetBitset(
 		/// [in] ビット集合として扱う整数値。
 		TemplateBits const InBits,
 		/// [in] 埋め込むビット範囲のビット位置。

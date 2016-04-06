@@ -1,6 +1,6 @@
 ﻿// Copyright (c) 2016, Hillco Psychi, All rights reserved.
 /// @file
-/// @brief @copybrief Psyque::RuleEngine::_private::THandler
+/// @brief @copybrief Psyque::RulesEngine::_private::THandler
 /// @author Hillco Psychi (https://twitter.com/psychi)
 #pragma once
 
@@ -11,13 +11,13 @@
 /// @cond
 namespace Psyque
 {
-	namespace RuleEngine
+	namespace RulesEngine
 	{
 		namespace _private
 		{
 			template<typename, typename> class THandler;
 		} // namespace _private
-	} // namespace RuleEngine
+	} // namespace RulesEngine
 } // namespace Psyque
 /// @endcond
 
@@ -26,9 +26,9 @@ namespace Psyque
 /// @tparam TemplateExpressionKey @copydoc THandler::FExpressionKey
 /// @tparam TemplatePriority      @copydoc THandler::FPriority
 template<typename TemplateExpressionKey, typename TemplatePriority>
-class Psyque::RuleEngine::_private::THandler
+class Psyque::RulesEngine::_private::THandler
 {
-	private: using This = THandler; ///< @copydoc TDispatcher::This
+	private: using ThisClass = THandler; ///< @copydoc TDispatcher::ThisClass
 
 	//-------------------------------------------------------------------------
 	/// @copydoc TEvaluator::FExpressionKey
@@ -79,14 +79,14 @@ class Psyque::RuleEngine::_private::THandler
 	///   - 引数#2は、 TEvaluator::EvaluateExpression の前回の戻り値。
 	public: using FFunction = std::function<
 		void (
-			typename This::FExpressionKey const&,
-			Psyque::ETernary const,
-			Psyque::ETernary const)>;
+			typename ThisClass::FExpressionKey const&,
+			EPsyqueKleene const,
+			EPsyqueKleene const)>;
 	/// @brief THandler::FFunction の強参照スマートポインタ。
 	public: using FFunctionSharedPtr = std::shared_ptr<
-		typename This::FFunction>;
+		typename ThisClass::FFunction>;
 	/// @brief THandler::FFunction の弱参照スマートポインタ。
-	public: using FFunctionWeakPtr = std::weak_ptr<typename This::FFunction>;
+	public: using FFunctionWeakPtr = std::weak_ptr<typename ThisClass::FFunction>;
 
 	//-------------------------------------------------------------------------
 	private: enum: uint8
@@ -98,19 +98,19 @@ class Psyque::RuleEngine::_private::THandler
 	/// @brief 条件挙動ハンドラのキャッシュ。
 	public: class FCache: public THandler
 	{
-		private: using This = FCache;   ///< @copydoc THandler::This
-		public: using Super = THandler; ///< @brief This の基底型。
+		private: using ThisClass = FCache;   ///< @copydoc THandler::ThisClass
+		public: using Super = THandler; ///< @brief ThisClass の基底型。
 
 		/// @brief 条件挙動ハンドラのキャッシュを構築する。
 		public: FCache(
 			/// [in] キャッシュする条件挙動ハンドラ。
 			THandler const& InHandler,
-			/// [in] This::ExpressionKey の初期値。
+			/// [in] ThisClass::ExpressionKey の初期値。
 			typename Super::FExpressionKey InExpressionKey,
-			/// [in] This::CurrentEvaluation の初期値。
-			Psyque::ETernary const InCurrentEvaluation,
-			/// [in] This::LastEvaluation の初期値。
-			Psyque::ETernary const InLastEvaluation):
+			/// [in] ThisClass::CurrentEvaluation の初期値。
+			EPsyqueKleene const InCurrentEvaluation,
+			/// [in] ThisClass::LastEvaluation の初期値。
+			EPsyqueKleene const InLastEvaluation):
 		Super(InHandler),
 		ExpressionKey(MoveTemp(InExpressionKey)),
 		CurrentEvaluation(InCurrentEvaluation),
@@ -121,7 +121,7 @@ class Psyque::RuleEngine::_private::THandler
 		/// @brief ムーブ構築子。
 		public: FCache(
 			/// [in,out] ムーブ元となるインスタンス。
-			This&& OutSource):
+			ThisClass&& OutSource):
 		Super(MoveTemp(OutSource)),
 		ExpressionKey(MoveTemp(OutSource.ExpressionKey)),
 		CurrentEvaluation(MoveTemp(OutSource.CurrentEvaluation)),
@@ -130,9 +130,9 @@ class Psyque::RuleEngine::_private::THandler
 
 		/// @brief ムーブ代入演算子。
 		/// @return *this
-		public: This& operator=(
+		public: ThisClass& operator=(
 			/// [in,out] ムーブ元となるインスタンス。
-			This&& OutSource)
+			ThisClass&& OutSource)
 		{
 			this->Super::operator=(MoveTemp(OutSource));
 			this->ExpressionKey = MoveTemp(OutSource.ExpressionKey);
@@ -159,9 +159,9 @@ class Psyque::RuleEngine::_private::THandler
 		/// @brief 条件式の識別値。
 		private: typename Super::FExpressionKey ExpressionKey;
 		/// @brief 条件式の最新の評価結果。
-		private: Psyque::ETernary CurrentEvaluation;
+		private: EPsyqueKleene CurrentEvaluation;
 		/// @brief 条件式の前回の評価結果。
-		private: Psyque::ETernary LastEvaluation;
+		private: EPsyqueKleene LastEvaluation;
 
 	}; // class FCache
 
@@ -169,11 +169,11 @@ class Psyque::RuleEngine::_private::THandler
 	/// @brief 条件挙動ハンドラを構築する。
 	public: THandler(
 		/// [in] THandler::Condition の初期値。 THandler::MakeCondition で作る。
-		typename This::FCondition const InCondition,
+		typename ThisClass::FCondition const InCondition,
 		/// [in] THandler::Function の初期値。
-		typename This::FFunctionWeakPtr InFunction,
+		typename ThisClass::FFunctionWeakPtr InFunction,
 		/// [in] THandler::Priority の初期値。
-		typename This::FPriority const InPriority):
+		typename ThisClass::FPriority const InPriority):
 	Function(MoveTemp(InFunction)),
 	Priority(InPriority),
 	Condition(InCondition)
@@ -183,7 +183,7 @@ class Psyque::RuleEngine::_private::THandler
 	/// @brief ムーブ構築子。
 	public: THandler(
 		/// [in,out] ムーブ元となるインスタンス。
-		This&& OutSource):
+		ThisClass&& OutSource):
 	Function(MoveTemp(OutSource.Function)),
 	Priority(MoveTemp(OutSource.Priority)),
 	Condition(MoveTemp(OutSource.Condition))
@@ -191,9 +191,9 @@ class Psyque::RuleEngine::_private::THandler
 
 	/// @brief ムーブ代入演算子。
 	/// @return *this
-	public: This& operator=(
+	public: ThisClass& operator=(
 		/// [in,out] ムーブ元となるインスタンス。
-		This&& OutSource)
+		ThisClass&& OutSource)
 	{
 		this->Function = MoveTemp(OutSource.Function);
 		this->Priority = MoveTemp(OutSource.Priority);
@@ -205,14 +205,14 @@ class Psyque::RuleEngine::_private::THandler
 	//-------------------------------------------------------------------------
 	/// @brief 挙動条件を取得する。
 	/// @return @copydoc THandler::Condition
-	public: typename This::FCondition GetCondition() const PSYQUE_NOEXCEPT
+	public: typename ThisClass::FCondition GetCondition() const PSYQUE_NOEXCEPT
 	{
 		return this->Condition;
 	}
 
 	/// @brief 条件挙動関数を取得する。
 	/// @return @copydoc THandler::Function
-	public: typename This::FFunctionWeakPtr const& GetFunction()
+	public: typename ThisClass::FFunctionWeakPtr const& GetFunction()
 	const PSYQUE_NOEXCEPT
 	{
 		return this->Function;
@@ -220,7 +220,7 @@ class Psyque::RuleEngine::_private::THandler
 
 	/// @brief 条件挙動関数の呼び出し優先順位を取得する。
 	/// @return @copydoc THandler::Priority
-	public: typename This::FPriority GetPriority() const PSYQUE_NOEXCEPT
+	public: typename ThisClass::FPriority GetPriority() const PSYQUE_NOEXCEPT
 	{
 		return this->Priority;
 	}
@@ -229,11 +229,11 @@ class Psyque::RuleEngine::_private::THandler
 	/// @brief 条件式の評価の遷移と挙動条件が合致するか判定する。
 	public: bool IsMatched(
 		/// [in] 条件式の評価の、最新と前回を合成した値。
-		typename This::FCondition const InTransition)
+		typename ThisClass::FCondition const InTransition)
 	const
 	{
 		return (
-			PSYQUE_ASSERT(InTransition != This::EUnitCondition::Invalid),
+			PSYQUE_ASSERT(InTransition != ThisClass::EUnitCondition::Invalid),
 			InTransition == (InTransition & this->GetCondition()));
 	}
 
@@ -249,16 +249,16 @@ class Psyque::RuleEngine::_private::THandler
 	///   @endcode
 	/// @return
 	///   関数が呼び出される挙動条件。単位条件の組み合わせが無効な場合は
-	///   This::EUnitCondition::Invalid を返す。
-	public: static typename This::FCondition MakeCondition(
+	///   ThisClass::EUnitCondition::Invalid を返す。
+	public: static typename ThisClass::FCondition MakeCondition(
 		/// [in] 条件式の、最新の評価の単位条件。
-		typename This::EUnitCondition::Type const InNowCondition,
+		typename ThisClass::EUnitCondition::Type const InNowCondition,
 		/// [in] 条件式の、前回の評価の単位条件。
-		typename This::EUnitCondition::Type const InLastCondition)
+		typename ThisClass::EUnitCondition::Type const InLastCondition)
 	{
-		return This::MixUnitCondition(
-			InNowCondition != This::EUnitCondition::Invalid
-				&& InLastCondition != This::EUnitCondition::Invalid
+		return ThisClass::MixUnitCondition(
+			InNowCondition != ThisClass::EUnitCondition::Invalid
+				&& InLastCondition != ThisClass::EUnitCondition::Invalid
 				&& (InNowCondition != InLastCondition
 					// 2のべき乗か判定する。
 					|| (InNowCondition & (InNowCondition - 1)) != 0),
@@ -279,58 +279,58 @@ class Psyque::RuleEngine::_private::THandler
 	///   @endcode
 	/// @return
 	///   関数が呼び出される挙動条件。評価の組み合わせが無効な場合は
-	///   This::EUnitCondition::Invalid を返す。
-	public: static typename This::FCondition MakeCondition(
+	///   ThisClass::EUnitCondition::Invalid を返す。
+	public: static typename ThisClass::FCondition MakeCondition(
 		/// [in] 条件となる、条件式の最新の評価。
-		Psyque::ETernary const InNowEvaluation,
+		EPsyqueKleene const InNowEvaluation,
 		/// [in] 条件となる、条件式の前回の評価。
-		Psyque::ETernary const InLastEvaluation)
+		EPsyqueKleene const InLastEvaluation)
 	{
 		auto const LocalNowCondition(
-			This::MakeUnitCondition(InNowEvaluation));
+			ThisClass::MakeUnitCondition(InNowEvaluation));
 		auto const LocalLastCondition(
-			This::MakeUnitCondition(InLastEvaluation));
-		return This::MixUnitCondition(
+			ThisClass::MakeUnitCondition(InLastEvaluation));
+		return ThisClass::MixUnitCondition(
 			LocalNowCondition != LocalLastCondition,
 			LocalNowCondition,
 			LocalLastCondition);
 	}
 
 	/// @brief 条件式の評価から単位条件を作る。
-	public: static typename This::EUnitCondition::Type MakeUnitCondition(
+	public: static typename ThisClass::EUnitCondition::Type MakeUnitCondition(
 		/// [in] 条件式の評価。
-		Psyque::ETernary const InEvaluation)
+		EPsyqueKleene const InEvaluation)
 	{
-		return InEvaluation == Psyque::ETernary::True?
-			This::EUnitCondition::True:
-			InEvaluation == Psyque::ETernary::False?
-				This::EUnitCondition::False:
-				This::EUnitCondition::Failed;
+		return InEvaluation == EPsyqueKleene::TernaryTrue?
+			ThisClass::EUnitCondition::True:
+			InEvaluation == EPsyqueKleene::TernaryFalse?
+				ThisClass::EUnitCondition::False:
+				ThisClass::EUnitCondition::Failed;
 	}
 
 	/// @brief 単位条件を合成して挙動条件を作る。
 	/// @return 挙動条件。
-	private: static typename This::FCondition MixUnitCondition(
+	private: static typename ThisClass::FCondition MixUnitCondition(
 		/// [in] 合成可能かどうか。
 		bool const InMix,
 		/// [in] 条件となる、最新の条件式の評価。
-		typename This::EUnitCondition::Type const InNowCondition,
+		typename ThisClass::EUnitCondition::Type const InNowCondition,
 		/// [in] 条件となる、前回の条件式の評価。
-		typename This::EUnitCondition::Type const InLastCondition)
+		typename ThisClass::EUnitCondition::Type const InLastCondition)
 	{
 		return InMix?
-			InNowCondition | (InLastCondition << This::UnitConditionBitWidth):
-			This::EUnitCondition::Invalid;
+			InNowCondition | (InLastCondition << ThisClass::UnitConditionBitWidth):
+			ThisClass::EUnitCondition::Invalid;
 	}
 
 	//---------------------------------------------------------------------
 	/// @brief 条件挙動関数を指すスマートポインタ。
-	private: typename This::FFunctionWeakPtr Function;
+	private: typename ThisClass::FFunctionWeakPtr Function;
 	/// @brief 条件挙動関数の呼び出し優先順位。
-	private: typename This::FPriority Priority;
+	private: typename ThisClass::FPriority Priority;
 	/// @brief 条件挙動関数を呼び出す挙動条件。
-	private: typename This::FCondition Condition;
+	private: typename ThisClass::FCondition Condition;
 
-}; // class Psyque::RuleEngine::_private::THandler
+}; // class Psyque::RulesEngine::_private::THandler
 
 // vim: set noexpandtab:

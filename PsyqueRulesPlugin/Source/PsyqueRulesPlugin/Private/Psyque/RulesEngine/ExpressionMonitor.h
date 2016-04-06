@@ -1,6 +1,6 @@
 ﻿// Copyright (c) 2016, Hillco Psychi, All rights reserved.
 /// @file
-/// @brief @copybrief Psyque::RuleEngine::_private::TExpressionMonitor
+/// @brief @copybrief Psyque::RulesEngine::_private::TExpressionMonitor
 /// @author Hillco Psychi (https://twitter.com/psychi)
 #pragma once
 
@@ -11,13 +11,13 @@
 /// @cond
 namespace Psyque
 {
-	namespace RuleEngine
+	namespace RulesEngine
 	{
 		namespace _private
 		{
 			template<typename> class TExpressionMonitor;
 		} // namespace _private
-	} // namespace RuleEngine
+	} // namespace RulesEngine
 } // namespace Psyque
 /// @endcond
 
@@ -25,9 +25,9 @@ namespace Psyque
 /// @brief 条件式監視器。条件式の評価の変化を検知し、条件挙動ハンドラに通知する。
 /// @tparam TemplateHandlerArray @copydoc TExpressionMonitor::FHandlerArray
 template<typename TemplateHandlerArray>
-class Psyque::RuleEngine::_private::TExpressionMonitor
+class Psyque::RulesEngine::_private::TExpressionMonitor
 {
-	private: using This = TExpressionMonitor; ///< @copydoc TDispatcher::This
+	private: using ThisClass = TExpressionMonitor; ///< @copydoc TDispatcher::ThisClass
 
 	//-------------------------------------------------------------------------
 	/// @brief 条件式監視器で保持する THandler のコンテナ。
@@ -36,7 +36,7 @@ class Psyque::RuleEngine::_private::TExpressionMonitor
 	private: using FHandler = typename TemplateHandlerArray::value_type;
 
 	//-------------------------------------------------------------------------
-	/// @brief This::Flags の構成。
+	/// @brief ThisClass::Flags の構成。
 	private: struct EFlag
 	{
 		enum Type: uint8
@@ -54,7 +54,7 @@ class Psyque::RuleEngine::_private::TExpressionMonitor
 	/// @brief 条件式監視器を構築する。
 	public: explicit TExpressionMonitor(
 		/// [in] メモリ割当子の初期値。
-		typename This::FHandlerArray::allocator_type const& InAllocator):
+		typename ThisClass::FHandlerArray::allocator_type const& InAllocator):
 	Handlers(InAllocator)
 	{}
 
@@ -62,16 +62,16 @@ class Psyque::RuleEngine::_private::TExpressionMonitor
 	/// @brief ムーブ構築子。
 	public: TExpressionMonitor(
 		/// [in,out] ムーブ元となるインスタンス。
-		This&& OutSource):
+		ThisClass&& OutSource):
 	Handlers(MoveTemp(OutSource.Handlers)),
 	Flags(MoveTemp(OutSource.Flags))
 	{}
 
 	/// @brief ムーブ代入演算子。
 	/// @return *this
-	public: This& operator=(
+	public: ThisClass& operator=(
 		/// [in,out] ムーブ元となるインスタンス。
-		This&& OutSource)
+		ThisClass&& OutSource)
 	{
 		if (this != &OutSource)
 		{
@@ -89,37 +89,37 @@ class Psyque::RuleEngine::_private::TExpressionMonitor
 	///   InCondition と合致すると、 InFunction の指す条件挙動関数が呼び出される。
 	/// @sa
 	///   InFunction の指す条件挙動関数が解体されると、それを弱参照している
-	///   This::FHandler は自動的に削除される。明示的に削除するには
-	///   This::UnregisterHandler を使う。
+	///   ThisClass::FHandler は自動的に削除される。明示的に削除するには
+	///   ThisClass::UnregisterHandler を使う。
 	/// @retval true
 	///   成功。 InFunction の指す条件挙動関数を弱参照する
-	///   This::FHandler を構築し、 OutExpressionMonitors に登録した。
+	///   ThisClass::FHandler を構築し、 OutExpressionMonitors に登録した。
 	/// @retval false
-	///   失敗。 This::FHandler は構築されなかった。
-	///   - InCondition が This::FHandler::EUnitCondition::Invalid だと、失敗する。
+	///   失敗。 ThisClass::FHandler は構築されなかった。
+	///   - InCondition が ThisClass::FHandler::EUnitCondition::Invalid だと、失敗する。
 	///   - InFunction が空か、空の関数を指していると、失敗する。
-	///   - InExpressionKey と対応する This::FHandler に、
+	///   - InExpressionKey と対応する ThisClass::FHandler に、
 	///     InFunction の指す条件挙動関数が既に登録されていると、失敗する。
 	public: template<typename TemplateExpressionMonitorMap>
 	static bool RegisterHandler(
-		/// [in,out] This::FHandler を登録する TExpressionMonitor の辞書。
+		/// [in,out] ThisClass::FHandler を登録する TExpressionMonitor の辞書。
 		TemplateExpressionMonitorMap& OutExpressionMonitors,
 		/// [in] InFunction の指す条件挙動関数に対応する
 		/// FEvaluator::FExpression の識別値。
-		typename This::FHandler::FExpressionKey const& InExpressionKey,
+		typename ThisClass::FHandler::FExpressionKey const& InExpressionKey,
 		/// [in] InFunction の指す条件挙動関数を呼び出す挙動条件。
 		/// FHandler::MakeCondition から作る。
-		typename This::FHandler::FCondition const InCondition,
+		typename ThisClass::FHandler::FCondition const InCondition,
 		/// [in] 登録する FHandler::FFunction を強参照するスマートポインタ。
 		/// InExpressionKey に対応する条件式の評価が変化して
 		/// InCondition に合致すると、呼び出される。
-		typename This::FHandler::FFunctionSharedPtr const& InFunction,
+		typename ThisClass::FHandler::FFunctionSharedPtr const& InFunction,
 		/// [in] InFunction の指す条件挙動関数の呼び出し優先順位。
 		/// 昇順に呼び出される。
-		typename This::FHandler::FPriority const InPriority)
+		typename ThisClass::FHandler::FPriority const InPriority)
 	{
 		auto const LocalFunction(InFunction.get());
-		if (InCondition != This::FHandler::EUnitCondition::Invalid
+		if (InCondition != ThisClass::FHandler::EUnitCondition::Invalid
 			&& LocalFunction != nullptr
 			&& static_cast<bool>(*LocalFunction))
 		{
@@ -127,10 +127,10 @@ class Psyque::RuleEngine::_private::TExpressionMonitor
 			auto const LocalEmplace(
 				OutExpressionMonitors.emplace(
 					InExpressionKey,
-					This(OutExpressionMonitors.get_allocator())));
+					ThisClass(OutExpressionMonitors.get_allocator())));
 			auto& LocalHandlers(LocalEmplace.first->second.Handlers);
 			if (LocalEmplace.second
-				|| !This::trim_handlers(LocalHandlers, LocalFunction, false))
+				|| !ThisClass::trim_handlers(LocalHandlers, LocalFunction, false))
 			{
 				// 条件式監視器へ条件挙動ハンドラを追加する。
 				LocalHandlers.emplace_back(InCondition, InFunction, InPriority);
@@ -140,22 +140,22 @@ class Psyque::RuleEngine::_private::TExpressionMonitor
 		return false;
 	}
 
-	/// @brief This::RegisterHandler で登録した条件挙動ハンドラを取り除く。
-	/// @retval true  InFunction を弱参照している This::FHandler を取り除いた。
-	/// @retval false 該当する This::FHandler がない。
+	/// @brief ThisClass::RegisterHandler で登録した条件挙動ハンドラを取り除く。
+	/// @retval true  InFunction を弱参照している ThisClass::FHandler を取り除いた。
+	/// @retval false 該当する ThisClass::FHandler がない。
 	public: bool UnregisterHandler(
-		/// [in] 削除する This::FHandler に対応する条件挙動関数。
-		typename This::FHandler::FFunction const& InFunction)
+		/// [in] 削除する ThisClass::FHandler に対応する条件挙動関数。
+		typename ThisClass::FHandler::FFunction const& InFunction)
 	{
-		return This::trim_handlers(this->Handlers, &InFunction, true);
+		return ThisClass::trim_handlers(this->Handlers, &InFunction, true);
 	}
 
 	/// @brief 条件挙動ハンドラを整理する。
-	/// @retval true  This::FHandler がなくなった。
-	/// @retval false This::FHandler はまだある。
+	/// @retval true  ThisClass::FHandler がなくなった。
+	/// @retval false ThisClass::FHandler はまだある。
 	public: bool ShrinkHandlers()
 	{
-		This::trim_handlers(this->Handlers, nullptr, false);
+		ThisClass::trim_handlers(this->Handlers, nullptr, false);
 		this->Handlers.shrink_to_fit();
 		return this->Handlers.empty();
 	}
@@ -181,10 +181,10 @@ class Psyque::RuleEngine::_private::TExpressionMonitor
 		for (auto& LocalExpressionMonitor: OutExpressionMonitors)
 		{
 			auto& local_flags(LocalExpressionMonitor.second.Flags);
-			if (!local_flags.test(This::EFlag::IsRegistered))
+			if (!local_flags.test(ThisClass::EFlag::IsRegistered))
 			{
 				auto const LocalRegisterExpression(
-					This::RegisterExpression(
+					ThisClass::RegisterExpression(
 						OutStatusMonitors,
 						OutExpressionMonitors,
 						LocalExpressionMonitor.first,
@@ -192,9 +192,9 @@ class Psyque::RuleEngine::_private::TExpressionMonitor
 						InEvaluator));
 				if (LocalRegisterExpression != 0)
 				{
-					local_flags.set(This::EFlag::IsRegistered);
+					local_flags.set(ThisClass::EFlag::IsRegistered);
 					local_flags.set(
-						This::EFlag::FlushCondition,
+						ThisClass::EFlag::FlushCondition,
 						LocalRegisterExpression < 0);
 				}
 			}
@@ -214,8 +214,8 @@ class Psyque::RuleEngine::_private::TExpressionMonitor
 	{
 		auto const local_flag_key(
 			InStatusExistence?
-				This::EFlag::ValidTransition:
-				This::EFlag::InvalidTransition);
+				ThisClass::EFlag::ValidTransition:
+				ThisClass::EFlag::InvalidTransition);
 		for (auto i(OutExpressionKeys.begin()); i != OutExpressionKeys.end();)
 		{
 			// 状態変化を通知する条件式監視器を取得する。
@@ -230,7 +230,7 @@ class Psyque::RuleEngine::_private::TExpressionMonitor
 				++i;
 				// 状態変化を条件式監視器へ知らせる。
 				auto& local_flags(LocalFind->second.Flags);
-				if (local_flags.test(This::EFlag::IsRegistered))
+				if (local_flags.test(ThisClass::EFlag::IsRegistered))
 				{
 					local_flags.set(local_flag_key);
 				}
@@ -241,8 +241,8 @@ class Psyque::RuleEngine::_private::TExpressionMonitor
 	/// @brief 条件式の評価の変化を検知し、条件挙動ハンドラをキャッシュに貯める。
 	/// @details
 	///   TEvaluator::FExpression の評価が最新と前回で異なっており、且つ
-	///   This::RegisterHandler で登録した This::FHandler::FCondition
-	///   と合致するなら、 This::FHandler を OutCachedHandlers に貯める。
+	///   ThisClass::RegisterHandler で登録した ThisClass::FHandler::FCondition
+	///   と合致するなら、 ThisClass::FHandler を OutCachedHandlers に貯める。
 	public: template<
 		typename TemplateHandlerCacheArray,
 		typename TemplateExpressionMonitorMap,
@@ -328,7 +328,7 @@ class Psyque::RuleEngine::_private::TExpressionMonitor
 		switch (LocalExpression.GetKind())
 		{
 			case EExpressionKind::SubExpression:
-			return This::RegisterCompoundExpression(
+			return ThisClass::RegisterCompoundExpression(
 				OutStatusMonitors,
 				InExpressionMonitors,
 				InRegisterKey,
@@ -391,7 +391,7 @@ class Psyque::RuleEngine::_private::TExpressionMonitor
 			++i)
 		{
 			auto const LocalRegisterExpression(
-				This::RegisterExpression(
+				ThisClass::RegisterExpression(
 					OutStatusMonitors,
 					InExpressionMonitors,
 					InExpressionKey,
@@ -417,9 +417,9 @@ class Psyque::RuleEngine::_private::TExpressionMonitor
 	/// @retval false OutHandlers から InFunction が見つからなかった。
 	private: static bool trim_handlers(
 		/// [in,out] 走査する条件挙動ハンドラのコンテナ。
-		typename This::FHandlerArray& OutHandlers,
+		typename ThisClass::FHandlerArray& OutHandlers,
 		/// [in] 検索する挙動挙動ハンドラに対応する条件挙動関数。
-		typename This::FHandler::FFunction const* const InFunction,
+		typename ThisClass::FHandler::FFunction const* const InFunction,
 		/// [in] 検索する条件挙動ハンドラを削除するかどうか。
 		bool const InErase)
 	{
@@ -450,7 +450,7 @@ class Psyque::RuleEngine::_private::TExpressionMonitor
 		return LocalFind && InFunction != nullptr;
 	}
 
-	/// @copydoc This::CacheHandlers
+	/// @copydoc ThisClass::CacheHandlers
 	private: template<
 		typename TemplateHandlerCacheArray, typename TemplateEvaluator>
 	void CacheHandlers(
@@ -465,7 +465,7 @@ class Psyque::RuleEngine::_private::TExpressionMonitor
 	{
 		// 条件式を評価し、結果が前回から変化してないか判定する。
 		auto const LocalFlushCondition(
-			this->Flags.test(This::EFlag::FlushCondition));
+			this->Flags.test(ThisClass::EFlag::FlushCondition));
 		auto const LocalLastEvaluation(
 			this->GetLastEvaluation(LocalFlushCondition));
 		auto const LocalNowEvaluation(
@@ -475,9 +475,9 @@ class Psyque::RuleEngine::_private::TExpressionMonitor
 				InExpressionKey,
 				LocalFlushCondition));
 		auto const LocalTransition(
-			This::FHandler::MakeCondition(
+			ThisClass::FHandler::MakeCondition(
 				LocalNowEvaluation, LocalLastEvaluation));
-		if (LocalTransition != This::FHandler::EUnitCondition::Invalid)
+		if (LocalTransition != ThisClass::FHandler::EUnitCondition::Invalid)
 		{
 			// 条件式の評価の変化が挙動条件と合致すれば、
 			// 条件挙動ハンドラをキャッシュに貯める。
@@ -509,7 +509,7 @@ class Psyque::RuleEngine::_private::TExpressionMonitor
 	/// @retval 0  条件式の評価は偽となった。
 	/// @retval 負 条件式の評価に失敗した。
 	private: template<typename TemplateEvaluator>
-	typename Psyque::ETernary EvaluateExpression(
+	typename EPsyqueKleene EvaluateExpression(
 		/// [in] 条件式から参照する TReservoir インスタンス。
 		typename TemplateEvaluator::FReservoir const& InReservoir,
 		/// [in] 評価する条件式を持つ TEvaluator インスタンス。
@@ -521,28 +521,28 @@ class Psyque::RuleEngine::_private::TExpressionMonitor
 	{
 		// 状態変化フラグを更新する。
 		auto const LocalInvalidTransition(
-			this->Flags.test(This::EFlag::InvalidTransition));
-		this->Flags.reset(This::EFlag::ValidTransition);
-		this->Flags.reset(This::EFlag::InvalidTransition);
+			this->Flags.test(ThisClass::EFlag::InvalidTransition));
+		this->Flags.reset(ThisClass::EFlag::ValidTransition);
+		this->Flags.reset(ThisClass::EFlag::InvalidTransition);
 
 		// 状態値の取得の失敗を検知したら、条件式の評価も失敗とみなす。
 		if (LocalInvalidTransition)
 		//if (InFlush && LocalInvalidTransition)
 		{
-			this->Flags.reset(This::EFlag::LastEvaluation);
-			this->Flags.reset(This::EFlag::LastCondition);
-			return Psyque::ETernary::Unknown;
+			this->Flags.reset(ThisClass::EFlag::LastEvaluation);
+			this->Flags.reset(ThisClass::EFlag::LastCondition);
+			return EPsyqueKleene::TernaryUnknown;
 		}
 
 		// 条件式を評価し、結果を記録する。
 		auto const LocalEvaluateExpression(
 			InEvaluator.EvaluateExpression(InExpressionKey, InReservoir));
 		this->Flags.set(
-			This::EFlag::LastEvaluation,
-			LocalEvaluateExpression != Psyque::ETernary::Unknown);
+			ThisClass::EFlag::LastEvaluation,
+			LocalEvaluateExpression != EPsyqueKleene::TernaryUnknown);
 		this->Flags.set(
-			This::EFlag::LastCondition,
-			LocalEvaluateExpression == Psyque::ETernary::True);
+			ThisClass::EFlag::LastCondition,
+			LocalEvaluateExpression == EPsyqueKleene::TernaryTrue);
 		return this->GetLastEvaluation(false);
 	}
 
@@ -554,8 +554,8 @@ class Psyque::RuleEngine::_private::TExpressionMonitor
 		/// [in] 評価する条件式の識別値。
 		typename TemplateEvaluator::FExpressionKey const& InExpressionKey)
 	{
-		if (this->Flags.test(This::EFlag::InvalidTransition)
-			|| this->Flags.test(This::EFlag::ValidTransition))
+		if (this->Flags.test(ThisClass::EFlag::InvalidTransition)
+			|| this->Flags.test(ThisClass::EFlag::ValidTransition))
 		{
 			return true;
 		}
@@ -563,11 +563,11 @@ class Psyque::RuleEngine::_private::TExpressionMonitor
 		// 条件式の生成と削除を検知する。
 		auto const LocalExistence(InEvaluator.IsRegistered(InExpressionKey));
 		auto const LocalLastEvaluation(
-			this->Flags.test(This::EFlag::LastEvaluation));
+			this->Flags.test(ThisClass::EFlag::LastEvaluation));
 		auto const LocalInvalid(!LocalExistence && LocalLastEvaluation);
 		auto const LocalValid(LocalExistence && !LocalLastEvaluation);
-		this->Flags.set(This::EFlag::InvalidTransition, LocalInvalid);
-		this->Flags.set(This::EFlag::ValidTransition, LocalValid);
+		this->Flags.set(ThisClass::EFlag::InvalidTransition, LocalInvalid);
+		this->Flags.set(ThisClass::EFlag::ValidTransition, LocalValid);
 		return LocalInvalid || LocalValid;
 	}
 
@@ -575,25 +575,25 @@ class Psyque::RuleEngine::_private::TExpressionMonitor
 	/// @retval 正 条件式の評価は真となった。
 	/// @retval 0  条件式の評価は偽となった。
 	/// @retval 負 条件式の評価に失敗した。
-	private: Psyque::ETernary GetLastEvaluation(
+	private: EPsyqueKleene GetLastEvaluation(
 		/// [in] 前回の評価を無視する。
 		bool const InFlush)
 	const PSYQUE_NOEXCEPT
 	{
-		return this->Flags.test(This::EFlag::LastEvaluation)?
-			static_cast<Psyque::ETernary>(
-				!InFlush && this->Flags.test(This::EFlag::LastCondition)):
-			Psyque::ETernary::Unknown;
+		return this->Flags.test(ThisClass::EFlag::LastEvaluation)?
+			static_cast<EPsyqueKleene>(
+				!InFlush && this->Flags.test(ThisClass::EFlag::LastCondition)):
+			EPsyqueKleene::TernaryUnknown;
 	}
 
-	/// @brief Psyque::RuleEngine 管理者以外は使用禁止。
+	/// @brief Psyque::RulesEngine 管理者以外は使用禁止。
 	/// @details 登録されている条件挙動ハンドラを取得する。
 	/// @return
-	///   InFunction に対応する This::FHandler を指すポインタ。該当する
-	///   This::FHandler がない場合は nullptr を返す。
-	public: typename This::FHandler const* _find_handler_ptr(
-		/// [in] 取得する This::FHandler に対応する条件挙動関数。
-		typename This::FHandler::FFunction const& InFunction)
+	///   InFunction に対応する ThisClass::FHandler を指すポインタ。該当する
+	///   ThisClass::FHandler がない場合は nullptr を返す。
+	public: typename ThisClass::FHandler const* _find_handler_ptr(
+		/// [in] 取得する ThisClass::FHandler に対応する条件挙動関数。
+		typename ThisClass::FHandler::FFunction const& InFunction)
 	const PSYQUE_NOEXCEPT
 	{
 		for (auto& LocalHandler: this->Handlers)
@@ -608,11 +608,11 @@ class Psyque::RuleEngine::_private::TExpressionMonitor
 	}
 
 	//-------------------------------------------------------------------------
-	/// @copydoc This::FHandlerArray
-	private: typename This::FHandlerArray Handlers;
+	/// @copydoc ThisClass::FHandlerArray
+	private: typename ThisClass::FHandlerArray Handlers;
 	/// @brief 条件式の評価結果を記録するフラグの集合。
 	private: std::bitset<8> Flags;
 
-}; // class Psyque::RuleEngine::_private::TExpressionMonitor
+}; // class Psyque::RulesEngine::_private::TExpressionMonitor
 
 // vim: set noexpandtab:

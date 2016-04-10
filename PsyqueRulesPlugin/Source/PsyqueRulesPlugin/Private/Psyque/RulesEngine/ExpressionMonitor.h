@@ -308,47 +308,47 @@ class Psyque::RulesEngine::_private::TExpressionMonitor
 		/// [in] 走査する条件式を持つ TEvaluator インスタンス。
 		TemplateEvaluator const& InEvaluator)
 	{
-		// InScanKey に対応する条件式と要素条件チャンクを取得する。
+		// InScanKey に対応する条件式と論理項要素チャンクを取得する。
 		auto const LocalExpression(InEvaluator.FindExpression(InScanKey));
-		if (LocalExpression.IsEmpty())
+		if (LocalExpression == nullptr)
 		{
 			return 0;
 		}
 		auto const LocalChunk(
-			InEvaluator._find_chunk(LocalExpression.GetChunkKey()));
+			InEvaluator._find_chunk(LocalExpression->GetChunkKey()));
 		if (LocalChunk == nullptr)
 		{
-			// 条件式があれば、要素条件チャンクもあるはず。
+			// 条件式があれば、論理項要素チャンクもあるはず。
 			check(false);
 			return 0;
 		}
 
 		// InScanKey に対応する条件式の種類によって、
 		// InRegisterKey の登録先を選択する。
-		switch (LocalExpression.GetKind())
+		switch (LocalExpression->GetKind())
 		{
-			case EExpressionKind::SubExpression:
+			case EPsyqueRulesExpressionKind::SubExpression:
 			return ThisClass::RegisterCompoundExpression(
 				OutStatusMonitors,
 				InExpressionMonitors,
 				InRegisterKey,
-				LocalExpression,
+				*LocalExpression,
 				LocalChunk->SubExpressions,
 				InEvaluator);
 
-			case EExpressionKind::StatusTransition:
+			case EPsyqueRulesExpressionKind::StatusTransition:
 			TemplateStatusMonitorMap::mapped_type::RegisterExpression(
 				OutStatusMonitors,
 				InRegisterKey,
-				LocalExpression,
+				*LocalExpression,
 				LocalChunk->StatusTransitions);
 			return -1;
 
-			case EExpressionKind::StatusComparison:
+			case EPsyqueRulesExpressionKind::StatusComparison:
 			TemplateStatusMonitorMap::mapped_type::RegisterExpression(
 				OutStatusMonitors,
 				InRegisterKey,
-				LocalExpression,
+				*LocalExpression,
 				LocalChunk->StatusComparisons);
 			return 1;
 
@@ -376,13 +376,13 @@ class Psyque::RulesEngine::_private::TExpressionMonitor
 		typename TemplateEvaluator::FExpressionKey const& InExpressionKey,
 		/// [in] 走査する複合条件式。
 		typename TemplateEvaluator::FExpression const& InExpression,
-		/// [in] InExpression が参照する要素条件コンテナ。
+		/// [in] InExpression が参照する論理項要素コンテナ。
 		typename TemplateEvaluator::FChunk::FSubExpressionArray const&
 			InSubExpressions,
 		/// [in] 条件式を持つ TEvaluator インスタンス。
 		TemplateEvaluator const& InEvaluator)
 	{
-		// InExpression の要素条件を走査し、
+		// InExpression の論理項要素を走査し、
 		// InExpressionKey を状態監視器へ登録する。
 		int8 LocalResult(1);
 		for (

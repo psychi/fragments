@@ -18,8 +18,7 @@
 /// @brief 文字列表で、条件式の論理演算子が記述されている属性の名前。
 /// @details
 /// Psyque::RulesEngine::TExpressionBuilder で解析する文字列表で、
-/// Psyque::RulesEngine::EExpressionLogic
-/// として解析する属性の名前。
+/// EPsyqueRulesExpressionLogic として解析する属性の名前。
 #ifndef PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_COLUMN_LOGIC
 #define PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_COLUMN_LOGIC "LOGIC"
 #endif // !defined(PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_COLUMN_LOGIC)
@@ -27,17 +26,16 @@
 /// @brief 文字列表で、条件式の種別が記述されている属性の名前。
 /// @details
 /// Psyque::RulesEngine::TExpressionBuilder で解析する文字列表で、
-/// Psyque::RulesEngine::EExpressionKind
-/// として解析する属性の名前。
+/// EPsyqueRulesExpressionKind として解析する属性の名前。
 #ifndef PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_COLUMN_KIND
 #define PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_COLUMN_KIND "KIND"
 #endif // !defined(PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_COLUMN_KIND)
 
-/// @brief 文字列表で、条件式の要素条件が記述されている属性の名前。
+/// @brief 文字列表で、条件式の論理項要素が記述されている属性の名前。
 /// @details
 /// Psyque::RulesEngine::TExpressionBuilder で解析する文字列表で、
 /// Psyque::RulesEngine::TDriver::FEvaluator::FExpression
-/// の要素条件として解析する属性の名前。
+/// の論理項要素として解析する属性の名前。
 #ifndef PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_COLUMN_ELEMENT
 #define PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_COLUMN_ELEMENT "ELEMENT"
 #endif // !defined(PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_COLUMN_ELEMENT)
@@ -45,8 +43,7 @@
 /// @brief 文字列表で、条件式の論理和演算子に対応する文字列。
 /// @details
 /// Psyque::RulesEngine::TExpressionBuilder で解析する文字列表で、
-/// Psyque::RulesEngine::EExpressionLogic::Or
-/// として解析する文字列。
+/// EPsyqueRulesExpressionLogic::Or として解析する文字列。
 #ifndef PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_LOGIC_OR
 #define PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_LOGIC_OR "Or"
 #endif // !defined(PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_LOGIC_OR)
@@ -54,8 +51,7 @@
 /// @brief 文字列表で、条件式の論理積演算子に対応する文字列。
 /// @details
 /// Psyque::RulesEngine::TExpressionBuilder で解析する文字列表で、
-/// Psyque::RulesEngine::EExpressionLogic::And
-/// として解析する文字列。
+/// EPsyqueRulesExpressionLogic::And として解析する文字列。
 #ifndef PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_LOGIC_AND
 #define PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_LOGIC_AND "And"
 #endif // !defined(PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_LOGIC_AND)
@@ -63,7 +59,7 @@
 /// @brief 文字列表で、複合条件式の種別に対応する文字列。
 /// @details
 /// Psyque::RulesEngine::TExpressionBuilder で解析する文字列表で、
-/// Psyque::RulesEngine::EExpressionKind::SubExpression
+/// EPsyqueRulesExpressionKind::SubExpression
 /// として解析する文字列。
 #ifndef PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_KIND_SUB_EXPRESSION
 #define PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_KIND_SUB_EXPRESSION "SubExpression"
@@ -72,7 +68,7 @@
 /// @brief 文字列表で、状態変化条件式の種別に対応する文字列。
 /// @details
 /// Psyque::RulesEngine::TExpressionBuilder で解析する文字列表で、
-/// Psyque::RulesEngine::EExpressionKind::StatusTransition
+/// EPsyqueRulesExpressionKind::StatusTransition
 /// として解析する文字列。
 #ifndef PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_KIND_STATUS_TRANSITION
 #define PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_KIND_STATUS_TRANSITION "StatusTransition"
@@ -81,7 +77,7 @@
 /// @brief 文字列表で、状態比較条件式の種別に対応する文字列。
 /// @details
 /// Psyque::RulesEngine::TExpressionBuilder で解析する文字列表で、
-/// Psyque::RulesEngine::EExpressionKind::StatusComparison
+/// EPsyqueRulesExpressionKind::StatusComparison
 /// として解析する文字列。
 #ifndef PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_KIND_STATUS_COMPARISON
 #define PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_KIND_STATUS_COMPARISON "StatusComparison"
@@ -133,13 +129,84 @@ class Psyque::RulesEngine::TExpressionBuilder
 			InIntermediation);
 	}
 
-	/// @brief 中間表現を解析して条件式を構築し、条件評価器に登録する。
+	/// @brief UDataTable を解析して条件式を構築し、条件評価器に登録する。
 	/// @return 登録した条件式の数。
-	public: template<
-		typename TemplateEvaluator,
-		typename TemplateHasher,
-		typename TemplateIntermediation,
-		typename TemplateChar>
+	public: template<typename TemplateEvaluator, typename TemplateHasher>
+	static typename std::size_t RegisterExpressions(
+		/// [in,out] 構築した条件式を登録する TDriver::FEvaluator インスタンス。
+		TemplateEvaluator& OutEvaluator,
+		/// [in] 文字列からハッシュ値を作る TDriver::FHasher インスタンス。
+		TemplateHasher const& InHashFunction,
+		/// [in] 条件式を登録するチャンクの名前ハッシュ値。
+		typename TemplateEvaluator::FChunkKey const InChunkKey,
+		/// [in] 条件式が参照する TDriver::FReservoir インスタンス。
+		typename TemplateEvaluator::FReservoir const& InReservoir,
+		/// [in] 登録する状態値のもととなる
+		/// FPsyqueRulesStatusTableRow で構成される UDataTable 。
+		UDataTable const& InExpressionTable)
+	{
+		FString const LocalContextName(
+			TEXT("PsyqueRulesPlugin/ExpressionBuilder::RegisterExpressions"));
+		auto const LocalRowNames(InExpressionTable.GetRowNames());
+		std::size_t LocalCount(0);
+		TArray<typename TemplateEvaluator::FChunk::FStatusComparisonArray::value_type>
+			LocalStatusComparisons;
+		TArray<typename TemplateEvaluator::FChunk::FStatusTransitionArray::value_type>
+			LocalStatusTransitions;
+		TArray<typename TemplateEvaluator::FChunk::FSubExpressionArray::value_type>
+			LocalSubExpressions;
+		for (auto& LocalExpressionName: LocalRowNames)
+		{
+			auto const LocalExpression(
+				InExpressionTable.FindRow<FPsyqueRulesExpressionTableRow>(
+					LocalExpressionName, LocalContextName));
+			if (LocalExpression == nullptr)
+			{
+				continue;
+			}
+			auto const LocalExpressionKey(InHashFunction(LocalExpressionName));
+			switch (LocalExpression->Kind)
+			{
+				case EPsyqueRulesExpressionKind::StatusComparison:
+				LocalCount += ThisClass::RegisterExpression(
+					LocalStatusComparisons,
+					OutEvaluator,
+					InHashFunction,
+					InChunkKey,
+					InReservoir,
+					LocalExpressionKey,
+					*LocalExpression);
+				break;
+
+				case EPsyqueRulesExpressionKind::StatusTransition:
+				LocalCount += ThisClass::RegisterExpression(
+					LocalStatusTransitions,
+					OutEvaluator,
+					InHashFunction,
+					InChunkKey,
+					InReservoir,
+					LocalExpressionKey,
+					*LocalExpression);
+				break;
+
+				case EPsyqueRulesExpressionKind::SubExpression:
+				LocalCount += ThisClass::RegisterExpression(
+					LocalSubExpressions,
+					OutEvaluator,
+					InHashFunction,
+					InChunkKey,
+					OutEvaluator,
+					LocalExpressionKey,
+					*LocalExpression);
+				break;
+			}
+		}
+		return LocalCount;
+	}
+
+	/// @brief JSONを解析して条件式を構築し、条件評価器に登録する。
+	/// @return 登録した条件式の数。
+	public: template<typename TemplateEvaluator, typename TemplateHasher>
 	static typename std::size_t RegisterExpressions(
 		/// [in,out] 構築した条件式を登録する TDriver::FEvaluator インスタンス。
 		TemplateEvaluator& OutEvaluator,
@@ -147,29 +214,174 @@ class Psyque::RulesEngine::TExpressionBuilder
 		TemplateHasher const& InHashFunction,
 		/// [in] 条件式を登録するチャンクの識別値。
 		typename TemplateEvaluator::FChunkKey const InChunkKey,
-		/// [in] 条件式が参照する TDriver::FReservoir インスタンス。
+		/// [in] 登録する条件式が参照する TDriver::FReservoir インスタンス。
 		typename TemplateEvaluator::FReservoir const& InReservoir,
-		/// [in] 状態値が記述されているJSON解析器。
-		TSharedRef<TJsonReader<TemplateChar>> const& InJsonReader)
+		/// [in] 登録する条件式が記述されているJSON値の配列。
+		TArray<TSharedPtr<FJsonValue>> const& InJsonArray)
 	{
-		TArray<TSharedPtr<FJsonValue>> LocalJsonArray;
-		if (!FJsonSerializer::Deserialize(InJsonReader, LocalJsonArray))
-		{
-			//UE_LOG();
-			return 0;
-		}
 		std::size_t LocalCount(0);
-		for (auto const& LocalJsonValue: LocalJsonArray)
+		for (auto const& LocalJsonValue: InJsonArray)
 		{
-			// 下位要素が要素数2以上の配列か判定する。
+			// 下位要素が要素数4以上の配列か判定する。
 			auto const LocalRow(LocalJsonValue.Get());
 			if (LocalRow == nullptr || LocalRow->Type != EJson::Array)
 			{
 				check(LocalRow != nullptr);
 				continue;
 			}
+			auto const& LocalColumns(LocalRow->AsArray());
+			if (LocalColumns.Num() < 4)
+			{
+				continue;
+			}
+			/// @todo 未実装
+			check(false);
 		}
 		return LocalCount;
+	}
+
+	//-------------------------------------------------------------------------
+	/// @brief データテーブル行を解析して条件式を構築し、条件評価器へ登録する。
+	private: template<
+		typename TemplateTermArray,
+		typename TemplateEvaluator,
+		typename TemplateHasher,
+		typename TemplateDictionary>
+	static bool RegisterExpression(
+		TemplateTermArray& OutWorkspaceTerms,
+		/// [in,out] 構築した条件式を登録する TDriver::FEvaluator インスタンス。
+		TemplateEvaluator& OutEvaluator,
+		/// [in] 文字列からハッシュ値を作る TDriver::FHasher インスタンス。
+		TemplateHasher const& InHashFunction,
+		/// [in] 条件式を登録するチャンクの名前ハッシュ値。
+		typename TemplateEvaluator::FChunkKey const InChunkKey,
+		/// [in] 条件式が参照するインスタンス。
+		TemplateDictionary const& InDictionary,
+		/// [in] 登録する条件式の名前ハッシュ値。
+		typename TemplateEvaluator::FExpressionKey const InExpressionKey,
+		/// [in] 登録する条件式のもととなるデータテーブル行。
+		FPsyqueRulesExpressionTableRow const& InExpression)
+	{
+		OutWorkspaceTerms.Reset(0);
+		int32 LocalElementIndex(0);
+		for (;;)
+		{
+			LocalElementIndex = ThisClass::BuildTerm(
+				OutWorkspaceTerms,
+				InHashFunction,
+				InDictionary,
+				InExpression.Elements,
+				LocalElementIndex);
+			if (LocalElementIndex <= 0)
+			{
+				return false;
+			}
+			if (InExpression.Elements.Num() <= LocalElementIndex)
+			{
+				return 0 < OutWorkspaceTerms.Num()
+					&& OutEvaluator.RegisterExpression(
+						InChunkKey,
+						InExpressionKey,
+						InExpression.Logic,
+						&OutWorkspaceTerms[0],
+						&OutWorkspaceTerms[0] + OutWorkspaceTerms.Num());
+			}
+		}
+	}
+
+	/// @brief 文字列をもとに、状態比較条件式の論理項を構築する。
+	private: template<typename TemplateHasher, typename TemplateReservoir>
+	static int32 BuildTerm(
+		TArray<typename TemplateReservoir::FStatusComparison>&
+			OutStatusComparisons,
+		/// [in] 文字列からハッシュ値を作る TDriver::FHasher インスタンス。
+		TemplateHasher const& InHashFunction,
+		/// [in] 条件式が参照する TDriver::FReservoir インスタンス。
+		TemplateReservoir const& InReservoir,
+		/// [in] 状態比較条件式の論理項要素のもととなる文字列の配列。
+		TArray<FString> const& InElements,
+		/// [in] 状態比較条件式の論理項要素として解析する文字列配列のインデクス番号。
+		int32 const InElementIndex)
+	{
+		auto const LocalLastIndex(InElementIndex + 3);
+		if (InElements.Num() < LocalLastIndex)
+		{
+			return 0;
+		}
+		/// @todo 未実装
+		return LocalLastIndex;
+	}
+
+	/// @brief 文字列をもとに、状態変化条件式の論理項を構築する。
+	private: template<typename TemplateHasher, typename TemplateReservoir>
+	static int32 BuildTerm(
+		TArray<
+			_private::TStatusTransition<
+				typename TemplateReservoir::FStatusKey>>&
+					OutStatusTransitions,
+		/// [in] 文字列からハッシュ値を作る TDriver::FHasher インスタンス。
+		TemplateHasher const& InHashFunction,
+		/// [in] 条件式が参照する TDriver::FReservoir インスタンス。
+		TemplateReservoir const& InReservoir,
+		/// [in] 状態変化条件式の論理項要素のもととなる文字列の配列。
+		TArray<FString> const& InElements,
+		/// [in] 状態変化条件式の論理項要素として解析する文字列配列のインデクス番号。
+		int32 const InElementIndex)
+	{
+		auto const LocalLastIndex(InElementIndex + 1);
+		if (LocalLastIndex <= InElements.Num())
+		{
+			// 状態変化を検知する状態値が状態貯蔵器に登録されていれば、
+			// 状態変化条件式の論理項を構築する。
+			auto const LocalStatusKey(
+				InHashFunction(FName(*InElements[InElementIndex])));
+			if (0 < InReservoir.FindBitWidth(LocalStatusKey))
+			{
+				OutStatusTransitions.Emplace(LocalStatusKey);
+				return LocalLastIndex;
+			}
+		}
+		return 0;
+	}
+
+	/// @brief 文字列をもとに、複合条件式の論理項を構築する。
+	private: template<typename TemplateHasher, typename TemplateEvaluator>
+	static int32 BuildTerm(
+		TArray<
+			_private::TSubExpression<
+				typename TemplateEvaluator::FExpressionKey>>&
+					OutSubExpressions,
+		/// [in] 文字列からハッシュ値を作る TDriver::FHasher インスタンス。
+		TemplateHasher const& InHashFunction,
+		/// [in] 複合条件式が参照する TDriver::FEvaluator インスタンス。
+		TemplateEvaluator const& InEvaluator,
+		/// [in] 複合条件式の論理項要素のもととなる文字列の配列。
+		TArray<FString> const& InElements,
+		/// [in] 複合条件式の論理項要素として解析する文字列配列のインデクス番号。
+		int32 const InElementIndex)
+	{
+		auto const LocalLastIndex(InElementIndex + 2);
+		if (LocalLastIndex <= InElements.Num())
+		{
+			// 参照する条件式を結合する条件を取得する。
+			auto const LocalCondition(
+				Psyque::ParseKleene(InElements[InElementIndex + 1]));
+			if (LocalCondition != EPsyqueKleene::TernaryUnknown)
+			{
+				// 結合する条件式が条件判定器に登録されていれば、
+				// 複合条件式の論理項を構築する。
+				auto const LocalExpressionKey(
+					InHashFunction(FName(*InElements[InElementIndex])));
+				if (InEvaluator.FindExpression(LocalExpressionKey) != nullptr)
+				{
+					OutSubExpressions.Emplace(
+						LocalExpressionKey,
+						LocalCondition != EPsyqueKleene::TernaryFalse);
+					return LocalLastIndex;
+				}
+			}
+		}
+		return 0;
 	}
 
 }; // class Psyque::RulesEngine::TExpressionBuilder
@@ -217,7 +429,7 @@ class Psyque::RulesEngine::TExpressionBuilder_
 		public: typename TemplateRelationTable::FAttribute Logic;
 		/// @brief 文字列表で条件式の種別が記述されている属性の列番号と列数。
 		public: typename TemplateRelationTable::FAttribute Kind;
-		/// @brief 文字列表で条件式の要素条件が記述されている属性の列番号と列数。
+		/// @brief 文字列表で条件式の論理項要素が記述されている属性の列番号と列数。
 		public: typename TemplateRelationTable::FAttribute Elements;
 
 	}; // class FTableAttribute
@@ -261,7 +473,7 @@ class Psyque::RulesEngine::TExpressionBuilder_
 		TemplateEvaluator& OutEvaluator,
 		/// [in,out] 文字列からハッシュ値を作る TDriver::FHasher 。
 		TemplateHasher const& InHashFunction,
-		/// [in] 条件式を登録する要素条件チャンクの識別値。
+		/// [in] 条件式を登録する論理項要素チャンクの識別値。
 		typename TemplateEvaluator::FChunkKey const& InChunkKey,
 		/// [in] 条件式が参照する TDriver::FReservoir 。
 		typename TemplateEvaluator::FReservoir const& InReservoir,
@@ -346,7 +558,7 @@ class Psyque::RulesEngine::TExpressionBuilder_
 		TemplateHasher const& InHashFunction,
 		/// [in,out] 作業領域として使う TDriver::FEvaluator::FChunk 。
 		typename TemplateEvaluator::FChunk& io_workspace,
-		/// [in] 条件式を登録する要素条件チャンクの識別値。
+		/// [in] 条件式を登録する論理項要素チャンクの識別値。
 		typename TemplateEvaluator::FChunkKey const& InChunkKey,
 		/// [in] 登録する条件式の識別値。
 		typename TemplateEvaluator::FExpressionKey const& InExpressionKey,
@@ -360,7 +572,7 @@ class Psyque::RulesEngine::TExpressionBuilder_
 		typename TemplateRelationTable::FAttribute const& InLogic,
 		/// [in] InTable で条件式の種別が記述されている属性の列番号と列数。
 		typename TemplateRelationTable::FAttribute const& InKind,
-		/// [in] InTable で条件式の要素条件が記述されている属性の列番号と列数。
+		/// [in] InTable で条件式の論理項要素が記述されている属性の列番号と列数。
 		typename TemplateRelationTable::FAttribute const& InElements)
 	{
 		if (InLogic.second < 1 || InKind.second < 1 || InElements.second < 1)
@@ -368,20 +580,20 @@ class Psyque::RulesEngine::TExpressionBuilder_
 			return nullptr;
 		}
 
-		// 要素条件の論理演算子を、文字列表から取得する。
+		// 論理項要素の論理演算子を、文字列表から取得する。
 		auto const& local_logic_cell(
 			InTable.FindCell(InRowNumber, InLogic.first));
-		RulesEngine::EExpressionLogic local_logic;
+		EPsyqueRulesExpressionLogic local_logic;
 		if (local_logic_cell ==
 				PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_LOGIC_AND)
 		{
-			local_logic = RulesEngine::EExpressionLogic::And;
+			local_logic = EPsyqueRulesExpressionLogic::And;
 		}
 		else if (
 			local_logic_cell ==
 				PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_LOGIC_OR)
 		{
-			local_logic = RulesEngine::EExpressionLogic::Or;
+			local_logic = EPsyqueRulesExpressionLogic::Or;
 		}
 		else
 		{
@@ -391,14 +603,14 @@ class Psyque::RulesEngine::TExpressionBuilder_
 		}
 
 		// 条件式の種別を文字列表から取得し、
-		// 種別ごとに条件式の要素条件を構築して登録する。
+		// 種別ごとに条件式の論理項要素を構築して登録する。
 		auto const& LocalKindCell(
 			InTable.FindCell(InRowNumber, InKind.first));
 		auto const local_elements_end(InElements.first + InElements.second);
 		if (LocalKindCell ==
 				PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_KIND_SUB_EXPRESSION)
 		{
-			// 複合条件式の要素条件を構築して登録する。
+			// 複合条件式の論理項要素を構築して登録する。
 			return ThisClass::RegisterExpression(
 				OutEvaluator,
 				InHashFunction,
@@ -416,7 +628,7 @@ class Psyque::RulesEngine::TExpressionBuilder_
 			LocalKindCell ==
 				PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_KIND_STATUS_TRANSITION)
 		{
-			// 状態変化条件式の要素条件を構築して登録する。
+			// 状態変化条件式の論理項要素を構築して登録する。
 			return ThisClass::RegisterExpression(
 				OutEvaluator,
 				InHashFunction,
@@ -434,7 +646,7 @@ class Psyque::RulesEngine::TExpressionBuilder_
 			LocalKindCell ==
 				PSYQUE_RULES_ENGINE_EXPRESSION_BUILDER_KIND_STATUS_COMPARISON)
 		{
-			// 状態比較条件式の要素条件を構築して登録する。
+			// 状態比較条件式の論理項要素を構築して登録する。
 			return ThisClass::RegisterExpression(
 				OutEvaluator,
 				InHashFunction,
@@ -469,31 +681,31 @@ class Psyque::RulesEngine::TExpressionBuilder_
 		TemplateEvaluator& OutEvaluator,
 		/// [in,out] 文字列からハッシュ値を生成する TDriver::FHasher 。
 		TemplateHasher const& InHashFunction,
-		/// [in,out] 条件式の要素条件を構築する作業領域として使うコンテナ。
+		/// [in,out] 条件式の論理項要素を構築する作業領域として使うコンテナ。
 		template_element_container& OutElements,
-		/// [in] 条件式を登録する要素条件チャンクの識別値。
+		/// [in] 条件式を登録する論理項要素チャンクの識別値。
 		typename TemplateEvaluator::FChunkKey const& InChunkKey,
 		/// [in] 登録する条件式の識別値。
 		typename TemplateEvaluator::FExpressionKey const& InExpressionKey,
-		/// [in] 登録する条件式の RulesEngine::EExpressionLogic 。
-		RulesEngine::EExpressionLogic const InLogic,
-		/// [in] 要素条件が参照する値。
+		/// [in] 登録する条件式の EPsyqueRulesExpressionLogic 。
+		EPsyqueRulesExpressionLogic const InLogic,
+		/// [in] 論理項要素が参照する値。
 		template_element_server const& InElements,
 		/// [in] 解析する Psyque::string::TRelationTable 。
 		TemplateRelationTable const& InTable,
 		/// [in] 解析する InTable の行番号。
 		typename TemplateRelationTable::FNumber const InRowNumber,
-		/// [in] InTable で条件式の要素条件が記述されている属性の先頭の列番号。
-		typename TemplateRelationTable::FNumber const in_column_begin,
-		/// [in] InTable で条件式の要素条件が記述されている属性の末尾の列番号。
-		typename TemplateRelationTable::FNumber const in_column_end)
+		/// [in] InTable で条件式の論理項要素が記述されている属性の先頭の列番号。
+		typename TemplateRelationTable::FNumber const InColumnBegin,
+		/// [in] InTable で条件式の論理項要素が記述されている属性の末尾の列番号。
+		typename TemplateRelationTable::FNumber const InColumnEnd)
 	{
-		// 要素条件のコンテナを構築し、条件式を条件評価器へ登録する。
+		// 論理項要素のコンテナを構築し、条件式を条件評価器へ登録する。
 		OutElements.clear();
 		for (
-			auto i(in_column_begin);
-			i < in_column_end;
-			i += ThisClass::build_element<TemplateEvaluator>(
+			auto i(InColumnBegin);
+			i < InColumnEnd;
+			i += ThisClass::BuildElement<TemplateEvaluator>(
 				OutElements,
 				InHashFunction,
 				InElements,
@@ -504,14 +716,14 @@ class Psyque::RulesEngine::TExpressionBuilder_
 			InChunkKey, InExpressionKey, InLogic, OutElements);
 	}
 
-	/// @brief 文字列表を解析し、複合条件式の要素条件を構築する。
+	/// @brief 文字列表を解析し、複合条件式の論理項要素を構築する。
 	/// @return 解析した列の数。
 	private: template<
 		typename TemplateEvaluator,
 		typename TemplateHasher,
 		typename TemplateRelationTable>
-	static typename TemplateRelationTable::FNumber build_element(
-		/// [in,out] 構築した要素条件を追加する
+	static typename TemplateRelationTable::FNumber BuildElement(
+		/// [in,out] 構築した論理項要素を追加する
 		/// TDriver::FEvaluator::FChunk::FSubExpressionArray 。
 		typename TemplateEvaluator::FChunk::FSubExpressionArray& OutElements,
 		/// [in,out] 文字列からハッシュ値を生成する TDriver::FHasher 。
@@ -522,7 +734,7 @@ class Psyque::RulesEngine::TExpressionBuilder_
 		TemplateRelationTable const& InTable,
 		/// [in] 解析する InTable の行番号。
 		typename TemplateRelationTable::FNumber const InRowNumber,
-		/// [in] InTable で条件式の要素条件が記述されている属性の列番号。
+		/// [in] InTable で条件式の論理項要素が記述されている属性の列番号。
 		typename TemplateRelationTable::FNumber const InColumnNumber)
 	{
 		// 複合条件式の下位条件式の識別値を取得する。
@@ -542,7 +754,7 @@ class Psyque::RulesEngine::TExpressionBuilder_
 				local_condition_cell);
 			if (local_condition_parser.IsCompleted())
 			{
-				// 複合条件式に要素条件を追加する。
+				// 複合条件式に論理項要素を追加する。
 				OutElements.emplace_back(
 					local_sub_key, local_condition_parser.GetValue());
 			}
@@ -558,14 +770,14 @@ class Psyque::RulesEngine::TExpressionBuilder_
 		return 2;
 	}
 
-	/// @brief 文字列表を解析し、状態変化条件式の要素条件を構築する。
+	/// @brief 文字列表を解析し、状態変化条件式の論理項要素を構築する。
 	/// @return 解析した列の数。
 	private: template<
 		typename TemplateEvaluator,
 		typename TemplateHasher,
 		typename TemplateRelationTable>
-	static typename TemplateRelationTable::FNumber build_element(
-		/// [in,out] 構築した要素条件を追加する
+	static typename TemplateRelationTable::FNumber BuildElement(
+		/// [in,out] 構築した論理項要素を追加する
 		/// TDriver::FEvaluator::FChunk::FStatusTransitionArray 。
 		typename TemplateEvaluator::FChunk::FStatusTransitionArray&
 			OutElements,
@@ -577,7 +789,7 @@ class Psyque::RulesEngine::TExpressionBuilder_
 		TemplateRelationTable const& InTable,
 		/// [in] 解析する InTable の行番号。
 		typename TemplateRelationTable::FNumber const InRowNumber,
-		/// [in] InTable で条件式の要素条件が記述されている属性の列番号。
+		/// [in] InTable で条件式の論理項要素が記述されている属性の列番号。
 		typename TemplateRelationTable::FNumber const InColumnNumber)
 	{
 		// 状態値の識別値を取得する。
@@ -587,7 +799,7 @@ class Psyque::RulesEngine::TExpressionBuilder_
 		if (LocalStatusKey !=
 				InHashFunction(typename TemplateHasher::argument_type()))
 		{
-			// 状態変化条件式に要素条件を追加する。
+			// 状態変化条件式に論理項要素を追加する。
 			OutElements.push_back(LocalStatusKey);
 		}
 		else
@@ -597,14 +809,14 @@ class Psyque::RulesEngine::TExpressionBuilder_
 		return 1;
 	}
 
-	/// @brief 文字列表を解析し、状態比較条件式の要素条件を構築する。
+	/// @brief 文字列表を解析し、状態比較条件式の論理項要素を構築する。
 	/// @return 解析した列の数。
 	private: template<
 		typename TemplateEvaluator,
 		typename TemplateHasher,
 		typename TemplateRelationTable>
-	static typename TemplateRelationTable::FNumber build_element(
-		/// [in,out] 構築した要素条件を追加する
+	static typename TemplateRelationTable::FNumber BuildElement(
+		/// [in,out] 構築した論理項要素を追加する
 		/// TDriver::FEvaluator::FChunk::FStatusComparisonArray 。
 		typename TemplateEvaluator::FChunk::FStatusComparisonArray& OutElements,
 		/// [in,out] 文字列からハッシュ値を生成する TDriver::FHasher 。
@@ -615,7 +827,7 @@ class Psyque::RulesEngine::TExpressionBuilder_
 		TemplateRelationTable const& InTable,
 		/// [in] 解析する InTable の行番号。
 		typename TemplateRelationTable::FNumber const InRowNumber,
-		/// [in] InTable で条件式の要素条件が記述されている属性の列番号。
+		/// [in] InTable で条件式の論理項要素が記述されている属性の列番号。
 		typename TemplateRelationTable::FNumber const InColumnNumber)
 	{
 		auto const LocalComparison(

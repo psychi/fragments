@@ -69,13 +69,13 @@ class Psyque::RulesEngine::_private::TReservoir
 	public: using FStatusComparison =
 		Psyque::RulesEngine::_private::TStatusOperation<
 			typename ThisClass::FStatusKey,
-			EStatusComparison,
+			RulesEngine::EStatusComparison,
 			typename ThisClass::FStatusValue>;
 	/// @brief 状態値の代入演算の引数。
 	public: using FStatusAssignment =
 		Psyque::RulesEngine::_private::TStatusOperation<
 			typename ThisClass::FStatusKey,
-			typename RulesEngine::EStatusAssignment,
+			RulesEngine::EStatusAssignment,
 			typename ThisClass::FStatusValue>;
 
 	//-------------------------------------------------------------------------

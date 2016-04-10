@@ -14,6 +14,26 @@ namespace
 	using FPsyqueRulesEngineDriver = Psyque::RulesEngine::TDriver<
 		uint64, float, int32, std::hash<FName>, std::allocator<void*>>;
 	TSharedPtr<FPsyqueRulesEngineDriver> UnnamedDriver;
+
+	TArray<TSharedPtr<FJsonValue>> StringToJsonArray(
+		FString const& InJsonString)
+	{
+		auto const LocalJsonReader(
+			StaticCastSharedRef<TJsonReader<TCHAR>>(
+				FJsonStringReader::Create(InJsonString)));
+		TArray<TSharedPtr<FJsonValue>> LocalJsonArray;
+		if (!FJsonSerializer::Deserialize(LocalJsonReader, LocalJsonArray))
+		{
+			UE_LOG(
+				LogPsyqueRulesEngine,
+				Warning,
+				TEXT(
+					"FJsonSerializer::Deserialize is failed"
+					" in PsyqueRulesPlugin/StringToJsonArray"));
+			LocalJsonArray.Empty();
+		}
+		return LocalJsonArray;
+	}
 };
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
@@ -25,14 +45,13 @@ Super(InObjectInitializer)
 //-----------------------------------------------------------------------------
 bool UPsyqueRulesEngine::CreateDriver()
 {
-	if (::UnnamedDriver.IsValid()) {return false;}
-	else
+	auto const LocalDriver(new FPsyqueRulesEngineDriver);
+	if (LocalDriver != nullptr)
 	{
-		::UnnamedDriver = ::MakeShareable(new FPsyqueRulesEngineDriver);
-		auto const LocalValid(::UnnamedDriver.IsValid());
-		check(LocalValid);
-		return LocalValid;
+		::UnnamedDriver = ::MakeShareable(LocalDriver);
+		return true;
 	}
+	else {return false;}
 }
 
 bool UPsyqueRulesEngine::DestroyDriver()
@@ -72,7 +91,6 @@ bool UPsyqueRulesEngine::RegisterUnsignedStatus(
 	uint8 const InBitWidth)
 {
 	return 0 <= InValue
-		&& InBitWidth < sizeof(int32) * CHAR_BIT
 		&& ::UnnamedDriver->RegisterStatus(
 			InChunkKey, InStatusKey, static_cast<uint32>(InValue), InBitWidth);
 }
@@ -84,7 +102,6 @@ bool UPsyqueRulesEngine::RegisterSignedStatus(
 	uint8 const InBitWidth)
 {
 	return InValue != ThisClass::GetIntegerNan()
-		&& InBitWidth <= sizeof(int32) * CHAR_BIT
 		&& ::UnnamedDriver->RegisterStatus(
 			InChunkKey, InStatusKey, InValue, InBitWidth);
 }
@@ -113,13 +130,10 @@ int32 UPsyqueRulesEngine::GetUnsignedStatus(int32 const InStatusKey) const
 	auto const LocalValue(
 		::UnnamedDriver->GetReservoir().FindStatus(InStatusKey));
 	auto const LocalUnsigned(LocalValue.GetUnsigned());
-	if (LocalUnsigned != nullptr)
+	if (LocalUnsigned != nullptr &&
+		*LocalUnsigned <= static_cast<uint32>(std::numeric_limits<int32>::max()))
 	{
-		auto const LocalInteger(static_cast<int32>(*LocalUnsigned));
-		if (0 <= LocalInteger && LocalInteger == *LocalUnsigned)
-		{
-			return LocalInteger;
-		}
+		return static_cast<int32>(*LocalUnsigned);
 	}
 	return ThisClass::GetIntegerNan();
 }
@@ -129,8 +143,13 @@ int32 UPsyqueRulesEngine::GetSignedStatus(int32 const InStatusKey) const
 	auto const LocalValue(
 		::UnnamedDriver->GetReservoir().FindStatus(InStatusKey));
 	auto const LocalSigned(LocalValue.GetSigned());
-	return LocalSigned != nullptr?
-		static_cast<int32>(*LocalSigned): ThisClass::GetIntegerNan();
+	if (LocalSigned != nullptr
+		&& *LocalSigned <= std::numeric_limits<int32>::max()
+		&& ThisClass::GetIntegerNan() < *LocalSigned)
+	{
+		return static_cast<int32>(*LocalSigned);
+	}
+	return ThisClass::GetIntegerNan();
 }
 
 float UPsyqueRulesEngine::GetFloatStatus(int32 const InStatusKey) const
@@ -138,8 +157,7 @@ float UPsyqueRulesEngine::GetFloatStatus(int32 const InStatusKey) const
 	auto const LocalValue(
 		::UnnamedDriver->GetReservoir().FindStatus(InStatusKey));
 	auto const LocalFloat(LocalValue.GetFloat());
-	return LocalFloat != nullptr?
-		static_cast<float>(*LocalFloat): ThisClass::GetFloatNan();
+	return LocalFloat != nullptr? *LocalFloat: ThisClass::GetFloatNan();
 }
 
 //-----------------------------------------------------------------------------
@@ -176,7 +194,51 @@ bool UPsyqueRulesEngine::SetFloatStatus(
 }
 
 //-----------------------------------------------------------------------------
-void UPsyqueRulesEngine::ExtendChunkByJson(
+void UPsyqueRulesEngine::ExtendChunkFromDataTable(
+	int32 const InChunkKey,
+	UDataTable const* const InStatusTable,
+	UDataTable const* const InExpressionTable,
+	UDataTable const* const InBehaviorTable)
+{
+	if (InStatusTable == nullptr)
+	{
+		UE_LOG(
+			LogPsyqueRulesEngine,
+			Error,
+			TEXT("InStatusTable is nullptr in %s."),
+			__func__);
+		return;
+	}
+	if (InExpressionTable == nullptr)
+	{
+		UE_LOG(
+			LogPsyqueRulesEngine,
+			Error,
+			TEXT("InExpressionTable is nullptr in %s."),
+			__func__);
+		return;
+	}
+	if (InBehaviorTable == nullptr)
+	{
+		UE_LOG(
+			LogPsyqueRulesEngine,
+			Error,
+			TEXT("InBehaviorTable is nullptr in %s."),
+			__func__);
+		return;
+	}
+	::UnnamedDriver->ExtendChunk(
+		InChunkKey,
+		Psyque::RulesEngine::TStatusBuilder(),
+		*InStatusTable,
+		Psyque::RulesEngine::TExpressionBuilder(),
+		*InExpressionTable,
+		Psyque::RulesEngine::TStatusBuilder(),
+		*InBehaviorTable);
+}
+
+//-----------------------------------------------------------------------------
+void UPsyqueRulesEngine::ExtendChunkFromJsonString(
 	int32 const InChunkKey,
 	FString const& InStatusJson,
 	FString const& InExpressionJson,
@@ -185,11 +247,11 @@ void UPsyqueRulesEngine::ExtendChunkByJson(
 	::UnnamedDriver->ExtendChunk(
 		InChunkKey,
 		Psyque::RulesEngine::TStatusBuilder(),
-		InStatusJson,
+		StringToJsonArray(InStatusJson),
+		Psyque::RulesEngine::TExpressionBuilder(),
+		StringToJsonArray(InExpressionJson),
 		Psyque::RulesEngine::TStatusBuilder(),
-		InExpressionJson,
-		Psyque::RulesEngine::TStatusBuilder(),
-		InBehaviorJson);
+		StringToJsonArray(InBehaviorJson));
 }
 
 void UPsyqueRulesEngine::RemoveChunk(int32 const InChunkKey)

@@ -4,17 +4,168 @@
 /// @author Hillco Psychi (https://twitter.com/psychi)
 #pragma once
 
-#include "Json.h"
-
 /// @cond
 namespace Psyque
 {
+	namespace String
+	{
+		class FNumericParser;
+	}
 	namespace RulesEngine
 	{
 		class TStatusBuilder;
 	} // namespace RulesEngine
 } // namespace Psyque
 /// @endcond
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+class Psyque::String::FNumericParser
+{
+	private: using ThisClass = FNumericParser;
+
+	public: enum class EKind: uint8
+	{
+		Empty,
+		Bool,
+		Unsigned,
+		Negative,
+		Float,
+	};
+
+	public: template<typename TemplateChar>
+	TemplateChar const* Parse(
+		TemplateChar const* const InStringBegin,
+		TemplateChar const* const InStringEnd)
+	{
+		// 先頭と末尾の空白文字を取り除く。
+		auto const LocalStringBegin(
+			ThisClass::TrimFront(InStringBegin, InStringEnd));
+		auto const LocalStringEnd(
+			ThisClass::TrimFront(InStringBegin, InStringEnd));
+		if (LocalStringEnd <= LocalStringBegin)
+		{
+			return nullptr;
+		}
+
+		// 符号を決定する。
+		auto LocalCharIterator(LocalStringBegin);
+		int8 LocalSign(1);
+		switch (*LocalCharIterator)
+		{
+			case '-': LocalSign = -1;
+			// case '+' に続く。
+
+			case '+':
+			++LocalCharIterator;
+			if (LocalStringEnd <= LocalCharIterator)
+			{
+				return nullptr;
+			}
+			break;
+
+			case 't':
+			case 'T':
+			return nullptr;
+
+			case 'f':
+			case 'F':
+			return nullptr;
+
+			default: break;
+		}
+
+		// 基数を決定する。
+		uint8 LocalRadix;
+		if (*LocalCharIterator == '.' || (
+			'1' <= *LocalCharIterator && *LocalCharIterator <= '9'))
+		{
+			LocalRadix = 10;
+		}
+		else if (*LocalCharIterator != '0')
+		{
+			return nullptr;
+		}
+		else
+		{
+			++LocalCharIterator;
+			if (LocalStringEnd <= LocalCharIterator)
+			{
+				this->SetUnsigned(0);
+				return LocalCharIterator;
+			}
+
+			switch (*LocalCharIterator)
+			{
+				case 'b': LocalRadix =  2; break;
+				case 'x': LocalRadix = 16; break;
+
+				default:
+				if (std::isdigit(*LocalCharIterator))
+				{
+					LocalRadix = 8;
+					break;
+				}
+				return nullptr;
+			}
+		}
+
+		/// @todo 未実装。
+		return nullptr;
+	}
+
+	public: void SetUnsigned(uint64 const InUnsigned)
+	{
+		this->Kind = ThisClass::EKind::Unsigned;
+		this->Unsigned = InUnsigned;
+	}
+
+	public: template<typename TemplateChar>
+	static TemplateChar const* TrimFront(
+		TemplateChar const* const InStringBegin,
+		TemplateChar const* const InStringEnd)
+	{
+		if (InStringBegin < InStringEnd)
+		{
+			check(InStringBegin != nullptr);
+			for (auto i(InStringBegin); i < InStringEnd; ++i)
+			{
+				if (!std::isspace(*i))
+				{
+					return i;
+				}
+			}
+		}
+		return InStringEnd;
+	}
+
+	public: template<typename TemplateChar>
+	static TemplateChar const* TrimBack(
+		TemplateChar const* const InStringBegin,
+		TemplateChar const* const InStringEnd)
+	{
+		if (InStringBegin < InStringEnd)
+		{
+			check(InStringBegin != nullptr);
+			for (auto i(InStringEnd - 1); InStringBegin <= i; --i)
+			{
+				if (!std::isspace(*i))
+				{
+					return i + 1;
+				}
+			}
+		}
+		return InStringBegin;
+	}
+
+	private:
+	union
+	{
+		double Float;
+		uint64 Unsigned;
+		bool Bool;
+	};
+	ThisClass::EKind Kind;
+};
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief 文字列表から状態値を構築する関数オブジェクト。
@@ -36,7 +187,7 @@ class Psyque::RulesEngine::TStatusBuilder
 		TemplateReservoir& OutReservoir,
 		/// [in,out] 文字列からハッシュ値を作る TDriver::FHasher インスタンス。
 		TemplateHasher const& InHashFunction,
-		/// [in] 状態値を登録するチャンクの識別値。
+		/// [in] 状態値を登録するチャンクの名前ハッシュ値。
 		typename TemplateReservoir::FChunkKey const InChunkKey,
 		/// [in] 解析する中間表現。
 		TemplateIntermediation const& InIntermediation)
@@ -46,7 +197,7 @@ class Psyque::RulesEngine::TStatusBuilder
 			OutReservoir, InHashFunction, InChunkKey, InIntermediation);
 	}
 
-	/// @brief JSONを解析して状態値を構築し、状態貯蔵器へ登録する。
+	/// @brief UDataTable を解析して状態値を構築し、状態貯蔵器へ登録する。
 	/// @return 登録した状態値の数。
 	public: template<typename TemplateReservoir, typename TemplateHasher>
 	static std::size_t RegisterStatuses(
@@ -54,22 +205,30 @@ class Psyque::RulesEngine::TStatusBuilder
 		TemplateReservoir& OutReservoir,
 		/// [in] 文字列からハッシュ値を作る TDriver::FHasher インスタンス。
 		TemplateHasher const& InHashFunction,
-		/// [in] 状態値を登録するチャンクの識別値。
+		/// [in] 状態値を登録するチャンクの名前ハッシュ値。
 		typename TemplateReservoir::FChunkKey const InChunkKey,
-		/// [in] JSON形式で状態値が記述されている文字列。
-		FString const& InJsonFormatString)
+		/// [in] 登録する状態値のもととなる
+		/// FPsyqueRulesStatusTableRow で構成される UDataTable 。
+		UDataTable const& InStatusTable)
 	{
-		auto const LocalJsonReader(
-			StaticCastSharedRef<TJsonReader<TCHAR>>(
-				FJsonStringReader::Create(InJsonFormatString)));
-		TArray<TSharedPtr<FJsonValue>> LocalJsonArray;
-		if (FJsonSerializer::Deserialize(LocalJsonReader, LocalJsonArray))
+		FString const LocalContextName(
+			TEXT("PsyqueRulesPlugin/StatusBuilder::RegisterStatuses"));
+		auto const LocalRowNames(InStatusTable.GetRowNames());
+		std::size_t LocalCount(0);
+		for (auto& LocalRowName: LocalRowNames)
 		{
-			return ThisClass::RegisterStatuses(
-				OutReservoir, InHashFunction, InChunkKey, LocalJsonArray);
+			auto const LocalRow(
+				InStatusTable.FindRow<FPsyqueRulesStatusTableRow>(
+					LocalRowName, LocalContextName));
+			LocalCount += LocalRow != nullptr
+				&& ThisClass::RegisterStatus(
+					OutReservoir,
+					InHashFunction,
+					InChunkKey,
+					InHashFunction(LocalRowName),
+					*LocalRow);
 		}
-		//UE_LOG();
-		return 0;
+		return LocalCount;
 	}
 
 	/// @brief JSONを解析して状態値を構築し、状態貯蔵器へ登録する。
@@ -80,9 +239,9 @@ class Psyque::RulesEngine::TStatusBuilder
 		TemplateReservoir& OutReservoir,
 		/// [in] 文字列からハッシュ値を作る TDriver::FHasher インスタンス。
 		TemplateHasher const& InHashFunction,
-		/// [in] 状態値を登録するチャンクの識別値。
+		/// [in] 状態値を登録するチャンクの名前ハッシュ値。
 		typename TemplateReservoir::FChunkKey const InChunkKey,
-		/// [in] 状態値が記述されているJSON値の配列。
+		/// [in] 登録する状態値が記述されているJSON値の配列。
 		TArray<TSharedPtr<FJsonValue>> const& InJsonArray)
 	{
 		std::size_t LocalCount(0);
@@ -128,6 +287,35 @@ class Psyque::RulesEngine::TStatusBuilder
 	}
 
 	//-------------------------------------------------------------------------
+	/// @brief データテーブル行を解析して状態値を構築し、状態貯蔵器へ登録する。
+	private: template<typename TemplateReservoir, typename TemplateHasher>
+	static bool RegisterStatus(
+		/// [in,out] 状態値を登録する TDriver::FReservoir インスタンス。
+		TemplateReservoir& OutReservoir,
+		/// [in] 文字列からハッシュ値を作る TDriver::FHasher インスタンス。
+		TemplateHasher const& InHashFunction,
+		/// [in] 状態値を登録するチャンクの名前ハッシュ値。
+		typename TemplateReservoir::FChunkKey const InChunkKey,
+		/// [in] 状態値の名前ハッシュ値。
+		typename TemplateReservoir::FStatusKey const InStatusKey,
+		/// [in] 状態値のもととなるデータテーブル行。
+		FPsyqueRulesStatusTableRow const& InStatus)
+	{
+		auto const LocalKleene(Psyque::ParseKleene(InStatus.InitialValue));
+		if (LocalKleene != EPsyqueKleene::TernaryUnknown)
+		{
+			return OutReservoir.RegisterStatus(
+				InChunkKey,
+				InStatusKey,
+				LocalKleene != EPsyqueKleene::TernaryFalse);
+		}
+
+		/// @todo 未実装。
+		auto const LocalFloat(FCString::Atof(*InStatus.InitialValue));
+		auto const LocalInteger(FCString::Atoi(*InStatus.InitialValue));
+		return false;
+	}
+
 	/// @brief JSONを解析して状態値を構築し、状態貯蔵器へ登録する。
 	private: template<typename TemplateReservoir, typename TemplateHasher>
 	static bool RegisterStatus(
@@ -191,8 +379,11 @@ class Psyque::RulesEngine::TStatusBuilder
 				InHashFunction(FName(*InStatusKey)),
 				InStatusValue.AsNumber());
 
-			/// @note 状態値の初期値を、文字列から数値へ変換できるようにしたい。
-			case EJson::String: break;
+			/// @todo 状態値の初期値を、文字列から数値へ変換できるようにしたい。
+			case EJson::String:
+			check(false);
+			break;
+
 			default: break;
 		}
 		return false;

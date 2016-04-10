@@ -304,13 +304,13 @@ class Psyque::RulesEngine::TDriver
 			this->HashFunction,
 			InChunkKey,
 			InStatusIntermediation);
-/*
 		InExpressionBuilder(
 			this->Evaluator,
 			this->HashFunction,
 			InChunkKey,
 			this->Reservoir,
 			InExpressionIntermediation);
+/*
 		ThisClass::FHandlerChunk::Extend(
 			this->HandlerChunks,
 			InChunkKey,
@@ -559,76 +559,5 @@ class Psyque::RulesEngine::TDriver
 	public: typename ThisClass::FHasher HashFunction;
 
 }; // class Psyque::RulesEngine::TDriver
-
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-namespace PsyqueTest
-{
-	inline void RulesEngine()
-	{
-		using FDriver = Psyque::RulesEngine::TDriver<>;
-		FDriver LocalDriver;
-
-		FString const LocalStatusJson(
-			TEXT(
-				"["
-				"  [\"status_bool\",     true],"
-				"  [\"status_signed\",   -128, -8],"
-				"  [\"status_unsigned\", 1023, 10],"
-				"  [\"status_float\",     0.5]"
-				"]"));
-		FString const LocalExpressionJson(
-			TEXT(
-				"["
-				"  [\"expression#0\", \"AND\", \"STATUS_COMPARISON\"],"
-				"  [\"expression#1\", \"OR\",  \"STATUS_COMPARISON\"]"
-				"]"));
-		FString const LocalHandlerJson((TEXT("DUMMY")));
-		FName const LocalChunkName(TEXT("PsyqueTest"));
-		LocalDriver.ExtendChunk(
-			LocalDriver.HashFunction(LocalChunkName),
-			Psyque::RulesEngine::TStatusBuilder(),
-			LocalStatusJson,
-			Psyque::RulesEngine::TExpressionBuilder(),
-			LocalExpressionJson,
-			Psyque::RulesEngine::TStatusBuilder(),
-			LocalHandlerJson);
-
-		auto const LocalEmpyStatus(
-			LocalDriver.GetReservoir().FindStatus(
-				LocalDriver.HashFunction(LocalChunkName)));
-		check(LocalEmpyStatus.IsEmpty());
-
-		auto const LocalBoolStatus(
-			LocalDriver.GetReservoir().FindStatus(
-				LocalDriver.HashFunction(TEXT("status_bool"))));
-		check(
-			EPsyqueKleene::TernaryTrue == LocalBoolStatus.Compare(
-				Psyque::RulesEngine::EStatusComparison::Equal, true));
-
-		auto const LocalSignedStatus(
-			LocalDriver.GetReservoir().FindStatus(
-				LocalDriver.HashFunction(TEXT("status_signed"))));
-		check(
-			EPsyqueKleene::TernaryTrue == LocalSignedStatus.Compare(
-				Psyque::RulesEngine::EStatusComparison::Equal, -128));
-
-		auto const LocalUnsignedStatus(
-			LocalDriver.GetReservoir().FindStatus(
-				LocalDriver.HashFunction(TEXT("status_unsigned"))));
-		check(
-			EPsyqueKleene::TernaryTrue == LocalUnsignedStatus.Compare(
-				Psyque::RulesEngine::EStatusComparison::Equal, 1023));
-
-		auto const LocalFloatStatus(
-			LocalDriver.GetReservoir().FindStatus(
-				LocalDriver.HashFunction(TEXT("status_float"))));
-		check(
-			EPsyqueKleene::TernaryTrue == LocalFloatStatus.Compare(
-				Psyque::RulesEngine::EStatusComparison::Equal, 0.5f));
-
-		LocalDriver.Tick();
-		LocalDriver.RemoveChunk(LocalDriver.HashFunction(LocalChunkName));
-	}
-}
 
 // vim: set noexpandtab:

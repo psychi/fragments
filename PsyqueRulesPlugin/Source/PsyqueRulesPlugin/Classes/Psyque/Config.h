@@ -44,7 +44,9 @@
 #		define PSYQUE_EXPLICIT_CAST explicit
 #	endif
 #	if 1900 <= _MSC_VER
-#		define PSYQUE_NOEXCEPT noexcept
+/// @note 2016.04.13 ビルド時にC4577エラーがでるので、とりあえず無効にしておく。
+#		define PSYQUE_NOEXCEPT
+//#		define PSYQUE_NOEXCEPT noexcept
 #		define PSYQUE_CONSTEXPR constexpr
 #	else
 #		define PSYQUE_NOEXCEPT throw()

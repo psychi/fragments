@@ -561,7 +561,8 @@ class Psyque::RulesEngine::_private::TExpressionMonitor
 		}
 
 		// 条件式の生成と削除を検知する。
-		auto const LocalExistence(InEvaluator.IsRegistered(InExpressionKey));
+		auto const LocalExistence(
+			InEvaluator.FindExpression(InExpressionKey) != nullptr);
 		auto const LocalLastEvaluation(
 			this->Flags.test(ThisClass::EFlag::LastEvaluation));
 		auto const LocalInvalid(!LocalExistence && LocalLastEvaluation);

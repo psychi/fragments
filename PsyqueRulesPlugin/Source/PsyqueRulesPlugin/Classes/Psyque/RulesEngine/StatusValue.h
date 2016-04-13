@@ -58,14 +58,21 @@ class Psyque::RulesEngine::_private::TStatusValue
 	/// @brief 状態値のビット幅を表す、符号なし整数型。
 	public: using FBitWidth = TemplateBitWidth;
 	static_assert(
-		sizeof(RulesEngine::EStatusKind) <= sizeof(TemplateBitWidth)
+		sizeof(EPsyqueRulesStatusKind) <= sizeof(TemplateBitWidth)
 		&& std::is_integral<TemplateBitWidth>::value
 		&& std::is_unsigned<TemplateBitWidth>::value,
 		"'TemplateBitWidth' is not unsigned integer.");
 
 	/// @brief 状態値のビット構成を表す型。
-	public: using FBitFormat =
-		typename std::make_signed<TemplateBitWidth>::type;
+	public: using FBitFormat = TemplateBitWidth;
+
+	private: enum: TemplateBitWidth
+	{
+		UnsignedBase = static_cast<TemplateBitWidth>(
+			EPsyqueRulesStatusKind::Unsigned),
+		SignedBase = static_cast<TemplateBitWidth>(
+			EPsyqueRulesStatusKind::Signed),
+	};
 
 	//-------------------------------------------------------------------------
 	/// @name 構築
@@ -73,7 +80,7 @@ class Psyque::RulesEngine::_private::TStatusValue
 
 	/// @brief 空値を構築する。
 	public: TStatusValue() PSYQUE_NOEXCEPT:
-	BitFormat(ThisClass::GetBitFormat(RulesEngine::EStatusKind::Empty))
+	BitFormat(ThisClass::GetBitFormat(EPsyqueRulesStatusKind::Empty))
 	{}
 
 	/// @brief 論理型の値を構築する。
@@ -81,7 +88,7 @@ class Psyque::RulesEngine::_private::TStatusValue
 		/// [in] 初期値となる論理値。
 		bool const InBool)
 	PSYQUE_NOEXCEPT:
-	BitFormat(ThisClass::GetBitFormat(RulesEngine::EStatusKind::Bool))
+	BitFormat(ThisClass::GetBitFormat(EPsyqueRulesStatusKind::Bool))
 	{
 		this->Bool = InBool;
 	}
@@ -90,7 +97,10 @@ class Psyque::RulesEngine::_private::TStatusValue
 	public: explicit TStatusValue(
 		/// [in] 初期値となる符号なし整数。
 		typename ThisClass::FUnsigned const InUnsigned)
-	PSYQUE_NOEXCEPT: BitFormat(sizeof(InUnsigned) * CHAR_BIT)
+	PSYQUE_NOEXCEPT:
+	BitFormat(
+		ThisClass::GetBitFormat(
+			EPsyqueRulesStatusKind::Unsigned, sizeof(InUnsigned) * CHAR_BIT))
 	{
 		this->Unsigned = InUnsigned;
 	}
@@ -101,7 +111,8 @@ class Psyque::RulesEngine::_private::TStatusValue
 		typename ThisClass::FSigned const InSigned)
 	PSYQUE_NOEXCEPT:
 	BitFormat(
-		-static_cast<typename ThisClass::FBitFormat>(sizeof(InSigned) * CHAR_BIT))
+		ThisClass::GetBitFormat(
+			EPsyqueRulesStatusKind::Signed, sizeof(InSigned) * CHAR_BIT))
 	{
 		this->Signed = InSigned;
 	}
@@ -111,7 +122,7 @@ class Psyque::RulesEngine::_private::TStatusValue
 		/// [in] 初期値となる浮動小数点数。
 		typename ThisClass::FFloat const InFloat)
 	PSYQUE_NOEXCEPT:
-	BitFormat(ThisClass::GetBitFormat(RulesEngine::EStatusKind::Float))
+	BitFormat(ThisClass::GetBitFormat(EPsyqueRulesStatusKind::Float))
 	{
 		this->Float = InFloat;
 	}
@@ -121,10 +132,11 @@ class Psyque::RulesEngine::_private::TStatusValue
 	explicit TStatusValue(
 		/// [in] 初期値。
 		TemplateValue const& InValue,
-		/// [in] 値の型。 RulesEngine::EStatusKind::Empty の場合は、自動で決定する。
-		RulesEngine::EStatusKind const InKind = RulesEngine::EStatusKind::Empty)
+		/// [in] 値の型。
+		/// EPsyqueRulesStatusKind::Empty の場合は、自動で決定する。
+		EPsyqueRulesStatusKind const InKind = EPsyqueRulesStatusKind::Empty)
 	PSYQUE_NOEXCEPT:
-	BitFormat(ThisClass::GetBitFormat(RulesEngine::EStatusKind::Empty))
+	BitFormat(ThisClass::GetBitFormat(EPsyqueRulesStatusKind::Empty))
 	{
 		this->Assign(InValue, InKind);
 	}
@@ -147,9 +159,8 @@ class Psyque::RulesEngine::_private::TStatusValue
 	}
 
 	/// @brief 符号なし整数値を取得する。
-	/// @return
-	/// 符号なし整数値を指すポインタ。
-	/// 符号なし整数値が格納されてない場合は nullptr を返す。
+	/// @return 符号なし整数値を指すポインタ。
+	///   符号なし整数値が格納されてない場合は nullptr を返す。
 	public: typename ThisClass::FUnsigned const* GetUnsigned()
 	const PSYQUE_NOEXCEPT
 	{
@@ -157,18 +168,16 @@ class Psyque::RulesEngine::_private::TStatusValue
 	}
 
 	/// @brief 符号あり整数値を取得する。
-	/// @return
-	/// 符号あり整数値を指すポインタ。
-	/// 符号あり整数値が格納されてない場合は nullptr を返す。
+	/// @return 符号あり整数値を指すポインタ。
+	///   符号あり整数値が格納されてない場合は nullptr を返す。
 	public: typename ThisClass::FSigned const* GetSigned() const PSYQUE_NOEXCEPT
 	{
 		return ThisClass::IsSigned(this->BitFormat)? &this->Signed: nullptr;
 	}
 
 	/// @brief 浮動小数点数値を取得する。
-	/// @return
-	/// 浮動小数点数値を指すポインタ。
-	/// 浮動小数点数値が格納されてない場合は nullptr を返す。
+	/// @return 浮動小数点数値を指すポインタ。
+	///   浮動小数点数値が格納されてない場合は nullptr を返す。
 	public: typename ThisClass::FFloat const* GetFloat() const PSYQUE_NOEXCEPT
 	{
 		return ThisClass::IsFloat(this->BitFormat)? &this->Float: nullptr;
@@ -178,11 +187,10 @@ class Psyque::RulesEngine::_private::TStatusValue
 	{
 		switch (this->BitFormat)
 		{
-			case RulesEngine::EStatusKind::Empty: return 0;
+			case EPsyqueRulesStatusKind::Empty: return 0;
+			case EPsyqueRulesStatusKind::Bool:  return this->Bool;
 
-			case RulesEngine::EStatusKind::Bool: return this->Bool;
-
-			case RulesEngine::EStatusKind::Float:
+			case EPsyqueRulesStatusKind::Float:
 			using FFloatBitset = Psyque::TFloatBitset<typename ThisClass::FFloat>;
 			return FFloatBitset(this->Float).Bitset;
 
@@ -192,7 +200,7 @@ class Psyque::RulesEngine::_private::TStatusValue
 
 	/// @brief 格納値の型の種類を取得する。
 	/// @return 格納値の型の種類。
-	public: RulesEngine::EStatusKind GetKind() const PSYQUE_NOEXCEPT
+	public: EPsyqueRulesStatusKind GetKind() const PSYQUE_NOEXCEPT
 	{
 		return ThisClass::GetKind(this->BitFormat);
 	}
@@ -259,16 +267,16 @@ class Psyque::RulesEngine::_private::TStatusValue
 	{
 		switch (InRight.GetKind())
 		{
-			case RulesEngine::EStatusKind::Bool:
+			case EPsyqueRulesStatusKind::Bool:
 			return this->Compare(InRight.Bool);
 
-			case RulesEngine::EStatusKind::Unsigned:
+			case EPsyqueRulesStatusKind::Unsigned:
 			return this->Compare(InRight.Unsigned);
 
-			case RulesEngine::EStatusKind::Signed:
+			case EPsyqueRulesStatusKind::Signed:
 			return this->Compare(InRight.Signed);
 
-			case RulesEngine::EStatusKind::Float:
+			case EPsyqueRulesStatusKind::Float:
 			return this->Compare(InRight.Float);
 
 			default:
@@ -307,15 +315,15 @@ class Psyque::RulesEngine::_private::TStatusValue
 	{
 		switch (this->GetKind())
 		{
-			case RulesEngine::EStatusKind::Unsigned:
+			case EPsyqueRulesStatusKind::Unsigned:
 			return ThisClass::CompareValue(this->Unsigned, InRight);
 
-			case RulesEngine::EStatusKind::Signed:
+			case EPsyqueRulesStatusKind::Signed:
 			return this->Signed < 0?
 				RulesEngine::EStatusOrder::Less:
 				ThisClass::CompareValue(this->Unsigned, InRight);
 
-			case RulesEngine::EStatusKind::Float:
+			case EPsyqueRulesStatusKind::Float:
 			return ThisClass::CompareFloatLeft(this->Float, InRight);
 
 			default: return RulesEngine::EStatusOrder::Failed;
@@ -331,17 +339,17 @@ class Psyque::RulesEngine::_private::TStatusValue
 	{
 		switch (this->GetKind())
 		{
-			case RulesEngine::EStatusKind::Unsigned:
+			case EPsyqueRulesStatusKind::Unsigned:
 			return InRight < 0?
 				RulesEngine::EStatusOrder::Greater:
 				ThisClass::CompareValue(
 					this->Unsigned,
 					static_cast<typename ThisClass::FUnsigned>(InRight));
 
-			case RulesEngine::EStatusKind::Signed:
+			case EPsyqueRulesStatusKind::Signed:
 			return ThisClass::CompareValue(this->Signed, InRight);
 
-			case RulesEngine::EStatusKind::Float:
+			case EPsyqueRulesStatusKind::Float:
 			return ThisClass::CompareFloatLeft(this->Float, InRight);
 
 			default: return RulesEngine::EStatusOrder::Failed;
@@ -357,15 +365,15 @@ class Psyque::RulesEngine::_private::TStatusValue
 	{
 		switch (this->GetKind())
 		{
-			case RulesEngine::EStatusKind::Unsigned:
+			case EPsyqueRulesStatusKind::Unsigned:
 			return InRight < 0?
 				RulesEngine::EStatusOrder::Greater:
 				ThisClass::CompareFloatRight(this->Unsigned, InRight);
 
-			case RulesEngine::EStatusKind::Signed:
+			case EPsyqueRulesStatusKind::Signed:
 			return ThisClass::CompareFloatRight(this->Signed, InRight);
 
-			case RulesEngine::EStatusKind::Float:
+			case EPsyqueRulesStatusKind::Float:
 			return ThisClass::CompareFloat(this->Float, InRight);
 
 			default: return RulesEngine::EStatusOrder::Failed;
@@ -417,7 +425,7 @@ class Psyque::RulesEngine::_private::TStatusValue
 	/// @brief 状態値を空にする。
 	public: void AssignEmpty() PSYQUE_NOEXCEPT
 	{
-		this->BitFormat = ThisClass::GetBitFormat(RulesEngine::EStatusKind::Empty);
+		this->BitFormat = ThisClass::GetBitFormat(EPsyqueRulesStatusKind::Empty);
 	}
 
 	/// @brief 論理値を代入する。
@@ -427,7 +435,7 @@ class Psyque::RulesEngine::_private::TStatusValue
 	PSYQUE_NOEXCEPT
 	{
 		this->Bool = InValue;
-		this->BitFormat = ThisClass::GetBitFormat(RulesEngine::EStatusKind::Bool);
+		this->BitFormat = ThisClass::GetBitFormat(EPsyqueRulesStatusKind::Bool);
 	}
 
 	/// @brief 符号なし整数を代入する。
@@ -447,7 +455,9 @@ class Psyque::RulesEngine::_private::TStatusValue
 			if (static_cast<TemplateValue>(LocalUnsigned) == InValue)
 			{
 				this->Unsigned = LocalUnsigned;
-				this->BitFormat = sizeof(LocalUnsigned) * CHAR_BIT;
+				this->BitFormat = ThisClass::GetBitFormat(
+					EPsyqueRulesStatusKind::Unsigned,
+					sizeof(LocalUnsigned) * CHAR_BIT);
 				return true;
 			}
 		}
@@ -455,9 +465,9 @@ class Psyque::RulesEngine::_private::TStatusValue
 	}
 
 	/// @brief 符号あり整数を代入する。
-	/// @retval true 成功。 InValue を *this に代入した。
-	/// @retval false
-	/// 失敗。 InValue を符号あり整数に変換できなかった。 *this は変化しない。
+	/// @retval true  成功。 InValue を *this に代入した。
+	/// @retval false 失敗。 InValue を符号あり整数に変換できなかった。
+	///   *this は変化しない。
 	public: template<typename TemplateValue>
 	bool AssignSigned(
 		/// [in] 代入する値。
@@ -470,7 +480,8 @@ class Psyque::RulesEngine::_private::TStatusValue
 			if (static_cast<TemplateValue>(LocalSigned) == InValue)
 			{
 				this->Signed = LocalSigned;
-				this->BitFormat = -static_cast<typename ThisClass::FBitFormat>(
+				this->BitFormat = ThisClass::GetBitFormat(
+					EPsyqueRulesStatusKind::Signed,
 					sizeof(LocalSigned) * CHAR_BIT);
 				return true;
 			}
@@ -479,9 +490,9 @@ class Psyque::RulesEngine::_private::TStatusValue
 	}
 
 	/// @brief 浮動小数点数を代入する。
-	/// @retval true 成功。 InValue を *this に代入した。
-	/// @retval false
-	/// 失敗。 InValue を浮動小数点数に変換できなかった。 *this は変化しない。
+	/// @retval true  成功。 InValue を *this に代入した。
+	/// @retval false 失敗。 InValue を浮動小数点数に変換できなかった。
+	///   *this は変化しない。
 	public: template<typename TemplateValue>
 	bool AssignFloat(
 		/// [in] 代入する値。
@@ -499,36 +510,37 @@ class Psyque::RulesEngine::_private::TStatusValue
 		{
 			this->Float = LocalFloat;
 			this->BitFormat =
-				ThisClass::GetBitFormat(RulesEngine::EStatusKind::Float);
+				ThisClass::GetBitFormat(EPsyqueRulesStatusKind::Float);
 			return true;
 		}
 		return false;
 	}
 
 	/// @brief 値を代入する。
-	/// @retval true 成功。 InValue を *this に代入した。
-	/// @retval false
-	/// 失敗。 InValue を状態値に変換できなかった。 *this は変化しない。
+	/// @retval true  成功。 InValue を *this に代入した。
+	/// @retval false 失敗。 InValue を状態値に変換できなかった。
+	///   *this は変化しない。
 	public: template<typename TemplateValue>
 	bool Assign(
 		/// [in] 代入する値。
 		TemplateValue const& InValue,
-		/// [in] 代入する型。 RulesEngine::EStatusKind::Empty の場合は、自動で決定する。
-		RulesEngine::EStatusKind InKind = RulesEngine::EStatusKind::Empty)
+		/// [in] 代入する型。
+		/// EPsyqueRulesStatusKind::Empty の場合は、自動で決定する。
+		EPsyqueRulesStatusKind InKind = EPsyqueRulesStatusKind::Empty)
 	{
-		if (InKind == RulesEngine::EStatusKind::Empty)
+		if (InKind == EPsyqueRulesStatusKind::Empty)
 		{
 			InKind = ThisClass::template ClassifyKind<TemplateValue>();
 		}
 		switch (InKind)
 		{
-			case RulesEngine::EStatusKind::Unsigned:
+			case EPsyqueRulesStatusKind::Unsigned:
 			return this->AssignUnsigned(InValue);
 
-			case RulesEngine::EStatusKind::Signed:
+			case EPsyqueRulesStatusKind::Signed:
 			return this->AssignSigned(InValue);
 
-			case RulesEngine::EStatusKind::Float:
+			case EPsyqueRulesStatusKind::Float:
 			return this->AssignFloat(InValue);
 
 			default: return false;
@@ -538,25 +550,25 @@ class Psyque::RulesEngine::_private::TStatusValue
 	/// @copydoc Assign
 	public: bool Assign(
 		ThisClass const& InValue,
-		RulesEngine::EStatusKind InKind = RulesEngine::EStatusKind::Empty)
+		EPsyqueRulesStatusKind InKind = EPsyqueRulesStatusKind::Empty)
 	PSYQUE_NOEXCEPT
 	{
-		if (InKind == RulesEngine::EStatusKind::Empty)
+		if (InKind == EPsyqueRulesStatusKind::Empty)
 		{
 			InKind = InValue.GetKind();
 		}
 		switch (InValue.GetKind())
 		{
-			case RulesEngine::EStatusKind::Bool:
+			case EPsyqueRulesStatusKind::Bool:
 			return this->Assign(InValue.Bool, InKind);
 
-			case RulesEngine::EStatusKind::Unsigned:
+			case EPsyqueRulesStatusKind::Unsigned:
 			return this->Assign(InValue.Unsigned, InKind);
 
-			case RulesEngine::EStatusKind::Signed:
+			case EPsyqueRulesStatusKind::Signed:
 			return this->Assign(InValue.Signed, InKind);
 
-			case RulesEngine::EStatusKind::Float:
+			case EPsyqueRulesStatusKind::Float:
 			return this->Assign(InValue.Float, InKind);
 
 			default:
@@ -568,12 +580,12 @@ class Psyque::RulesEngine::_private::TStatusValue
 	/// @copydoc Assign
 	public: bool Assign(
 		bool const InValue,
-		RulesEngine::EStatusKind const InKind = RulesEngine::EStatusKind::Bool)
+		EPsyqueRulesStatusKind const InKind = EPsyqueRulesStatusKind::Bool)
 	{
 		switch (InKind)
 		{
-			case RulesEngine::EStatusKind::Empty:
-			case RulesEngine::EStatusKind::Bool:
+			case EPsyqueRulesStatusKind::Empty:
+			case EPsyqueRulesStatusKind::Bool:
 			this->AssignBool(InValue);
 			return true;
 
@@ -587,20 +599,20 @@ class Psyque::RulesEngine::_private::TStatusValue
 	public: template<typename TemplateValue>
 	bool Assign(
 		/// [in] 適用する代入演算子。
-		RulesEngine::EStatusAssignment const InOperator,
+		EPsyqueStatusAssignment const InOperator,
 		/// [in] 代入演算子の右辺。
 		TemplateValue const& InRight)
 	PSYQUE_NOEXCEPT
 	{
 		static_assert(!std::is_same<TemplateValue, bool>::value, "");
 		auto const LocalKind(this->GetKind());
-		if (InOperator == RulesEngine::EStatusAssignment::Copy)
+		if (InOperator == EPsyqueStatusAssignment::Copy)
 		{
 			return this->Assign(InRight, LocalKind);
 		}
 		switch (LocalKind)
 		{
-			case RulesEngine::EStatusKind::Unsigned:
+			case EPsyqueRulesStatusKind::Unsigned:
 			return this->AssignValue(
 				std::is_integral<TemplateValue>(),
 				LocalKind,
@@ -608,7 +620,7 @@ class Psyque::RulesEngine::_private::TStatusValue
 				this->Unsigned,
 				InRight);
 
-			case RulesEngine::EStatusKind::Signed:
+			case EPsyqueRulesStatusKind::Signed:
 			return this->AssignValue(
 				std::is_integral<TemplateValue>(),
 				LocalKind,
@@ -616,7 +628,7 @@ class Psyque::RulesEngine::_private::TStatusValue
 				this->Signed,
 				InRight);
 
-			case RulesEngine::EStatusKind::Float:
+			case EPsyqueRulesStatusKind::Float:
 			return this->AssignValue(
 				std::false_type(),
 				LocalKind,
@@ -628,33 +640,33 @@ class Psyque::RulesEngine::_private::TStatusValue
 		}
 	}
 
-	/// @copydoc Assign(RulesEngine::EStatusAssignment const, TemplateValue const&)
+	/// @copydoc Assign(EPsyqueStatusAssignment const, TemplateValue const&)
 	public: bool Assign(
-		RulesEngine::EStatusAssignment const InOperator,
+		EPsyqueStatusAssignment const InOperator,
 		ThisClass const& InRight)
 	PSYQUE_NOEXCEPT
 	{
 		switch (InRight.GetKind())
 		{
-			case RulesEngine::EStatusKind::Bool:
+			case EPsyqueRulesStatusKind::Bool:
 			return this->Assign(InOperator, InRight.Bool);
 
-			case RulesEngine::EStatusKind::Unsigned:
+			case EPsyqueRulesStatusKind::Unsigned:
 			return this->Assign(InOperator, InRight.Unsigned);
 
-			case RulesEngine::EStatusKind::Signed:
+			case EPsyqueRulesStatusKind::Signed:
 			return this->Assign(InOperator, InRight.Signed);
 
-			case RulesEngine::EStatusKind::Float:
+			case EPsyqueRulesStatusKind::Float:
 			return this->Assign(InOperator, InRight.Float);
 
 			default: return false;
 		}
 	}
 
-	/// @copydoc Assign(RulesEngine::EStatusAssignment const, TemplateValue const&)
+	/// @copydoc Assign(EPsyqueStatusAssignment const, TemplateValue const&)
 	public: bool Assign(
-		RulesEngine::EStatusAssignment const InOperator,
+		EPsyqueStatusAssignment const InOperator,
 		bool const InRight)
 	PSYQUE_NOEXCEPT
 	{
@@ -664,19 +676,19 @@ class Psyque::RulesEngine::_private::TStatusValue
 		}
 		switch (InOperator)
 		{
-			case RulesEngine::EStatusAssignment::Copy:
+			case EPsyqueStatusAssignment::Copy:
 			this->Bool  = InRight;
 			break;
 
-			case RulesEngine::EStatusAssignment::Or:
+			case EPsyqueStatusAssignment::Or:
 			this->Bool |= InRight;
 			break;
 
-			case RulesEngine::EStatusAssignment::Xor:
+			case EPsyqueStatusAssignment::Xor:
 			this->Bool ^= InRight;
 			break;
 
-			case RulesEngine::EStatusAssignment::And:
+			case EPsyqueStatusAssignment::And:
 			this->Bool &= InRight;
 			break;
 
@@ -692,7 +704,8 @@ class Psyque::RulesEngine::_private::TStatusValue
 		typename ThisClass::FBitFormat const InBitFormat)
 	PSYQUE_NOEXCEPT
 	{
-		return InBitFormat == ThisClass::GetBitFormat(RulesEngine::EStatusKind::Empty);
+		return InBitFormat
+			== ThisClass::GetBitFormat(EPsyqueRulesStatusKind::Empty);
 	}
 
 	/// @brief 真偽型のビット構成か判定する。
@@ -701,7 +714,8 @@ class Psyque::RulesEngine::_private::TStatusValue
 		typename ThisClass::FBitFormat const InBitFormat)
 	PSYQUE_NOEXCEPT
 	{
-		return InBitFormat == ThisClass::GetBitFormat(RulesEngine::EStatusKind::Bool);
+		return InBitFormat
+			== ThisClass::GetBitFormat(EPsyqueRulesStatusKind::Bool);
 	}
 
 	/// @brief 符号なし整数型のビット構成か判定する。
@@ -710,7 +724,8 @@ class Psyque::RulesEngine::_private::TStatusValue
 		typename ThisClass::FBitFormat const InBitFormat)
 	PSYQUE_NOEXCEPT
 	{
-		return ThisClass::GetBitFormat(RulesEngine::EStatusKind::Bool) < InBitFormat;
+		return ThisClass::GetBitFormat(EPsyqueRulesStatusKind::Bool)
+			< InBitFormat;
 	}
 
 	/// @brief 符号あり整数型のビット構成か判定する。
@@ -719,7 +734,8 @@ class Psyque::RulesEngine::_private::TStatusValue
 		typename ThisClass::FBitFormat const InBitFormat)
 	PSYQUE_NOEXCEPT
 	{
-		return InBitFormat < ThisClass::GetBitFormat(RulesEngine::EStatusKind::Float);
+		return InBitFormat
+			< ThisClass::GetBitFormat(EPsyqueRulesStatusKind::Float);
 	}
 
 	/// @brief 浮動小数点数型のビット構成か判定する。
@@ -729,21 +745,60 @@ class Psyque::RulesEngine::_private::TStatusValue
 	PSYQUE_NOEXCEPT
 	{
 		return InBitFormat == static_cast<typename ThisClass::FBitFormat>(
-			RulesEngine::EStatusKind::Float);
+			EPsyqueRulesStatusKind::Float);
 	}
 
-	/// @brief 状態値のビット構成から、状態値の型の種別を取得する。
-	/// @return 状態値の型の種別。
-	public: static RulesEngine::EStatusKind PSYQUE_CONSTEXPR GetKind(
+	/// @brief 状態値のビット構成から、状態値の型を取得する。
+	/// @return 状態値の型の種類。
+	public: static EPsyqueRulesStatusKind PSYQUE_CONSTEXPR GetKind(
 		/// [in] 状態値のビット構成。
 		typename ThisClass::FBitFormat const InBitFormat)
 	PSYQUE_NOEXCEPT
 	{
 		return ThisClass::IsUnsigned(InBitFormat)?
-			RulesEngine::EStatusKind::Unsigned:
+			EPsyqueRulesStatusKind::Unsigned:
 			ThisClass::IsSigned(InBitFormat)?
-				RulesEngine::EStatusKind::Signed:
-				static_cast<typename RulesEngine::EStatusKind>(InBitFormat);
+				EPsyqueRulesStatusKind::Signed:
+				static_cast<typename EPsyqueRulesStatusKind>(InBitFormat);
+	}
+
+	/// @brief 状態値の型とビット幅から、状態値のビット構成を取得する。
+	/// @return 状態値のビット構成。ただしビット構成が存在しない場合は0を戻す。
+	public: static typename ThisClass::FBitFormat GetBitFormat(
+		/// [in] 状態値の型の種類。
+		EPsyqueRulesStatusKind const InKind,
+		/// [in] 状態値が整数型の場合の、ビット幅。
+		/// 状態値が整数型以外の場合は、必ず0を指定すること。
+		typename ThisClass::FBitWidth const InBitWidth = 0)
+	PSYQUE_NOEXCEPT
+	{
+		switch (InKind)
+		{
+			case EPsyqueRulesStatusKind::Unsigned:
+			if (InBitWidth <= sizeof(typename ThisClass::FUnsigned) * CHAR_BIT
+				&& 2 <= InBitWidth)
+			{
+				return InBitWidth - 2 + ThisClass::UnsignedBase;
+			}
+			break;
+
+			case EPsyqueRulesStatusKind::Signed:
+			if (InBitWidth <= sizeof(typename ThisClass::FSigned) * CHAR_BIT
+				&& 2 <= InBitWidth)
+			{
+				return InBitWidth - 2 + ThisClass::SignedBase;
+			}
+			break;
+
+			default:
+			if (InBitWidth == 0)
+			{
+				return static_cast<ThisClass::FBitFormat>(InKind);
+			}
+			check(false);
+			break;
+		}
+		return 0;
 	}
 
 	/// @brief 状態値のビット構成から、状態値のビット幅を取得する。
@@ -753,58 +808,56 @@ class Psyque::RulesEngine::_private::TStatusValue
 		typename ThisClass::FBitFormat const InBitFormat)
 	PSYQUE_NOEXCEPT
 	{
-		switch (static_cast<typename FBitWidth>(InBitFormat))
+		switch (InBitFormat)
 		{
-			case RulesEngine::EStatusKind::Empty:
-			case RulesEngine::EStatusKind::Bool:
+			case EPsyqueRulesStatusKind::Empty:
+			case EPsyqueRulesStatusKind::Bool:
 			static_assert(
-				static_cast<int8>(RulesEngine::EStatusKind::Empty) == 0
-				&& static_cast<int8>(RulesEngine::EStatusKind::Bool) == 1,
+				static_cast<uint8>(EPsyqueRulesStatusKind::Empty) + 1
+				== static_cast<uint8>(EPsyqueRulesStatusKind::Bool),
 				"");
-			return InBitFormat;
+			return InBitFormat - static_cast<typename ThisClass::FBitWidth>(
+				EPsyqueRulesStatusKind::Empty);
 
-			case RulesEngine::EStatusKind::Float:
+			case EPsyqueRulesStatusKind::Float:
 			return sizeof(typename ThisClass::FFloat) * CHAR_BIT;
 
-			default: return Psyque::AbsInteger(InBitFormat);
+			default:
+			static_assert(ThisClass::UnsignedBase < ThisClass::SignedBase, "");
+			if (ThisClass::SignedBase <= InBitFormat)
+			{
+				return InBitFormat + 2 - ThisClass::SignedBase;
+			}
+			if (ThisClass::UnsignedBase <= InBitFormat)
+			{
+				return InBitFormat + 2 - ThisClass::UnsignedBase;
+			}
+			return 0;
 		}
 	}
 
 	//-------------------------------------------------------------------------
-	private: static typename ThisClass::FBitFormat PSYQUE_CONSTEXPR GetBitFormat(
-		RulesEngine::EStatusKind const InKind)
-	PSYQUE_NOEXCEPT
-	{
-		using FStatusKind = int8;
-		return (
-			PSYQUE_ASSERT(
-				sizeof(FStatusKind) == sizeof(RulesEngine::EStatusKind)
-				&& InKind != RulesEngine::EStatusKind::Signed
-				&& InKind != RulesEngine::EStatusKind::Unsigned),
-			static_cast<FStatusKind>(InKind));
-	}
-
 	/// @brief 型の種類を決定する。
 	/// @tparam TemplateValue 型。
 	/// @return 型の種類。
 	private: template<typename TemplateValue>
-	static RulesEngine::EStatusKind ClassifyKind() PSYQUE_NOEXCEPT
+	static EPsyqueRulesStatusKind ClassifyKind() PSYQUE_NOEXCEPT
 	{
 		if (std::is_same<TemplateValue, bool>::value)
 		{
-			return RulesEngine::EStatusKind::Bool;
+			return EPsyqueRulesStatusKind::Bool;
 		}
 		else if (std::is_floating_point<TemplateValue>::value)
 		{
-			return RulesEngine::EStatusKind::Float;
+			return EPsyqueRulesStatusKind::Float;
 		}
 		else if (std::is_integral<TemplateValue>::value)
 		{
 			return std::is_unsigned<TemplateValue>::value?
-				RulesEngine::EStatusKind::Unsigned:
-				RulesEngine::EStatusKind::Signed;
+				EPsyqueRulesStatusKind::Unsigned:
+				EPsyqueRulesStatusKind::Signed;
 		}
-		return RulesEngine::EStatusKind::Empty;
+		return EPsyqueRulesStatusKind::Empty;
 	}
 
 	//-------------------------------------------------------------------------
@@ -823,9 +876,9 @@ class Psyque::RulesEngine::_private::TStatusValue
 	bool AssignValue(
 		std::true_type,
 		/// [in] 演算した結果の型。
-		RulesEngine::EStatusKind const InKind,
+		EPsyqueRulesStatusKind const InKind,
 		/// [in] 適用する演算子。
-		RulesEngine::EStatusAssignment const InOperator,
+		EPsyqueStatusAssignment const InOperator,
 		/// [in] 演算子の左辺となる整数値。
 		TemplateLeft const& InLeft,
 		/// [in] 演算子の左辺となる整数値。
@@ -834,20 +887,20 @@ class Psyque::RulesEngine::_private::TStatusValue
 	{
 		switch (InOperator)
 		{
-			case RulesEngine::EStatusAssignment::Mod:
+			case EPsyqueStatusAssignment::Mod:
 			if (InRight == 0)
 			{
 				return false;
 			}
 			return this->Assign(InLeft % InRight, InKind);
 
-			case RulesEngine::EStatusAssignment::Or:
+			case EPsyqueStatusAssignment::Or:
 			return this->Assign(InLeft | InRight, InKind);
 
-			case RulesEngine::EStatusAssignment::Xor:
+			case EPsyqueStatusAssignment::Xor:
 			return this->Assign(InLeft ^ InRight, InKind);
 
-			case RulesEngine::EStatusAssignment::And:
+			case EPsyqueStatusAssignment::And:
 			return this->Assign(InLeft & InRight, InKind);
 
 			default:
@@ -863,9 +916,9 @@ class Psyque::RulesEngine::_private::TStatusValue
 	bool AssignValue(
 		std::false_type,
 		/// [in] 演算した結果の型。
-		RulesEngine::EStatusKind const InKind,
+		EPsyqueRulesStatusKind const InKind,
 		/// [in] 適用する演算子。
-		RulesEngine::EStatusAssignment const InOperator,
+		EPsyqueStatusAssignment const InOperator,
 		/// [in] 演算子の左辺となる実数値。
 		TemplateLeft const& InLeft,
 		/// [in] 演算子の左辺となる実数値。
@@ -874,16 +927,16 @@ class Psyque::RulesEngine::_private::TStatusValue
 	{
 		switch (InOperator)
 		{
-			case RulesEngine::EStatusAssignment::Add:
+			case EPsyqueStatusAssignment::Add:
 			return this->Assign(InLeft + InRight, InKind);
 
-			case RulesEngine::EStatusAssignment::Sub:
+			case EPsyqueStatusAssignment::Sub:
 			return this->Assign(InLeft - InRight, InKind);
 
-			case RulesEngine::EStatusAssignment::Mul:
+			case EPsyqueStatusAssignment::Mul:
 			return this->Assign(InLeft * InRight, InKind);
 
-			case RulesEngine::EStatusAssignment::Div:
+			case EPsyqueStatusAssignment::Div:
 			if (InRight == 0)
 			{
 				return false;
@@ -931,8 +984,8 @@ class Psyque::RulesEngine::_private::TStatusValue
 		TemplateValue const& InRight)
 	PSYQUE_NOEXCEPT
 	{
-		ThisClass const LocalRight(InRight, RulesEngine::EStatusKind::Float);
-		return LocalRight.GetKind() != RulesEngine::EStatusKind::Float?
+		ThisClass const LocalRight(InRight, EPsyqueRulesStatusKind::Float);
+		return LocalRight.GetKind() != EPsyqueRulesStatusKind::Float?
 			RulesEngine::EStatusOrder::Failed:
 			ThisClass::CompareFloat(InLeft, LocalRight.Float);
 	}
@@ -947,8 +1000,8 @@ class Psyque::RulesEngine::_private::TStatusValue
 		typename ThisClass::FFloat const& InRight)
 	PSYQUE_NOEXCEPT
 	{
-		ThisClass const LocalLeft(InLeft, RulesEngine::EStatusKind::Float);
-		return LocalLeft.GetKind() != RulesEngine::EStatusKind::Float?
+		ThisClass const LocalLeft(InLeft, EPsyqueRulesStatusKind::Float);
+		return LocalLeft.GetKind() != EPsyqueRulesStatusKind::Float?
 			RulesEngine::EStatusOrder::Failed:
 			ThisClass::CompareFloat(LocalLeft.Float, InRight);
 	}
@@ -973,7 +1026,7 @@ class Psyque::RulesEngine::_private::TStatusValue
 	//-------------------------------------------------------------------------
 	private: union
 	{
-		bool Bool;                         ///< 論理値。
+		bool Bool;                              ///< 論理値。
 		typename ThisClass::FUnsigned Unsigned; ///< 符号なし整数値。
 		typename ThisClass::FSigned Signed;     ///< 符号あり整数値。
 		typename ThisClass::FFloat Float;       ///< 浮動小数点数値。

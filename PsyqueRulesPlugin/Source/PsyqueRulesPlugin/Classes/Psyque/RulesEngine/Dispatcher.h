@@ -211,22 +211,6 @@ class Psyque::RulesEngine::_private::TDispatcher
 	/// @name 条件挙動ハンドラ
 	/// @{
 
-	/// @brief 条件挙動ハンドラが登録されているか判定する。
-	/// @retval true
-	///   InExpressionKey に対応し *InFunction を弱参照している
-	///   ThisClass::FHandler が *this に登録されている。
-	/// @retval false 該当する ThisClass::FHandler は *this に登録されてない。
-	public: bool IsRegistered(
-		/// [in] 判定する ThisClass::FHandler に対応する
-		/// TEvaluator::FExpression の識別値。
-		typename ThisClass::FEvaluator::FExpressionKey const InExpressionKey,
-		/// [in] 判定する ThisClass::FHandler が弱参照している条件挙動関数。
-		typename ThisClass::FHandler::FFunction const* const InFunction)
-	const
-	{
-		return this->FindHandlerPtr(InExpressionKey, InFunction) != nullptr;
-	}
-
 	/// @brief 条件挙動ハンドラを登録する。
 	/// @sa
 	///   ThisClass::_dispatch で、 InExpressionKey に対応する条件式の評価が変化し
@@ -330,7 +314,7 @@ class Psyque::RulesEngine::_private::TDispatcher
 	///   に対応し *InFunction を弱参照している ThisClass::FHandler 。
 	///   該当するものがない場合は、 ThisClass::FHandler::GetCondition が
 	///   ThisClass::FHandler::EUnitCondition::Invalid となる値を返す。
-	public: typename ThisClass::FHandler FindHandler(
+	public: typename ThisClass::FHandler const* FindHandler(
 		/// [in] 取得する ThisClass::FHandler に対応する
 		/// TEvaluator::FExpression の識別値。
 		typename ThisClass::FEvaluator::FExpressionKey const InExpressionKey,
@@ -338,14 +322,16 @@ class Psyque::RulesEngine::_private::TDispatcher
 		typename ThisClass::FHandler::FFunction const* const InFunction)
 	const
 	{
-		auto const local_handler(
-			this->FindHandlerPtr(InExpressionKey, InFunction));
-		return local_handler != nullptr?
-			*local_handler:
-			typename ThisClass::FHandler(
-				ThisClass::FHandler::EUnitCondition::Invalid,
-				typename ThisClass::FHandler::FFunctionWeakPtr(),
-				typename ThisClass::FHandler::FPriority());
+		if (InFunction != nullptr)
+		{
+			auto const LocalFind(
+				this->ExpressionMonitors.find(InExpressionKey));
+			if (LocalFind != this->ExpressionMonitors.end())
+			{
+				return LocalFind->second._find_handler_ptr(*InFunction);
+			}
+		}
+		return nullptr;
 	}
 
 	/// @brief Psyque::RulesEngine 管理者以外は、この関数は使用禁止。
@@ -430,31 +416,6 @@ class Psyque::RulesEngine::_private::TDispatcher
 	}
 	/// @}
 	//-------------------------------------------------------------------------
-	/// @brief 登録されている条件挙動ハンドラを取得する。
-	/// @return
-	///   InExpressionKey に対応し *InFunction を弱参照している
-	///   ThisClass::FHandler を指すポインタ。
-	///   該当するものがない場合は nullptr を返す。
-	private: typename ThisClass::FHandler const* FindHandlerPtr(
-		/// [in] 取得する ThisClass::FHandler に対応する
-		/// TEvaluator::FExpression の識別値。
-		typename ThisClass::FEvaluator::FExpressionKey const InExpressionKey,
-		/// [in] 取得する ThisClass::FHandler が弱参照している条件挙動関数。
-		typename ThisClass::FHandler::FFunction const* const InFunction)
-	const
-	{
-		if (InFunction != nullptr)
-		{
-			auto const LocalFind(
-				this->ExpressionMonitors.find(InExpressionKey));
-			if (LocalFind != this->ExpressionMonitors.end())
-			{
-				return LocalFind->second._find_handler_ptr(*InFunction);
-			}
-		}
-		return nullptr;
-	}
-
 	/// @brief 監視器を再構築する。
 	private: template<
 		 typename TemplateMonitorMap, typename TemplateRebuildFunction>

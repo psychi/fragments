@@ -26,7 +26,7 @@ namespace Psyque
 /// @brief 状態変更器。状態変更を予約し、バッチ処理でまとめて状態値を変更する。
 /// @par 使い方の概略
 /// - TAccumulator::Accumulate で、状態変更を予約する。
-///   - 実際に状態変更が適用される順序は、 EAccumulationDelay
+///   - 実際に状態変更が適用される順序は、 EPsyqueAccumulationDelay
 ///     によって決める予約系列が同じなら、予約順となることが保証される。
 ///     予約系列が異なると、予約順となることは保証されない。
 /// - TAccumulator::_flush で、予約した状態変更が実際に適用される。
@@ -35,7 +35,7 @@ namespace Psyque
 ///     初回の状態変更のみが適用され、2回目以降の状態変更が次回の
 ///     ThisClass::_flush まで遅延する場合がある。
 ///   - 遅延するかどうかは、
-///     ThisClass::Accumulate に渡す EAccumulationDelay によって決まる。
+///     ThisClass::Accumulate に渡す EPsyqueAccumulationDelay によって決まる。
 /// @tparam TemplateReservoir @copydoc TAccumulator::FReservoir
 template<typename TemplateReservoir>
 class Psyque::RulesEngine::_private::TAccumulator
@@ -54,7 +54,7 @@ class Psyque::RulesEngine::_private::TAccumulator
 	private: using FStatusArray = std::vector<
 		std::pair<
 			typename ThisClass::FReservoir::FStatusAssignment,
-			typename EAccumulationDelay>,
+			typename EPsyqueAccumulationDelay>,
 		typename ThisClass::FAllocator>;
 
 	//-------------------------------------------------------------------------
@@ -123,7 +123,7 @@ class Psyque::RulesEngine::_private::TAccumulator
 		/// [in] 予約する状態変更。
 		typename ThisClass::FReservoir::FStatusAssignment const& InAssignment,
 		/// [in] 予約系列の切り替えと遅延方法の指定。
-		typename EAccumulationDelay const InDelay)
+		typename EPsyqueAccumulationDelay const InDelay)
 	{
 		this->AccumulatedStatuses.emplace_back(InAssignment, InDelay);
 	}
@@ -134,13 +134,13 @@ class Psyque::RulesEngine::_private::TAccumulator
 		/// [in] 予約する TReservoir::FStatusAssignment のコンテナ。
 		TemplateAssignmentArray const& InAssignments,
 		/// [in] 予約系列の切り替えと遅延方法の指定。
-		typename EAccumulationDelay const InDelay)
+		typename EPsyqueAccumulationDelay const InDelay)
 	{
 		auto LocalDelay(InDelay);
 		for (auto& LocalAssignment: InAssignments)
 		{
 			this->Accumulate(LocalAssignment, LocalDelay);
-			LocalDelay = EAccumulationDelay::Follow;
+			LocalDelay = EPsyqueAccumulationDelay::Follow;
 		}
 	}
 
@@ -152,12 +152,12 @@ class Psyque::RulesEngine::_private::TAccumulator
 		/// [in] 状態値に設定する値。
 		TemplateValue const InValue,
 		/// [in] 予約系列の切り替えと遅延方法の指定。
-		typename EAccumulationDelay const InDelay)
+		typename EPsyqueAccumulationDelay const InDelay)
 	{
 		this->Accumulate(
 			typename ThisClass::FReservoir::FStatusAssignment(
 				InKey,
-				RulesEngine::EStatusAssignment::Copy,
+				EPsyqueStatusAssignment::Copy,
 				typename ThisClass::FReservoir::FStatusValue(InValue)),
 			InDelay);
 	}
@@ -168,11 +168,11 @@ class Psyque::RulesEngine::_private::TAccumulator
 		/// [in] 変更する状態値の識別値。
 		typename ThisClass::FReservoir::FStatusKey const InKey,
 		/// [in] 代入演算子の種別。
-		typename RulesEngine::EStatusAssignment const InOperator,
+		typename EPsyqueStatusAssignment const InOperator,
 		/// [in] 代入演算子の右辺。
 		TemplateValue const InValue,
 		/// [in] 予約系列の切り替えと遅延方法の指定。
-		typename EAccumulationDelay const InDelay)
+		typename EPsyqueAccumulationDelay const InDelay)
 	{
 		this->Accumulate(
 			typename ThisClass::FReservoir::FStatusAssignment(
@@ -192,7 +192,7 @@ class Psyque::RulesEngine::_private::TAccumulator
 		for (auto i(this->AccumulatedStatuses.cbegin()); i != LocalEnd;)
 		{
 			// 同じ予約系列の末尾を決定する。
-			auto const LocalNonblock(i->second == EAccumulationDelay::Nonblock);
+			auto const LocalNonblock(i->second == EPsyqueAccumulationDelay::Nonblock);
 			auto LocalFlush(!LocalNonblock);
 			auto j(i);
 			for (;;)
@@ -205,7 +205,7 @@ class Psyque::RulesEngine::_private::TAccumulator
 					LocalFlush = false;
 				}
 				++j;
-				if (j == LocalEnd || j->second != EAccumulationDelay::Follow)
+				if (j == LocalEnd || j->second != EPsyqueAccumulationDelay::Follow)
 				{
 					break;
 				}
@@ -228,7 +228,7 @@ class Psyque::RulesEngine::_private::TAccumulator
 			else
 			{
 				// 状態変更を次回まで遅延する。
-				if (i->second == EAccumulationDelay::Block)
+				if (i->second == EPsyqueAccumulationDelay::Block)
 				{
 					// ブロックする場合は、残り全部を次回以降に遅延する。
 					j = LocalEnd;

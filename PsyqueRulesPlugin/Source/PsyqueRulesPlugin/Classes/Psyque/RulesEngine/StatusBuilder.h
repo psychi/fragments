@@ -4,13 +4,11 @@
 /// @author Hillco Psychi (https://twitter.com/psychi)
 #pragma once
 
+#include "../String/NumericParser.h"
+
 /// @cond
 namespace Psyque
 {
-	namespace String
-	{
-		class FNumericParser;
-	}
 	namespace RulesEngine
 	{
 		class TStatusBuilder;
@@ -19,156 +17,7 @@ namespace Psyque
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-class Psyque::String::FNumericParser
-{
-	private: using ThisClass = FNumericParser;
-
-	public: enum class EKind: uint8
-	{
-		Empty,
-		Bool,
-		Unsigned,
-		Negative,
-		Float,
-	};
-
-	public: template<typename TemplateChar>
-	TemplateChar const* Parse(
-		TemplateChar const* const InStringBegin,
-		TemplateChar const* const InStringEnd)
-	{
-		// 先頭と末尾の空白文字を取り除く。
-		auto const LocalStringBegin(
-			ThisClass::TrimFront(InStringBegin, InStringEnd));
-		auto const LocalStringEnd(
-			ThisClass::TrimFront(InStringBegin, InStringEnd));
-		if (LocalStringEnd <= LocalStringBegin)
-		{
-			return nullptr;
-		}
-
-		// 符号を決定する。
-		auto LocalCharIterator(LocalStringBegin);
-		int8 LocalSign(1);
-		switch (*LocalCharIterator)
-		{
-			case '-': LocalSign = -1;
-			// case '+' に続く。
-
-			case '+':
-			++LocalCharIterator;
-			if (LocalStringEnd <= LocalCharIterator)
-			{
-				return nullptr;
-			}
-			break;
-
-			case 't':
-			case 'T':
-			return nullptr;
-
-			case 'f':
-			case 'F':
-			return nullptr;
-
-			default: break;
-		}
-
-		// 基数を決定する。
-		uint8 LocalRadix;
-		if (*LocalCharIterator == '.' || (
-			'1' <= *LocalCharIterator && *LocalCharIterator <= '9'))
-		{
-			LocalRadix = 10;
-		}
-		else if (*LocalCharIterator != '0')
-		{
-			return nullptr;
-		}
-		else
-		{
-			++LocalCharIterator;
-			if (LocalStringEnd <= LocalCharIterator)
-			{
-				this->SetUnsigned(0);
-				return LocalCharIterator;
-			}
-
-			switch (*LocalCharIterator)
-			{
-				case 'b': LocalRadix =  2; break;
-				case 'x': LocalRadix = 16; break;
-
-				default:
-				if (std::isdigit(*LocalCharIterator))
-				{
-					LocalRadix = 8;
-					break;
-				}
-				return nullptr;
-			}
-		}
-
-		/// @todo 未実装。
-		return nullptr;
-	}
-
-	public: void SetUnsigned(uint64 const InUnsigned)
-	{
-		this->Kind = ThisClass::EKind::Unsigned;
-		this->Unsigned = InUnsigned;
-	}
-
-	public: template<typename TemplateChar>
-	static TemplateChar const* TrimFront(
-		TemplateChar const* const InStringBegin,
-		TemplateChar const* const InStringEnd)
-	{
-		if (InStringBegin < InStringEnd)
-		{
-			check(InStringBegin != nullptr);
-			for (auto i(InStringBegin); i < InStringEnd; ++i)
-			{
-				if (!std::isspace(*i))
-				{
-					return i;
-				}
-			}
-		}
-		return InStringEnd;
-	}
-
-	public: template<typename TemplateChar>
-	static TemplateChar const* TrimBack(
-		TemplateChar const* const InStringBegin,
-		TemplateChar const* const InStringEnd)
-	{
-		if (InStringBegin < InStringEnd)
-		{
-			check(InStringBegin != nullptr);
-			for (auto i(InStringEnd - 1); InStringBegin <= i; --i)
-			{
-				if (!std::isspace(*i))
-				{
-					return i + 1;
-				}
-			}
-		}
-		return InStringBegin;
-	}
-
-	private:
-	union
-	{
-		double Float;
-		uint64 Unsigned;
-		bool Bool;
-	};
-	ThisClass::EKind Kind;
-};
-
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// @brief 文字列表から状態値を構築する関数オブジェクト。
+/// @brief UDataTable から状態値を構築する関数オブジェクト。
 /// @details  TDriver::ExtendChunk の引数として使う。
 class Psyque::RulesEngine::TStatusBuilder
 {
@@ -182,7 +31,7 @@ class Psyque::RulesEngine::TStatusBuilder
 		typename TemplateReservoir,
 		typename TemplateHasher,
 		typename TemplateIntermediation>
-	std::size_t operator()(
+	uint32 operator()(
 		/// [in,out] 状態値を登録する TDriver::FReservoir 。
 		TemplateReservoir& OutReservoir,
 		/// [in,out] 文字列からハッシュ値を作る TDriver::FHasher インスタンス。
@@ -200,7 +49,7 @@ class Psyque::RulesEngine::TStatusBuilder
 	/// @brief UDataTable を解析して状態値を構築し、状態貯蔵器へ登録する。
 	/// @return 登録した状態値の数。
 	public: template<typename TemplateReservoir, typename TemplateHasher>
-	static std::size_t RegisterStatuses(
+	static uint32 RegisterStatuses(
 		/// [in,out] 状態値を登録する TDriver::FReservoir インスタンス。
 		TemplateReservoir& OutReservoir,
 		/// [in] 文字列からハッシュ値を作る TDriver::FHasher インスタンス。
@@ -214,7 +63,7 @@ class Psyque::RulesEngine::TStatusBuilder
 		FString const LocalContextName(
 			TEXT("PsyqueRulesPlugin/StatusBuilder::RegisterStatuses"));
 		auto const LocalRowNames(InStatusTable.GetRowNames());
-		std::size_t LocalCount(0);
+		uint32 LocalCount(0);
 		for (auto& LocalRowName: LocalRowNames)
 		{
 			auto const LocalRow(
@@ -233,8 +82,9 @@ class Psyque::RulesEngine::TStatusBuilder
 
 	/// @brief JSONを解析して状態値を構築し、状態貯蔵器へ登録する。
 	/// @return 登録した状態値の数。
+	/// @todo 実装途中
 	public: template<typename TemplateReservoir, typename TemplateHasher>
-	static std::size_t RegisterStatuses(
+	static uint32 RegisterStatuses(
 		/// [in,out] 状態値を登録する TDriver::FReservoir インスタンス。
 		TemplateReservoir& OutReservoir,
 		/// [in] 文字列からハッシュ値を作る TDriver::FHasher インスタンス。
@@ -244,7 +94,7 @@ class Psyque::RulesEngine::TStatusBuilder
 		/// [in] 登録する状態値が記述されているJSON値の配列。
 		TArray<TSharedPtr<FJsonValue>> const& InJsonArray)
 	{
-		std::size_t LocalCount(0);
+		uint32 LocalCount(0);
 		for (auto const& LocalJsonValue: InJsonArray)
 		{
 			// 下位要素が要素数2以上の配列か判定する。
@@ -301,18 +151,115 @@ class Psyque::RulesEngine::TStatusBuilder
 		/// [in] 状態値のもととなるデータテーブル行。
 		FPsyqueRulesStatusTableRow const& InStatus)
 	{
-		auto const LocalKleene(Psyque::ParseKleene(InStatus.InitialValue));
-		if (LocalKleene != EPsyqueKleene::TernaryUnknown)
+		int32 LocalParseEnd;
+		Psyque::String::FNumericParser const LocalNumber(
+			&LocalParseEnd, InStatus.InitialValue);
+		if (LocalParseEnd != InStatus.InitialValue.Len())
 		{
-			return OutReservoir.RegisterStatus(
-				InChunkKey,
-				InStatusKey,
-				LocalKleene != EPsyqueKleene::TernaryFalse);
+			UE_LOG(
+				LogPsyqueRulesEngine,
+				Warning,
+				TEXT(
+					"TStatusBuilder::RegisterStatus is failed."
+					"\n\t'%s'[%d] is invalid in status key '%s'."),
+				*InStatus.InitialValue,
+				LocalParseEnd,
+				*_private::_find_key_string(InStatusKey));
+			return false;
 		}
 
-		/// @todo 未実装。
-		auto const LocalFloat(FCString::Atof(*InStatus.InitialValue));
-		auto const LocalInteger(FCString::Atoi(*InStatus.InitialValue));
+		// 論理型の状態値を登録する。
+		auto const LocalBool(LocalNumber.GetBool());
+		if (LocalBool != nullptr)
+		{
+			return OutReservoir.RegisterStatus(
+				InChunkKey, InStatusKey, *LocalBool);
+		}
+		else if (0 < InStatus.BitWidth)
+		{
+			// 符号なし整数型の状態値を登録する。
+			auto const LocalUnsigned(LocalNumber.GetUnsigned());
+			if (LocalUnsigned != nullptr)
+			{
+				return OutReservoir.RegisterStatus(
+					InChunkKey,
+					InStatusKey,
+					*LocalUnsigned,
+					static_cast<uint32>(InStatus.BitWidth));
+			}
+		}
+		else if (InStatus.BitWidth < 0)
+		{
+			// 符号あり整数型の状態値を登録する。
+			auto const LocalUnsigned(LocalNumber.GetUnsigned());
+			if (LocalUnsigned != nullptr)
+			{
+				if (MAX_int64 < *LocalUnsigned)
+				{
+					UE_LOG(
+						LogPsyqueRulesEngine,
+						Warning,
+						TEXT(
+							"TStatusBuilder::RegisterStatus is failed."
+							"\n\tSigned status '%s' = %llu"
+							" is greater than MAX_int64."),
+						*_private::_find_key_string(InStatusKey),
+						*LocalUnsigned);
+					return false;
+				}
+				return OutReservoir.RegisterStatus(
+					InChunkKey,
+					InStatusKey,
+					static_cast<int64>(*LocalUnsigned),
+					static_cast<uint32>(-InStatus.BitWidth));
+			}
+			auto const LocalNegative(LocalNumber.GetNegative());
+			if (LocalNegative != nullptr)
+			{
+				return OutReservoir.RegisterStatus(
+					InChunkKey,
+					InStatusKey,
+					*LocalNegative,
+					static_cast<uint32>(-InStatus.BitWidth));
+			}
+		}
+		else
+		{
+			// 浮動小数点数型の状態値を登録する。
+			using FFloat = typename TemplateReservoir::FStatusValue::FFloat;
+			auto const LocalFloat(LocalNumber.GetFloat());
+			if (LocalFloat != nullptr)
+			{
+				return OutReservoir.RegisterStatus(
+					InChunkKey,
+					InStatusKey,
+					static_cast<FFloat>(*LocalFloat));
+			}
+			auto const LocalUnsigned(LocalNumber.GetUnsigned());
+			if (LocalUnsigned != nullptr)
+			{
+				return OutReservoir.RegisterStatus(
+					InChunkKey,
+					InStatusKey,
+					static_cast<FFloat>(*LocalUnsigned));
+			}
+			auto const LocalNegative(LocalNumber.GetUnsigned());
+			if (LocalNegative != nullptr)
+			{
+				return OutReservoir.RegisterStatus(
+					InChunkKey,
+					InStatusKey,
+					static_cast<FFloat>(*LocalNegative));
+			}
+		}
+		UE_LOG(
+			LogPsyqueRulesEngine,
+			Warning,
+			TEXT(
+				"TStatusBuilder::RegisterStatus is failed."
+				"\n\tInStatus.InitialValue '%s' is empty in status key '%s'."),
+			*InStatus.InitialValue,
+			*_private::_find_key_string(InStatusKey));
 		return false;
 	}
 
@@ -365,12 +312,12 @@ class Psyque::RulesEngine::TStatusBuilder
 						InChunkKey,
 						LocalStatusKey,
 						LocalInteger,
-						static_cast<std::size_t>(-LocalBitWidth)):
+						static_cast<uint32>(-LocalBitWidth)):
 					OutReservoir.RegisterStatus(
 						InChunkKey,
 						LocalStatusKey,
 						static_cast<uint64>(LocalInteger),
-						static_cast<std::size_t>(LocalBitWidth));
+						static_cast<uint32>(LocalBitWidth));
 			}
 
 			// 浮動小数点数型の状態値を登録する。

@@ -20,6 +20,11 @@ namespace Psyque
 		{
 			template<typename, typename, typename, typename, typename>
 				class TReservoir;
+
+			inline FString _find_key_string(int32 const InKey)
+			{
+				return FName(InKey, InKey, 0).ToString();
+			}
 		} // namespace _private
 	} // namespace RulesEngine
 } // namespace Psyque
@@ -75,7 +80,7 @@ class Psyque::RulesEngine::_private::TReservoir
 	public: using FStatusAssignment =
 		Psyque::RulesEngine::_private::TStatusOperation<
 			typename ThisClass::FStatusKey,
-			RulesEngine::EStatusAssignment,
+			EPsyqueStatusAssignment,
 			typename ThisClass::FStatusValue>;
 
 	//-------------------------------------------------------------------------
@@ -115,9 +120,9 @@ class Psyque::RulesEngine::_private::TReservoir
 	/// @brief 空の状態貯蔵器を構築する。
 	public: TReservoir(
 		/// [in] チャンク辞書のバケット数。
-		std::size_t const InChunkCapacity,
+		uint32 const InChunkCapacity,
 		/// [in] 状態値プロパティ辞書のバケット数。
-		std::size_t const InStatusCapacity,
+		uint32 const InStatusCapacity,
 		/// [in] 使用するメモリ割当子の初期値。
 		typename ThisClass::FAllocator const& InAllocator = ThisClass::FAllocator()):
 	Chunks(
@@ -163,9 +168,9 @@ class Psyque::RulesEngine::_private::TReservoir
 	/// @brief 状態貯蔵器を再構築する。
 	public: void Rebuild(
 		/// [in] 状態値ビット列チャンク辞書のバケット数。
-		std::size_t const InChunkCapacity,
+		uint32 const InChunkCapacity,
 		/// [in] 状態値プロパティ辞書のバケット数。
-		std::size_t const InStatusCapacity)
+		uint32 const InStatusCapacity)
 	{
 		// 新たな辞書を用意する。
 		typename ThisClass::FChunkMap LocalChunks(
@@ -204,15 +209,29 @@ class Psyque::RulesEngine::_private::TReservoir
 	/// @name 状態値の登録
 	/// @{
 
-	/// @brief 状態値が登録されているか判定する。
-	/// @retval true  InStatusKey に対応する状態値が *this に登録されている。
-	/// @retval false InStatusKey に対応する状態値は *this に登録されてない。
-	public: bool IsRegistered(
-		/// [in] 判定する状態値に対応する識別値。
-		typename ThisClass::FStatusKey const InStatusKey)
-	const
+	/// @brief 論理型の状態値を登録する。
+	/// @sa
+	/// - ThisClass::FindStatus と
+	///   ThisClass::AssignStatus で、登録した状態値にアクセスできる。
+	/// - ThisClass::RemoveChunk で、登録した状態値をチャンク毎に削除できる。
+	/// @retval true  成功。状態値を登録した。
+	/// @retval false 失敗。状態値は登録されなかった。
+	/// - InStatusKey に対応する状態値がすでに登録されていると失敗する。
+	public: bool RegisterStatus(
+		/// [in] 登録する状態値を格納する状態値ビット列チャンクの識別値。
+		typename ThisClass::FChunkKey const InChunkKey,
+		/// [in] 登録する状態値の識別値。
+		typename ThisClass::FStatusKey const InStatusKey,
+		/// [in] 登録する状態値の初期値。
+		bool const InValue)
 	{
-		return this->Properties.find(InStatusKey) != this->Properties.end();
+		// 論理型の状態値を登録する。
+		using FBitFormat = typename ThisClass::FStatusValue::FBitFormat;
+		return nullptr != this->RegisterBitset(
+			InChunkKey,
+			InStatusKey,
+			InValue,
+			ThisClass::FStatusValue::GetBitFormat(EPsyqueRulesStatusKind::Bool));
 	}
 
 	/// @brief 状態値を登録する。
@@ -230,7 +249,6 @@ class Psyque::RulesEngine::_private::TReservoir
 		/// [in] 登録する状態値の識別値。
 		typename ThisClass::FStatusKey const InStatusKey,
 		/// [in] 登録する状態値の初期値。以下の型の値を登録できる。
-		/// - bool 型。
 		/// - C++ 組み込み整数型。
 		/// - C++ 組み込み浮動小数点数型。
 		TemplateValue const InValue)
@@ -240,23 +258,15 @@ class Psyque::RulesEngine::_private::TReservoir
 		{
 			// 浮動小数点数型の状態値を登録する。
 			/// @note コンパイル時にここで警告かエラーが発生する場合は、
-			/// TemplateValue が double 型で
-			/// ThisClass::FFloatBitset::FFloat が float 型なのが原因。
+			///   TemplateValue が double 型で
+			///   ThisClass::FFloatBitset::FFloat が float 型なのが原因。
 			typename ThisClass::FFloatBitset::FFloat const LocalFloat(InValue);
 			return nullptr != this->RegisterBitset(
 				InChunkKey,
 				InStatusKey,
 				typename ThisClass::FFloatBitset(LocalFloat).Bitset,
-				static_cast<FBitFormat>(RulesEngine::EStatusKind::Float));
-		}
-		else if (std::is_same<bool, TemplateValue>::value)
-		{
-			// 論理型の状態値を登録する。
-			return nullptr != this->RegisterBitset(
-				InChunkKey,
-				InStatusKey,
-				InValue != 0,
-				static_cast<FBitFormat>(RulesEngine::EStatusKind::Bool));
+				ThisClass::FStatusValue::GetBitFormat(
+					EPsyqueRulesStatusKind::Float));
 		}
 		else
 		{
@@ -291,7 +301,7 @@ class Psyque::RulesEngine::_private::TReservoir
 		/// [in] 登録する状態値の初期値。 C++ 組み込み整数型であること。
 		TemplateValue const InValue,
 		/// [in] 登録する状態値のビット幅。
-		std::size_t const InBitWidth)
+		uint32 const InBitWidth)
 	{
 		using FBitFormat = typename ThisClass::FStatusValue::FBitFormat;
 		using FBitBlock = typename ThisClass::FStatusChunk::FBitBlock;
@@ -301,6 +311,7 @@ class Psyque::RulesEngine::_private::TReservoir
 			|| InBitWidth < 2)
 		{
 			// 適切な整数型ではないので、登録に失敗する。
+			return false;
 		}
 		else if (std::is_signed<TemplateValue>::value)
 		{
@@ -312,9 +323,10 @@ class Psyque::RulesEngine::_private::TReservoir
 					InChunkKey,
 					InStatusKey,
 					Psyque::MakeBitMask<FBitBlock>(InBitWidth) & LocalValue,
-					-static_cast<FBitFormat>(InBitWidth));
+					ThisClass::FStatusValue::GetBitFormat(
+						EPsyqueRulesStatusKind::Signed, InBitWidth));
 		}
-		else //if (std::is_unsigned<TemplateValue>::value)
+		else
 		{
 			// 符号なし整数型の状態値を登録する。
 			auto const LocalValue(static_cast<FBitBlock>(InValue));
@@ -323,9 +335,9 @@ class Psyque::RulesEngine::_private::TReservoir
 					InChunkKey,
 					InStatusKey,
 					LocalValue,
-					static_cast<FBitFormat>(InBitWidth));
+					ThisClass::FStatusValue::GetBitFormat(
+						EPsyqueRulesStatusKind::Unsigned, InBitWidth));
 		}
-		return false;
 	}
 	/// @}
 	//-------------------------------------------------------------------------
@@ -333,27 +345,23 @@ class Psyque::RulesEngine::_private::TReservoir
 	/// @{
 
 	/// @brief 状態値のプロパティを取得する。
-	/// @return
-	/// InStatusKey に対応する状態値のプロパティのコピー。
-	/// 該当する状態値がない場合は
-	/// ThisClass::FStatusProperty::IsEmpty が真となる値を返す。
-	public: typename ThisClass::FStatusProperty FindProperty(
+	/// @return InStatusKey に対応する状態値のプロパティを指すポインタ。。
+	///   該当する状態値がない場合はnullptrを返す。
+	public: typename ThisClass::FStatusProperty const* FindProperty(
 		/// [in] 取得する状態値プロパティに対応する識別値。
 		typename ThisClass::FStatusKey const InStatusKey)
 	const
 	{
 		auto const LocalFind(this->Properties.find(InStatusKey));
 		return LocalFind != this->Properties.end()?
-			LocalFind->second:
-			typename ThisClass::FStatusProperty(
-				typename ThisClass::FChunkKey(), 0, 0);
+			&LocalFind->second: nullptr;
 	}
 
 	/// @brief 状態値の型の種別を取得する。
 	/// @return
-	/// InStatusKey に対応する状態値の型の種別。該当する状態値がない場合は
-	/// RulesEngine::EStatusKind::Empty を返す。
-	public: RulesEngine::EStatusKind FindKind(
+	///   InStatusKey に対応する状態値の型の種別。該当する状態値がない場合は
+	///   EPsyqueRulesStatusKind::Empty を返す。
+	public: EPsyqueRulesStatusKind FindKind(
 		/// [in] 状態値に対応する識別値。
 		typename ThisClass::FStatusKey const InStatusKey)
 	const
@@ -361,22 +369,32 @@ class Psyque::RulesEngine::_private::TReservoir
 		auto const LocalFind(this->Properties.find(InStatusKey));
 		return LocalFind != this->Properties.end()?
 			ThisClass::FStatusValue::GetKind(LocalFind->second.GetBitFormat()):
-			RulesEngine::EStatusKind::Empty;
+			EPsyqueRulesStatusKind::Empty;
 	}
 
-	/// @brief 状態値のビット幅を取得する。
-	/// @return
-	/// InStatusKey に対応する状態値のビット幅。
-	/// 該当する状態値がない場合は0を返す。
-	public: typename ThisClass::FStatusValue::FBitWidth FindBitWidth(
+	/// @brief 状態値のビット構成を取得する。
+	/// @return InStatusKey に対応する状態値のビット構成。
+	///   該当する状態値がない場合は0を返す。
+	public: typename ThisClass::FStatusValue::FBitWidth FindBitFormat(
 		/// [in] 状態値に対応する識別値。
 		typename ThisClass::FStatusKey const InStatusKey)
 	const
 	{
 		auto const LocalFind(this->Properties.find(InStatusKey));
 		return LocalFind != this->Properties.end()?
-			ThisClass::FStatusValue::GetBitWidth(LocalFind->second.GetBitFormat()):
-			0;
+			LocalFind->second.GetBitFormat(): 0;
+	}
+
+	/// @brief 状態値のビット幅を取得する。
+	/// @return InStatusKey に対応する状態値のビット幅。
+	///   該当する状態値がない場合は0を返す。
+	public: typename ThisClass::FStatusValue::FBitWidth FindBitWidth(
+		/// [in] 状態値に対応する識別値。
+		typename ThisClass::FStatusKey const InStatusKey)
+	const
+	{
+		return ThisClass::FStatusValue::GetBitWidth(
+			this->FindBitFormat(InStatusKey));
 	}
 
 	/// @brief 状態変化フラグを取得する。
@@ -616,11 +634,11 @@ class Psyque::RulesEngine::_private::TReservoir
 		/// [in] 代入演算子の左辺となる状態値の識別値。
 		typename ThisClass::FStatusKey const InLeftKey,
 		/// [in] 適用する代入演算子。
-		typename RulesEngine::EStatusAssignment const InOperator,
+		EPsyqueStatusAssignment const InOperator,
 		/// [in] 代入演算子の右辺となる値。
 		typename ThisClass::FStatusValue const& InRightValue)
 	{
-		if (InOperator == RulesEngine::EStatusAssignment::Copy)
+		if (InOperator == EPsyqueStatusAssignment::Copy)
 		{
 			return this->AssignStatus(InLeftKey, InRightValue);
 		}
@@ -637,7 +655,7 @@ class Psyque::RulesEngine::_private::TReservoir
 		/// [in] 代入演算子の左辺となる状態値の識別値。
 		typename ThisClass::FStatusKey const InLeftKey,
 		/// [in] 適用する代入演算子。
-		typename RulesEngine::EStatusAssignment const InOperator,
+		EPsyqueStatusAssignment const InOperator,
 		/// [in] 代入演算子の右辺となる状態値の識別値。
 		typename ThisClass::FStatusKey const InRightKey)
 	{
@@ -664,9 +682,9 @@ class Psyque::RulesEngine::_private::TReservoir
 		/// [in] 予約する状態値ビット列チャンクに対応する識別値。
 		typename ThisClass::FChunkKey const InChunkKey,
 		/// [in] 予約するビット列コンテナの容量。
-		std::size_t const InBlockCapacity,
+		uint32 const InBlockCapacity,
 		/// [in] 予約する空きビット領域コンテナの容量。
-		std::size_t const InEmptyCapacity)
+		uint32 const InEmptyCapacity)
 	{
 		// 状態値を登録する状態値ビット列チャンクを用意する。
 		auto const LocalEmplace(
@@ -804,6 +822,15 @@ class Psyque::RulesEngine::_private::TReservoir
 					auto& LocalProperty(*LocalEmplace.first);
 					return &LocalProperty;
 				}
+
+				// 同じ名前ハッシュ値の状態値がすでに登録されていた。
+				UE_LOG(
+					LogPsyqueRulesEngine,
+					Warning,
+					TEXT(
+						"TReservoir::AllocateBitset is failed."
+						"\n\tStatus key '%s' is already registered."),
+					*_find_key_string(InStatusKey));
 			}
 			else {check(false);}
 		}
@@ -982,7 +1009,8 @@ class Psyque::RulesEngine::_private::TReservoir
 		typename ThisClass::FStatusChunk::FBitBlock LocalBitset;
 		if (LocalKind != InValue.GetKind())
 		{
-			typename ThisClass::FStatusValue const LocalValue(InValue, LocalKind);
+			typename ThisClass::FStatusValue const
+				LocalValue(InValue, LocalKind);
 			if (LocalValue.IsEmpty())
 			{
 				return typename ThisClass::FBitset(0, 0);
@@ -995,31 +1023,27 @@ class Psyque::RulesEngine::_private::TReservoir
 		}
 
 		// ビット列とビット幅を構築する。
-		using FBitWidth = typename ThisClass::FStatusValue::FBitWidth;
-		if (ThisClass::FStatusValue::IsBool(InBitFormat))
+		auto const LocalBitWidth(
+			ThisClass::FStatusValue::GetBitWidth(InBitFormat));
+		switch (LocalKind)
 		{
-			return typename ThisClass::FBitset(LocalBitset, 1);
-		}
-		else if (ThisClass::FStatusValue::IsFloat(InBitFormat))
-		{
-			return typename ThisClass::FBitset(
-				LocalBitset,
-				static_cast<FBitWidth>(
-					sizeof(typename ThisClass::FStatusValue::FFloat) * CHAR_BIT));
-		}
-		else if (ThisClass::FStatusValue::IsUnsigned(InBitFormat))
-		{
-			return ThisClass::MakeBitsetWidth<decltype(LocalBitset)>(
-				LocalBitset, static_cast<FBitWidth>(InBitFormat), InMask);
-		}
-		else if (ThisClass::FStatusValue::IsSigned(InBitFormat))
-		{
+			case EPsyqueRulesStatusKind::Bool:
+			case EPsyqueRulesStatusKind::Float:
+			return typename ThisClass::FBitset(LocalBitset, LocalBitWidth);
+
+			case EPsyqueRulesStatusKind::Unsigned:
+			return ThisClass::MakeIntegerBitsetWidth<decltype(LocalBitset)>(
+				LocalBitset, LocalBitWidth, InMask);
+
+			case EPsyqueRulesStatusKind::Signed:
 			using FSigned = typename ThisClass::FStatusValue::FSigned;
-			return ThisClass::MakeBitsetWidth<FSigned>(
-				LocalBitset, static_cast<FBitWidth>(-InBitFormat), InMask);
+			return ThisClass::MakeIntegerBitsetWidth<FSigned>(
+				LocalBitset, LocalBitWidth, InMask);
+
+			default:
+			check(false);
+			return typename ThisClass::FBitset(0, 0);
 		}
-		check(false);
-		return typename ThisClass::FBitset(0, 0);
 	}
 
 	/// @brief 数値からビット列を構築する。
@@ -1035,15 +1059,21 @@ class Psyque::RulesEngine::_private::TReservoir
 		/// [in] 指定のビット幅に収まるようマスクするか。
 		bool const InMask)
 	{
-		using FBitWidth = typename ThisClass::FStatusValue::FBitWidth;
-		using FBitBlock = typename ThisClass::FStatusChunk::FBitBlock;
-		if (ThisClass::FStatusValue::IsBool(InBitFormat))
+		auto const LocalBitWidth(
+			ThisClass::FStatusValue::GetBitWidth(InBitFormat));
+		if (ThisClass::FStatusValue::IsUnsigned(InBitFormat))
 		{
-			// 論理値のビット列を構築する。
-			if (std::is_same<TemplateValue, bool>::value)
-			{
-				return typename ThisClass::FBitset(InValue != 0, 1);
-			}
+			// 符号なし整数のビット列を構築する。
+			using FUnsigned= typename ThisClass::FStatusValue::FUnsigned;
+			return ThisClass::MakeIntegerBitsetWidth<FUnsigned>(
+				InValue, LocalBitWidth, InMask);
+		}
+		else if (ThisClass::FStatusValue::IsSigned(InBitFormat))
+		{
+			// 符号あり整数のビット列を構築する。
+			using FSigned = typename ThisClass::FStatusValue::FSigned;
+			return ThisClass::MakeIntegerBitsetWidth<FSigned>(
+				InValue, LocalBitWidth, InMask);
 		}
 		else if (ThisClass::FStatusValue::IsFloat(InBitFormat))
 		{
@@ -1052,20 +1082,12 @@ class Psyque::RulesEngine::_private::TReservoir
 			using FFloat = typename FFloatBitset::FFloat;
 			return typename ThisClass::FBitset(
 				FFloatBitset(static_cast<FFloat>(InValue)).Bitset,
-				static_cast<FBitWidth>(sizeof(FFloat) * CHAR_BIT));
+				LocalBitWidth);
 		}
-		else if (ThisClass::FStatusValue::IsUnsigned(InBitFormat))
+		else if (std::is_same<TemplateValue, bool>::value)
 		{
-			// 符号なし整数のビット列を構築する。
-			return ThisClass::MakeBitsetWidth<FBitBlock>(
-				InValue, static_cast<FBitWidth>(InBitFormat), InMask);
-		}
-		else if (ThisClass::FStatusValue::IsSigned(InBitFormat))
-		{
-			// 符号あり整数のビット列を構築する。
-			using FSigned = typename ThisClass::FStatusValue::FSigned;
-			return ThisClass::MakeBitsetWidth<FSigned>(
-				InValue, static_cast<FBitWidth>(-InBitFormat), InMask);
+			// 論理値のビット列を構築する。
+			return typename ThisClass::FBitset(InValue != 0, LocalBitWidth);
 		}
 		check(false);
 		return typename ThisClass::FBitset(0, 0);
@@ -1076,7 +1098,7 @@ class Psyque::RulesEngine::_private::TReservoir
 	///   数値から構築したビット列とビット幅のペア。
 	///   構築に失敗した場合は、ビット幅が0となる。
 	private: template<typename TemplateInteger, typename TemplateValue>
-	static typename ThisClass::FBitset MakeBitsetWidth(
+	static typename ThisClass::FBitset MakeIntegerBitsetWidth(
 		/// [in] ビット列の元となる数値。
 		TemplateValue const& InValue,
 		/// [in] 構築するビット列の幅。
@@ -1102,7 +1124,7 @@ class Psyque::RulesEngine::_private::TReservoir
 
 	/// @brief 論理値を整数に変換してビット列を構築させないためのダミー関数。
 	private: template<typename TemplateInteger>
-	static typename ThisClass::FBitset MakeBitsetWidth(
+	static typename ThisClass::FBitset MakeIntegerBitsetWidth(
 		bool, typename ThisClass::FStatusValue::FBitWidth, bool)
 	{
 		// bool型の値を他の型へ変換できないようにする。
@@ -1115,7 +1137,7 @@ class Psyque::RulesEngine::_private::TReservoir
 		/// [in] 判定する整数。
 		typename ThisClass::FStatusChunk::FBitBlock const InInteger,
 		/// [in] 許容するビット幅。
-		std::size_t const InBitWidth)
+		uint32 const InBitWidth)
 	PSYQUE_NOEXCEPT
 	{
 		return Psyque::ShiftRightBitwise(InInteger, InBitWidth) != 0;
@@ -1126,7 +1148,7 @@ class Psyque::RulesEngine::_private::TReservoir
 		/// [in] 判定する整数。
 		typename ThisClass::FStatusValue::FSigned const InInteger,
 		/// [in] 許容するビット幅。
-		std::size_t const InBitWidth)
+		uint32 const InBitWidth)
 	PSYQUE_NOEXCEPT
 	{
 		using FBitBlock = typename ThisClass::FStatusChunk::FBitBlock;

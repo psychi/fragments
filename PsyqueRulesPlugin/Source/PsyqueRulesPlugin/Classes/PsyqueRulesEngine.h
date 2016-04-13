@@ -2,167 +2,41 @@
 
 #pragma once
 
-#include <memory>
-#include "Runtime/Engine/Classes/Engine/DataTable.h"
+#include "./PsyqueRulesStruct.h"
+#include "./Psyque/RulesEngine/Driver.h"
 #include "PsyqueRulesEngine.generated.h"
-
-/// @cond
-namespace Psyque
-{
-	namespace RulesEngine
-	{
-		template<typename, typename, typename, typename, typename>
-			class TDriver;
-	} // namespace RulesEngine
-} // namespace Psyque
-/// @endcond
-
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-//-----------------------------------------------------------------------------
-/// @brief Kleeneの3値論理による真理値。
-/// @details http://goo.gl/0kyClO
-UENUM(BlueprintType)
-enum class EPsyqueKleene: uint8
-{
-	/// 偽。
-	TernaryFalse = 0 UMETA(DisplayName="TernaryFalse"),
-
-	/// 真。
-	TernaryTrue = 1 UMETA(DisplayName="TernaryTrue"),
-
-	/// 真か偽か不明。
-	TernaryUnknown = 128 UMETA(DisplayName="TernaryUnknown")
-};
-static_assert(
-	static_cast<int8>(EPsyqueKleene::TernaryFalse) == false
-	&& static_cast<int8>(EPsyqueKleene::TernaryTrue) == true
-	&& static_cast<int8>(EPsyqueKleene::TernaryUnknown) < 0,
-	"");
-
-namespace Psyque
-{
-	inline EPsyqueKleene ParseKleene(FString const& InString)
-	{
-		if (InString == TEXT("true"))
-		{
-			return EPsyqueKleene::TernaryTrue;
-		}
-		if (InString == TEXT("false"))
-		{
-			return EPsyqueKleene::TernaryFalse;
-		}
-		return EPsyqueKleene::TernaryUnknown;
-	}
-}
-
-//-----------------------------------------------------------------------------
-/// @brief 条件式の論理項を結合する、論理演算子を表す列挙型。
-/// @details Psyque::RulesEngine::TDriver::FEvaluator::FExpression::Logic
-///   の型として使う。
-UENUM(BlueprintType)
-enum class EPsyqueRulesExpressionLogic: uint8
-{
-	/// 条件式の論理項を、論理積で結合する。
-	And = 0 UMETA(DisplayName="and"),
-
-	/// 条件式の論理項を、論理和で結合する。
-	Or = 1 UMETA(DisplayName="or"),
-};
-
-//-----------------------------------------------------------------------------
-/// @brief 条件式の種類を表す列挙型。
-/// @details Psyque::RulesEngine::TDriver::FEvaluator::FExpression::Kind
-///   の型として使う。
-UENUM(BlueprintType)
-enum class EPsyqueRulesExpressionKind: uint8
-{
-	/// 状態値を比較する条件式。
-	/// 1つの論理項は、3つの要素で構成される。
-	/// - 左辺となる状態値の識別子。
-	/// - 左辺と右辺を結合する比較演算子。
-	/// - 右辺となる定数値。または右辺となる状態値の識別子。
-	StatusComparison = 0 UMETA(DisplayName="StatusComparison"),
-
-	/// 状態値の変化を検知する条件式。
-	/// 1つの論理項は、1つの要素で構成される。
-	/// - 変化を検知する状態値の識別子。
-	StatusTransition = 1 UMETA(DisplayName="StatusTransition"),
-
-	/// 複数の条件式を結合する条件式。
-	/// 1つの論理項は、2つの要素で構成される。
-	/// - 結合する条件式の識別子。
-	/// - 条件となる真偽値。
-	SubExpression = 2 UMETA(DisplayName="SubExpression"),
-};
-
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// @brief 状態値が記述されている UDataTable の行。
-USTRUCT(BlueprintType)
-struct FPsyqueRulesStatusTableRow: public FTableRowBase
-{
-	GENERATED_USTRUCT_BODY()
- 
-	/// @brief 状態値の初期値のもととなる文字列。
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="PsyqueRulesPlugin")
-	FString InitialValue;
-
-	/// @brief 状態値が整数型の場合のビット幅。
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="PsyqueRulesPlugin")
-	int32 BitWidth;
-};
-
-//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// @brief 条件式が記述されている UDataTable の行。
-USTRUCT(BlueprintType)
-struct FPsyqueRulesExpressionTableRow: public FTableRowBase
-{
-	GENERATED_USTRUCT_BODY()
- 
-	/// @brief 条件式の種類。
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="PsyqueRulesPlugin")
-	EPsyqueRulesExpressionKind Kind;
-
-	/// @brief 条件式が持つ論理項を結合する論理演算子。
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="PsyqueRulesPlugin")
-	EPsyqueRulesExpressionLogic Logic;
-
-	/// @brief 条件式が持つ論理項の要素。
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="PsyqueRulesPlugin")
-	TArray<FString> Elements;
-};
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief Blueprintからは、このクラスを介してルールエンジンを操作する。
-/// @todo 今のところBlueprintからの操作を前提としているが、
-///   Psyque をPublicフォルダに配置し、C++から直接操作できるようにしたい。
-UCLASS()
-class UPsyqueRulesEngine: public UBlueprintFunctionLibrary
+UCLASS(BlueprintType)
+class PSYQUERULESPLUGIN_API UPsyqueRulesEngine: public UObject
 {
 	GENERATED_UCLASS_BODY()
 
 	//-------------------------------------------------------------------------
 	public:
-	/// @brief  現在のルールエンジン駆動器を破棄し、新たな駆動器を生成する。
-	/// @retval true  成功。ルールエンジン駆動器を生成した。
-	/// @retval false 失敗。ルールエンジン駆動器を生成しなかった。
-	/// - ルールエンジン駆動器のメモリ割当に失敗すると、失敗する。
-	static bool CreateDriver();
+	/// @brief 使用するルールエンジン駆動器を表す型。
+	using FDriver = Psyque::RulesEngine::TDriver<
+		uint64, float, int32, std::hash<FName>, std::allocator<void*>>;
 
-	/// @brief 現在のルールエンジン駆動器を破棄する。
-	/// @retval true  成功。ルールエンジン駆動器を破棄した。
-	/// @retval false 失敗。ルールエンジン駆動器を破棄しなかった。
-	/// - ルールエンジン駆動器がすでに破棄されていると、失敗する。
-	static bool DestroyDriver();
-
+	//-------------------------------------------------------------------------
+	public:
 	/// @brief ルールエンジンを更新する。
 	UFUNCTION(BlueprintCallable, Category="PsyqueRulesPlugin")
-	static void Tick();
+	void Tick()
+	{
+		this->Driver.Tick();
+	}
 
 	/// @brief 名前文字列から名前ハッシュ値を取得する。
 	UFUNCTION(BlueprintPure, Category="PsyqueRulesPlugin")
-	static int32 MakeHash(
+	int32 MakeHash(
 		/// [in] 名前文字列となる FName インスタンス。
-		FName const& InName);
+		FName const& InName)
+	const
+	{
+		return this->Driver.HashFunction(InName);
+	}
 
 	//-------------------------------------------------------------------------
 	/// @name 状態値の登録
@@ -173,7 +47,7 @@ class UPsyqueRulesEngine: public UBlueprintFunctionLibrary
 	/// @retval false 失敗。状態値は登録されなかった。
 	/// - InStatusKey に対応する状態値がすでに登録されていると、失敗する。
 	UFUNCTION(BlueprintCallable, Category="PsyqueRulesPlugin")
-	static bool RegisterBoolStatus(
+	bool RegisterBoolStatus(
 		/// [in] 登録する状態値を格納する状態値ビット列チャンクの名前ハッシュ値。
 		/// UPsyqueRulesEngine::MakeHash から取得する。
 		int32 const InChunkKey,
@@ -181,7 +55,10 @@ class UPsyqueRulesEngine: public UBlueprintFunctionLibrary
 		/// UPsyqueRulesEngine::MakeHash から取得する。
 		int32 const InStatusKey,
 		/// [in] 登録する状態値の初期値。
-		bool const InValue);
+		bool const InValue)
+	{
+		return this->Driver.RegisterStatus(InChunkKey, InStatusKey, InValue);
+	}
 
 	/// @brief 符号なし整数型の状態値を登録する。
 	/// @note InBitWidth が31より大きく、状態値が31ビット幅より大きい値だと、
@@ -193,7 +70,7 @@ class UPsyqueRulesEngine: public UBlueprintFunctionLibrary
 	/// - InBitWidth が1以下だと、失敗する。ビット幅が1の場合は、論理型として
 	///   UPsyqueRulesEngine::RegisterBoolStatus で登録すること。
 	UFUNCTION(BlueprintCallable, Category="PsyqueRulesPlugin")
-	static bool RegisterUnsignedStatus(
+	bool RegisterUnsignedStatus(
 		/// [in] 登録する状態値を格納する状態値ビット列チャンクの名前ハッシュ値。
 		/// UPsyqueRulesEngine::MakeHash から取得する。
 		int32 const InChunkKey,
@@ -203,7 +80,14 @@ class UPsyqueRulesEngine: public UBlueprintFunctionLibrary
 		/// [in] 登録する状態値の初期値。
 		int32 const InValue,
 		/// [in] 登録する状態値のビット幅。
-		uint8 const InBitWidth);
+		uint8 const InBitWidth)
+	{
+		return 0 <= InValue
+			&& this->Driver.RegisterStatus(
+				InChunkKey,
+				InStatusKey,
+				static_cast<uint32>(InValue), InBitWidth);
+	}
 
 	/// @brief 符号あり整数型の状態値を登録する。
 	/// @note InBitWidth が32より大きく、状態値が32ビット幅より大きい値だと、
@@ -215,7 +99,7 @@ class UPsyqueRulesEngine: public UBlueprintFunctionLibrary
 	/// - InBitWidth が1以下だと失敗する。ビット幅が1の場合は、論理型として
 	///   UPsyqueRulesEngine::RegisterBoolStatus で登録すること。
 	UFUNCTION(BlueprintCallable, Category="PsyqueRulesPlugin")
-	static bool RegisterSignedStatus(
+	bool RegisterSignedStatus(
 		/// [in] 登録する状態値を格納する状態値ビット列チャンクの名前ハッシュ値。
 		/// UPsyqueRulesEngine::MakeHash から取得する。
 		int32 const InChunkKey,
@@ -225,7 +109,12 @@ class UPsyqueRulesEngine: public UBlueprintFunctionLibrary
 		/// [in] 登録する状態値の初期値。
 		int32 const InValue,
 		/// [in] 登録する状態値のビット幅。
-		uint8 const InBitWidth);
+		uint8 const InBitWidth)
+	{
+		return InValue != ThisClass::GetIntegerNan()
+			&& this->Driver.RegisterStatus(
+				InChunkKey, InStatusKey, InValue, InBitWidth);
+	}
 
 	/// @brief 浮動小数点数型の状態値を登録する。
 	/// @retval true  成功。状態値を登録した。
@@ -233,7 +122,7 @@ class UPsyqueRulesEngine: public UBlueprintFunctionLibrary
 	/// - InStatusKey に対応する状態値がすでに登録されていると、失敗する。
 	/// - InValue が UPsyqueRulesEngine::GetFloatNan と等値だと、失敗する。
 	UFUNCTION(BlueprintCallable, Category="PsyqueRulesPlugin")
-	static bool RegisterFloatStatus(
+	bool RegisterFloatStatus(
 		/// [in] 登録する状態値を格納する状態値ビット列チャンクの名前ハッシュ値。
 		/// UPsyqueRulesEngine::MakeHash から取得する。
 		int32 const InChunkKey,
@@ -241,7 +130,11 @@ class UPsyqueRulesEngine: public UBlueprintFunctionLibrary
 		/// UPsyqueRulesEngine::MakeHash から取得する。
 		int32 const InStatusKey,
 		/// [in] 登録する状態値の初期値。
-		float const InValue);
+		float const InValue)
+	{
+		return InValue != ThisClass::GetFloatNan()
+			&& this->Driver.RegisterStatus(InChunkKey, InStatusKey, InValue);
+	}
 	/// @}
 	//-------------------------------------------------------------------------
 	/// @name 状態値の取得
@@ -254,10 +147,19 @@ class UPsyqueRulesEngine: public UBlueprintFunctionLibrary
 	/// - InStatusKey に対応する状態値がない場合は、失敗する。
 	/// - InStatusKey に対応する状態値が論理型でない場合は、失敗する。
 	UFUNCTION(BlueprintPure, Category="PsyqueRulesPlugin")
-	static EPsyqueKleene GetBoolStatus(
+	EPsyqueKleene FindBoolStatus(
 		/// [in] 取得する状態値の名前ハッシュ値。
 		/// UPsyqueRulesEngine::MakeHash から取得する。
-		int32 const InStatusKey);
+		int32 const InStatusKey)
+	const
+	{
+		auto const LocalValue(
+			this->Driver.GetReservoir().FindStatus(InStatusKey));
+		auto const LocalBool(LocalValue.GetBool());
+		return LocalBool != nullptr?
+			static_cast<EPsyqueKleene>(*LocalBool):
+			EPsyqueKleene::TernaryUnknown;
+	}
 
 	/// @brief 符号なし整数型の状態値を取得する。
 	/// @return InStatusKey に対応する、符号なし整数型の状態値の値。
@@ -267,10 +169,22 @@ class UPsyqueRulesEngine: public UBlueprintFunctionLibrary
 	///   - InStatusKey に対応する状態値が符号なし整数型でない場合は、失敗する。
 	///   - 状態値が31ビット幅より大きい値だと、失敗する。
 	UFUNCTION(BlueprintPure, Category="PsyqueRulesPlugin")
-	static int32 GetUnsignedStatus(
+	int32 FindUnsignedStatus(
 		/// [in] 取得する状態値の名前ハッシュ値。
 		/// UPsyqueRulesEngine::MakeHash から取得する。
-		int32 const InStatusKey);
+		int32 const InStatusKey)
+	const
+	{
+		auto const LocalValue(
+			this->Driver.GetReservoir().FindStatus(InStatusKey));
+		auto const LocalUnsigned(LocalValue.GetUnsigned());
+		if (LocalUnsigned != nullptr &&
+			*LocalUnsigned <= static_cast<uint32>(std::numeric_limits<int32>::max()))
+		{
+			return static_cast<int32>(*LocalUnsigned);
+		}
+		return ThisClass::GetIntegerNan();
+	}
 
 	/// @brief 符号あり整数型の状態値を取得する。
 	/// @return InStatusKey に対応する、符号あり整数型の状態値の値。
@@ -280,10 +194,23 @@ class UPsyqueRulesEngine: public UBlueprintFunctionLibrary
 	///   - InStatusKey に対応する状態値が符号あり整数型でない場合は、失敗する。
 	///   - 状態値が32ビット幅より大きい値だと、失敗する。
 	UFUNCTION(BlueprintPure, Category="PsyqueRulesPlugin")
-	static int32 GetSignedStatus(
+	int32 FindSignedStatus(
 		/// [in] 取得する状態値の名前ハッシュ値。
 		/// UPsyqueRulesEngine::MakeHash から取得する。
-		int32 const InStatusKey);
+		int32 const InStatusKey)
+	const
+	{
+		auto const LocalValue(
+			this->Driver.GetReservoir().FindStatus(InStatusKey));
+		auto const LocalSigned(LocalValue.GetSigned());
+		if (LocalSigned != nullptr
+			&& *LocalSigned <= MAX_int32
+			&& ThisClass::GetIntegerNan() < *LocalSigned)
+		{
+			return static_cast<int32>(*LocalSigned);
+		}
+		return ThisClass::GetIntegerNan();
+	}
 
 	/// @brief 浮動小数点数型の状態値を取得する。
 	/// @return InStatusKey に対応する、浮動小数点数型の状態値の値。
@@ -292,71 +219,175 @@ class UPsyqueRulesEngine: public UBlueprintFunctionLibrary
 	///   - InStatusKey に対応する状態値がない場合は、失敗する。
 	///   - InStatusKey に対応する状態値が浮動小数点数型でない場合は、失敗する。
 	UFUNCTION(BlueprintPure, Category="PsyqueRulesPlugin")
-	static float GetFloatStatus(
+	float FindFloatStatus(
 		/// [in] 取得する状態値の名前ハッシュ値。
 		/// UPsyqueRulesEngine::MakeHash から取得する。
-		int32 const InStatusKey);
+		int32 const InStatusKey)
+	const
+	{
+		auto const LocalValue(
+			this->Driver.GetReservoir().FindStatus(InStatusKey));
+		auto const LocalFloat(LocalValue.GetFloat());
+		return LocalFloat != nullptr? *LocalFloat: ThisClass::GetFloatNan();
+	}
+
+	/// @brief 状態値の型を取得する。
+	/// @return 状態値の型の種類。 InStatusKey に対応する状態値がない場合は、
+	///   EPsyqueRulesStatusKind::Empty となる。
+	UFUNCTION(BlueprintPure, Category="PsyqueRulesPlugin")
+	EPsyqueRulesStatusKind FindStatusKind(
+		/// [in] 取得する状態値の名前ハッシュ値。
+		/// UPsyqueRulesEngine::MakeHash から取得する。
+		int32 const InStatusKey)
+	const
+	{
+		return this->Driver.GetReservoir().FindKind(InStatusKey);
+	}
+
+	/// @brief 状態値のビット幅を取得する。
+	/// @return 状態値のビット幅。
+	///   InStatusKey に対応する状態値がない場合は、0となる。
+	UFUNCTION(BlueprintPure, Category="PsyqueRulesPlugin")
+	uint8 FindStatusBitWidth(
+		/// [in] 取得する状態値の名前ハッシュ値。
+		/// UPsyqueRulesEngine::MakeHash から取得する。
+		int32 const InStatusKey)
+	const
+	{
+		return this->Driver.GetReservoir().FindBitWidth(InStatusKey);
+	}
+
+	/// @brief 状態値のビット構成を取得する。
+	/// @return 状態値のビット構成。
+	///   InStatusKey に対応する状態値がない場合は、0となる。
+	UFUNCTION(BlueprintPure, Category="PsyqueRulesPlugin")
+	int32 FindStatusBitFormat(
+		/// [in] 取得する状態値の名前ハッシュ値。
+		/// UPsyqueRulesEngine::MakeHash から取得する。
+		int32 const InStatusKey)
+	const
+	{
+		return this->Driver.GetReservoir().FindBitFormat(InStatusKey);
+	}
 	/// @}
 	//-------------------------------------------------------------------------
-	/// @name 状態値の設定
+	/// @name 状態値の代入演算
 	/// @{
 	public:
-	/// @brief 論理型の状態値へ値を代入する。
-	/// @retval true  成功。 InValue を InStatusKey に対応する状態値へ代入した。
-	/// @retval false 失敗。状態値は変化しない。
-	/// - UPsyqueRulesEngine::RegisterBoolStatus で、
-	///   InStatusKey に対応する状態値が登録されてないと、失敗する。
+	/// @brief 真偽値の状態値への代入演算を予約する。
+	/// @note 代入演算は、次回の UPsyqueRulesEngine::Tick 以降に行われる。
+	/// @retval true  成功。代入演算を予約した。
+	/// @retval false 失敗。代入演算を予約しなかった。
 	UFUNCTION(BlueprintCallable, Category="PsyqueRulesPlugin")
-	static bool SetBoolStatus(
-		/// [in] 代入先となる状態値の名前ハッシュ値。
+	bool AccumulateAssignmentBool(
+		/// [in] 代入演算の遅延方法。
+		EPsyqueAccumulationDelay const InDelay,
+		/// [in] 代入演算の左辺値となる状態値の名前ハッシュ値。
 		/// UPsyqueRulesEngine::MakeHash から取得する。
 		int32 const InStatusKey,
-		/// [in] 状態値へ代入する値。
-		bool const InValue);
+		/// [in] 代入演算の種類。
+		EPsyqueStatusAssignment const InOperator,
+		/// [in] 代入演算の右辺値。
+		bool const InValue)
+	{
+		this->Driver.Accumulator.Accumulate(
+			ThisClass::FDriver::FReservoir::FStatusAssignment(
+				InStatusKey,
+				InOperator,
+				ThisClass::FDriver::FReservoir::FStatusValue(InValue)),
+			InDelay);
+		return true;
+	}
 
-	/// @brief 符号なし整数型の状態値へ値を代入する。
-	/// @retval true  成功。 InValue を InStatusKey に対応する状態値へ代入した。
-	/// @retval false 失敗。状態値は変化しない。
-	/// - UPsyqueRulesEngine::RegisterUnsignedStatus で、
-	///   InStatusKey に対応する状態値が登録されてないと、失敗する。
-	/// - InValue の値が
-	///   InStatusKey に対応する状態値のビット幅を超えていると、失敗する。
+	/// @brief 符号なし整数値の状態値への代入演算を予約する。
+	/// @note 代入演算は、次回の UPsyqueRulesEngine::Tick 以降に行われる。
+	/// @retval true  成功。代入演算を予約した。
+	/// @retval false 失敗。代入演算を予約しなかった。
 	UFUNCTION(BlueprintCallable, Category="PsyqueRulesPlugin")
-	static bool SetUnsignedStatus(
-		/// [in] 代入先となる状態値の名前ハッシュ値。
+	bool AccumulateAssignmentUnsigned(
+		/// [in] 代入演算の遅延方法。
+		EPsyqueAccumulationDelay const InDelay,
+		/// [in] 代入演算の左辺値となる状態値の名前ハッシュ値。
 		/// UPsyqueRulesEngine::MakeHash から取得する。
 		int32 const InStatusKey,
-		/// [in] 状態値へ代入する値。
-		int32 const InValue);
+		/// [in] 代入演算の種類。
+		EPsyqueStatusAssignment const InOperator,
+		/// [in] 代入演算の右辺値。
+		int32 const InValue)
+	{
+		if (InValue < 0)
+		{
+			return false;
+		}
+		using FStatusValue = ThisClass::FDriver::FReservoir::FStatusValue;
+		this->Driver.Accumulator.Accumulate(
+			ThisClass::FDriver::FReservoir::FStatusAssignment(
+				InStatusKey,
+				InOperator,
+				FStatusValue(static_cast<FStatusValue::FUnsigned>(InValue))),
+			InDelay);
+		return true;
+	}
 
-	/// @brief 符号あり整数型の状態値へ値を代入する。
-	/// @retval true  成功。 InValue を InStatusKey に対応する状態値へ代入した。
-	/// @retval false 失敗。状態値は変化しない。
-	/// - UPsyqueRulesEngine::RegisterSignedStatus で、
-	///   InStatusKey に対応する状態値が登録されてないと、失敗する。
-	/// - InValue の値が
-	///   InStatusKey に対応する状態値のビット幅を超えていると、失敗する。
+	/// @brief 符号あり整数値の状態値への代入演算を予約する。
+	/// @note 代入演算は、次回の UPsyqueRulesEngine::Tick 以降に行われる。
+	/// @retval true  成功。代入演算を予約した。
+	/// @retval false 失敗。代入演算を予約しなかった。
 	UFUNCTION(BlueprintCallable, Category="PsyqueRulesPlugin")
-	static bool SetSignedStatus(
-		/// [in] 代入先となる状態値の名前ハッシュ値。
+	bool AccumulateAssignmentSigned(
+		/// [in] 代入演算の遅延方法。
+		EPsyqueAccumulationDelay const InDelay,
+		/// [in] 代入演算の左辺値となる状態値の名前ハッシュ値。
 		/// UPsyqueRulesEngine::MakeHash から取得する。
 		int32 const InStatusKey,
-		/// [in] 状態値へ代入する値。
-		int32 const InValue);
+		/// [in] 代入演算の種類。
+		EPsyqueStatusAssignment const InOperator,
+		/// [in] 代入演算の右辺値。
+		int32 const InValue)
+	{
+		if (InValue == ThisClass::GetIntegerNan())
+		{
+			return false;
+		}
+		using FStatusValue = ThisClass::FDriver::FReservoir::FStatusValue;
+		this->Driver.Accumulator.Accumulate(
+			ThisClass::FDriver::FReservoir::FStatusAssignment(
+				InStatusKey,
+				InOperator,
+				FStatusValue(static_cast<FStatusValue::FSigned>(InValue))),
+			InDelay);
+		return true;
+	}
 
-	/// @brief 浮動小数点数型の状態値へ値を代入する。
-	/// @retval true  成功。 InValue を InStatusKey に対応する状態値へ代入した。
-	/// @retval false 失敗。状態値は変化しない。
-	/// - UPsyqueRulesEngine::RegisterFloatStatus で、
-	///   InStatusKey に対応する状態値が登録されてないと、失敗する。
-	/// - InValue の値が UPsyqueRulesEngine::GetFloatNan と等値だと、失敗する。
+	/// @brief 浮動小数点数値の状態値への代入演算を予約する。
+	/// @note 代入演算は、次回の UPsyqueRulesEngine::Tick 以降に行われる。
+	/// @retval true  成功。代入演算を予約した。
+	/// @retval false 失敗。代入演算を予約しなかった。
 	UFUNCTION(BlueprintCallable, Category="PsyqueRulesPlugin")
-	static bool SetFloatStatus(
-		/// [in] 代入先となる状態値の名前ハッシュ値。
+	bool AccumulateAssignmentFloat(
+		/// [in] 代入演算の遅延方法。
+		EPsyqueAccumulationDelay const InDelay,
+		/// [in] 代入演算の左辺値となる状態値の名前ハッシュ値。
 		/// UPsyqueRulesEngine::MakeHash から取得する。
 		int32 const InStatusKey,
-		/// [in] 状態値へ代入する値。
-		float const InValue);
+		/// [in] 代入演算の種類。
+		EPsyqueStatusAssignment const InOperator,
+		/// [in] 代入演算の右辺値。
+		float const InValue)
+	{
+		if (InValue == ThisClass::GetFloatNan())
+		{
+			return false;
+		}
+		using FStatusValue = ThisClass::FDriver::FReservoir::FStatusValue;
+		this->Driver.Accumulator.Accumulate(
+			ThisClass::FDriver::FReservoir::FStatusAssignment(
+				InStatusKey,
+				InOperator,
+				FStatusValue(static_cast<FStatusValue::FFloat>(InValue))),
+			InDelay);
+		return true;
+	}
 	/// @}
 	//-------------------------------------------------------------------------
 	/// @name チャンク
@@ -367,7 +398,7 @@ class UPsyqueRulesEngine: public UBlueprintFunctionLibrary
 	///   UDataTable を解析し、
 	///   状態値と条件式と条件挙動を1つのチャンクに登録する。
 	UFUNCTION(BlueprintCallable, Category="PsyqueRulesPlugin")
-	static void ExtendChunkFromDataTable(
+	void ExtendChunkFromDataTable(
 		/// [in] 拡張するチャンクの名前ハッシュ値。
 		/// UPsyqueRulesEngine::MakeHash から取得する。
 		int32 const InChunkKey,
@@ -386,7 +417,7 @@ class UPsyqueRulesEngine: public UBlueprintFunctionLibrary
 	///   JSON形式の文字列を解析し、
 	///   状態値と条件式と条件挙動を1つのチャンクに登録する。
 	UFUNCTION(BlueprintCallable, Category="PsyqueRulesPlugin")
-	static void ExtendChunkFromJsonString(
+	void ExtendChunkFromJsonString(
 		/// [in] 拡張するチャンクの名前ハッシュ値。
 		/// UPsyqueRulesEngine::MakeHash から取得する。
 		int32 const InChunkKey,
@@ -402,13 +433,31 @@ class UPsyqueRulesEngine: public UBlueprintFunctionLibrary
 
 	/// @brief チャンクを削除する。
 	UFUNCTION(BlueprintCallable, Category="PsyqueRulesPlugin")
-	static void RemoveChunk(
+	void RemoveChunk(
 		/// [in] 削除するチャンクの名前ハッシュ値。
 		/// UPsyqueRulesEngine::MakeHash から取得する。
-		int32 const InChunkKey);
+		int32 const InChunkKey)
+	{
+		this->Driver.RemoveChunk(InChunkKey);
+	}
 	/// @}
 	//-------------------------------------------------------------------------
 	public:
+	/// @brief 現在のルールエンジンを取得する。
+	UFUNCTION(BlueprintPure, Category="PsyqueRulesPlugin")
+	static UPsyqueRulesEngine* Get();
+
+	/// @brief 新たなルールエンジンを生成する。
+	//UFUNCTION(BlueprintCallable, Category="PsyqueRulesPlugin")
+	static UPsyqueRulesEngine* Create();
+
+	/// @brief 現在のルールエンジンを破棄する。
+	/// @retval true  成功。ルールエンジンを破棄した。
+	/// @retval false 失敗。ルールエンジンを破棄しなかった。
+	/// - ルールエンジンがすでに破棄されていると、失敗する。
+	//UFUNCTION(BlueprintCallable, Category="PsyqueRulesPlugin")
+	static bool Destroy();
+
 	/// @brief 整数型のNaN値を取得する。
 	UFUNCTION(BlueprintPure, Category="PsyqueRulesPlugin")
 	static int32 GetIntegerNan()
@@ -422,6 +471,10 @@ class UPsyqueRulesEngine: public UBlueprintFunctionLibrary
 	{
 		return std::numeric_limits<float>::quiet_NaN();
 	}
+
+	//-------------------------------------------------------------------------
+	public:
+	ThisClass::FDriver Driver;
 
 }; // class UPsyqueRulesEngine
 

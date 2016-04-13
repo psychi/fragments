@@ -26,13 +26,13 @@ void FPsyqueRulesPlugin::StartupModule()
 	this->Super::StartupModule();
 
 	// ドライバを構築する。
-	UPsyqueRulesEngine::CreateDriver();
+	UPsyqueRulesEngine::Create();
 }
 
 void FPsyqueRulesPlugin::ShutdownModule()
 {
 	// ドライバを破棄する。
-	verify(UPsyqueRulesEngine::DestroyDriver());
+	UPsyqueRulesEngine::Destroy();
 
 	// This function may be called during shutdown to clean up your module.
 	// For modules that support dynamic reloading,

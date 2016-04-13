@@ -678,29 +678,32 @@ WARN_LOGFILE           =
 # with spaces.
 
 INPUT                  = \
-                         ./Source/PsyqueRulesPlugin/Private/Psyque/Assert.h \
-                         ./Source/PsyqueRulesPlugin/Private/Psyque/Config.h \
-                         ./Source/PsyqueRulesPlugin/Private/Psyque/BitAlgorithm.h \
-                         ./Source/PsyqueRulesPlugin/Private/Psyque/RulesEngine/Enum.h \
-                         ./Source/PsyqueRulesPlugin/Private/Psyque/RulesEngine/StatusChunk.h \
-                         ./Source/PsyqueRulesPlugin/Private/Psyque/RulesEngine/StatusOperation.h \
-                         ./Source/PsyqueRulesPlugin/Private/Psyque/RulesEngine/StatusProperty.h \
-                         ./Source/PsyqueRulesPlugin/Private/Psyque/RulesEngine/StatusValue.h \
-                         ./Source/PsyqueRulesPlugin/Private/Psyque/RulesEngine/StatusChunk.h \
-                         ./Source/PsyqueRulesPlugin/Private/Psyque/RulesEngine/Reservoir.h \
-                         ./Source/PsyqueRulesPlugin/Private/Psyque/RulesEngine/Accumulator.h \
-                         ./Source/PsyqueRulesPlugin/Private/Psyque/RulesEngine/Expression.h \
-                         ./Source/PsyqueRulesPlugin/Private/Psyque/RulesEngine/Evaluator.h \
-                         ./Source/PsyqueRulesPlugin/Private/Psyque/RulesEngine/Handler.h \
-                         ./Source/PsyqueRulesPlugin/Private/Psyque/RulesEngine/StatusMonitor.h \
-                         ./Source/PsyqueRulesPlugin/Private/Psyque/RulesEngine/ExpressionMonitor.h \
-                         ./Source/PsyqueRulesPlugin/Private/Psyque/RulesEngine/Dispatcher.h \
-                         ./Source/PsyqueRulesPlugin/Private/Psyque/RulesEngine/HandlerChunk.h \
-                         ./Source/PsyqueRulesPlugin/Private/Psyque/RulesEngine/StatusBuilder.h \
-                         ./Source/PsyqueRulesPlugin/Private/Psyque/RulesEngine/ExpressionBuilder.h \
-                         ./Source/PsyqueRulesPlugin/Private/Psyque/RulesEngine/HandlerBuilder.h \
-                         ./Source/PsyqueRulesPlugin/Private/Psyque/RulesEngine/Driver.h \
+                         ./Source/PsyqueRulesPlugin/Classes/Psyque/Assert.h \
+                         ./Source/PsyqueRulesPlugin/Classes/Psyque/Config.h \
+                         ./Source/PsyqueRulesPlugin/Classes/Psyque/BitAlgorithm.h \
+                         ./Source/PsyqueRulesPlugin/Classes/Psyque/String/View.h \
+                         ./Source/PsyqueRulesPlugin/Classes/Psyque/String/NumericParser.h \
+                         ./Source/PsyqueRulesPlugin/Classes/Psyque/RulesEngine/Enum.h \
+                         ./Source/PsyqueRulesPlugin/Classes/Psyque/RulesEngine/StatusChunk.h \
+                         ./Source/PsyqueRulesPlugin/Classes/Psyque/RulesEngine/StatusOperation.h \
+                         ./Source/PsyqueRulesPlugin/Classes/Psyque/RulesEngine/StatusProperty.h \
+                         ./Source/PsyqueRulesPlugin/Classes/Psyque/RulesEngine/StatusValue.h \
+                         ./Source/PsyqueRulesPlugin/Classes/Psyque/RulesEngine/StatusChunk.h \
+                         ./Source/PsyqueRulesPlugin/Classes/Psyque/RulesEngine/Reservoir.h \
+                         ./Source/PsyqueRulesPlugin/Classes/Psyque/RulesEngine/Accumulator.h \
+                         ./Source/PsyqueRulesPlugin/Classes/Psyque/RulesEngine/Expression.h \
+                         ./Source/PsyqueRulesPlugin/Classes/Psyque/RulesEngine/Evaluator.h \
+                         ./Source/PsyqueRulesPlugin/Classes/Psyque/RulesEngine/Handler.h \
+                         ./Source/PsyqueRulesPlugin/Classes/Psyque/RulesEngine/StatusMonitor.h \
+                         ./Source/PsyqueRulesPlugin/Classes/Psyque/RulesEngine/ExpressionMonitor.h \
+                         ./Source/PsyqueRulesPlugin/Classes/Psyque/RulesEngine/Dispatcher.h \
+                         ./Source/PsyqueRulesPlugin/Classes/Psyque/RulesEngine/HandlerChunk.h \
+                         ./Source/PsyqueRulesPlugin/Classes/Psyque/RulesEngine/StatusBuilder.h \
+                         ./Source/PsyqueRulesPlugin/Classes/Psyque/RulesEngine/ExpressionBuilder.h \
+                         ./Source/PsyqueRulesPlugin/Classes/Psyque/RulesEngine/HandlerBuilder.h \
+                         ./Source/PsyqueRulesPlugin/Classes/Psyque/RulesEngine/Driver.h \
                          ./Source/PsyqueRulesPlugin/Classes/PsyqueRulesEngine.h \
+                         ./Source/PsyqueRulesPlugin/Classes/PsyqueRulesStruct.h \
 
 
 # This tag can be used to specify the character encoding of the source files 

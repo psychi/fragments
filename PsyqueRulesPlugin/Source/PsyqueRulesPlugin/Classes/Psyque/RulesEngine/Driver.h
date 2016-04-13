@@ -44,12 +44,21 @@ namespace Psyque
 template<> struct std::hash<FName>
 {
 	using argument_type = FName;
-	using result_type = std::size_t;
+	using result_type = uint32;
 
-	std::size_t operator()(FName const& InKey) const
+	uint32 operator()(FName const& InKey) const
 	{
-		check(InKey.GetNumber() == 0);
-		return static_cast<std::size_t>(InKey.GetDisplayIndex());
+		if (InKey.GetNumber() != 0)
+		{
+			UE_LOG(
+				LogPsyqueRulesEngine,
+				Warning,
+				TEXT(
+					"std::hash<FName>::operator() is failed."
+					"\n\tFName('%s').GetNumber() is not 0."),
+				*InKey.ToString())
+		}
+		return static_cast<uint32>(InKey.GetDisplayIndex());
 	}
 };
 
@@ -514,21 +523,6 @@ class Psyque::RulesEngine::TDriver
 	{
 		return this->Reservoir.RegisterStatus(
 			InChunkKey, InStatusKey, InValue, InBitWidth);
-	}
-
-	/// @copydoc _private::TReservoir::AssignStatus(typename ThisClass::FStatusKey const, TemplateValue const&)
-	public: template<typename TemplateValue>
-	bool AssignStatus(
-		/// [in] 代入する状態値の識別値。
-		typename ThisClass::FReservoir::FStatusKey const InStatusKey,
-		/// [in] 状態値へ代入する値。以下の型の値を代入できる。
-		/// - bool 型。
-		/// - C++ 組み込み整数型。
-		/// - C++ 組み込み浮動小数点数型。
-		/// - ThisClass::FReservoir::FStatusValue 型。
-		TemplateValue const& InValue)
-	{
-		return this->Reservoir.AssignStatus(InStatusKey, InValue);
 	}
 
 	/// @brief 状態値を更新し、条件式を評価して、条件挙動関数を呼び出す。

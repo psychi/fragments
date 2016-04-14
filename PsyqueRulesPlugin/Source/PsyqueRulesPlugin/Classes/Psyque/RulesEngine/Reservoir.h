@@ -231,7 +231,7 @@ class Psyque::RulesEngine::_private::TReservoir
 			InChunkKey,
 			InStatusKey,
 			InValue,
-			ThisClass::FStatusValue::GetBitFormat(EPsyqueRulesStatusKind::Bool));
+			ThisClass::FStatusValue::MakeBitFormat(EPsyqueRulesStatusKind::Bool));
 	}
 
 	/// @brief 状態値を登録する。
@@ -265,7 +265,7 @@ class Psyque::RulesEngine::_private::TReservoir
 				InChunkKey,
 				InStatusKey,
 				typename ThisClass::FFloatBitset(LocalFloat).Bitset,
-				ThisClass::FStatusValue::GetBitFormat(
+				ThisClass::FStatusValue::MakeBitFormat(
 					EPsyqueRulesStatusKind::Float));
 		}
 		else
@@ -323,7 +323,7 @@ class Psyque::RulesEngine::_private::TReservoir
 					InChunkKey,
 					InStatusKey,
 					Psyque::MakeBitMask<FBitBlock>(InBitWidth) & LocalValue,
-					ThisClass::FStatusValue::GetBitFormat(
+					ThisClass::FStatusValue::MakeBitFormat(
 						EPsyqueRulesStatusKind::Signed, InBitWidth));
 		}
 		else
@@ -335,7 +335,7 @@ class Psyque::RulesEngine::_private::TReservoir
 					InChunkKey,
 					InStatusKey,
 					LocalValue,
-					ThisClass::FStatusValue::GetBitFormat(
+					ThisClass::FStatusValue::MakeBitFormat(
 						EPsyqueRulesStatusKind::Unsigned, InBitWidth));
 		}
 	}
@@ -368,7 +368,7 @@ class Psyque::RulesEngine::_private::TReservoir
 	{
 		auto const LocalFind(this->Properties.find(InStatusKey));
 		return LocalFind != this->Properties.end()?
-			ThisClass::FStatusValue::GetKind(LocalFind->second.GetBitFormat()):
+			ThisClass::FStatusValue::MakeKind(LocalFind->second.GetBitFormat()):
 			EPsyqueRulesStatusKind::Empty;
 	}
 
@@ -393,7 +393,7 @@ class Psyque::RulesEngine::_private::TReservoir
 		typename ThisClass::FStatusKey const InStatusKey)
 	const
 	{
-		return ThisClass::FStatusValue::GetBitWidth(
+		return ThisClass::FStatusValue::MakeBitWidth(
 			this->FindBitFormat(InStatusKey));
 	}
 
@@ -441,7 +441,7 @@ class Psyque::RulesEngine::_private::TReservoir
 		}
 		auto const LocalBitFormat(LocalProperty.GetBitFormat());
 		auto const LocalBitWidth(
-			ThisClass::FStatusValue::GetBitWidth(LocalBitFormat));
+			ThisClass::FStatusValue::MakeBitWidth(LocalBitFormat));
 		auto const LocalBitset(
 			LocalChunkIterator->second.GetBitset(
 				LocalProperty.GetBitPosition(), LocalBitWidth));
@@ -779,7 +779,7 @@ class Psyque::RulesEngine::_private::TReservoir
 		if (LocalProperty != nullptr
 			&& EPsyqueKleene::TernaryUnknown != LocalChunk.second.SetBitset(
 				LocalProperty->second.GetBitPosition(),
-				ThisClass::FStatusValue::GetBitWidth(InBitFormat),
+				ThisClass::FStatusValue::MakeBitWidth(InBitFormat),
 				InBitset))
 		{
 			return &LocalProperty->second;
@@ -806,7 +806,7 @@ class Psyque::RulesEngine::_private::TReservoir
 		{
 			// 状態値のビット領域を生成する。
 			auto const LocalBitWidth(
-				ThisClass::FStatusValue::GetBitWidth(InBitFormat));
+				ThisClass::FStatusValue::MakeBitWidth(InBitFormat));
 			auto const LocalBitPosition(
 				OutChunk.second.AllocateBitset(LocalBitWidth));
 			if (LocalBitPosition != ThisClass::FStatusChunk::INVALID_BIT_POSITION)
@@ -906,7 +906,7 @@ class Psyque::RulesEngine::_private::TReservoir
 		for (auto& LocalProperty: InProperties)
 		{
 			LocalProperties.emplace_back(
-				ThisClass::FStatusValue::GetBitWidth(
+				ThisClass::FStatusValue::MakeBitWidth(
 					LocalProperty.second.GetBitFormat()),
 				&LocalProperty);
 		}
@@ -981,7 +981,7 @@ class Psyque::RulesEngine::_private::TReservoir
 
 		// 状態値のビット領域をコピーする。
 		auto const LocalBitWidth(
-			ThisClass::FStatusValue::GetBitWidth(LocalBitFormat));
+			ThisClass::FStatusValue::MakeBitWidth(LocalBitFormat));
 		LocalTargetChunk.second.SetBitset(
 			LocalTargetProperty->second.GetBitPosition(),
 			LocalBitWidth,
@@ -1005,7 +1005,7 @@ class Psyque::RulesEngine::_private::TReservoir
 		bool const InMask)
 	{
 		// 入力値のビット列を取得する。
-		auto const LocalKind(ThisClass::FStatusValue::GetKind(InBitFormat));
+		auto const LocalKind(ThisClass::FStatusValue::MakeKind(InBitFormat));
 		typename ThisClass::FStatusChunk::FBitBlock LocalBitset;
 		if (LocalKind != InValue.GetKind())
 		{
@@ -1024,7 +1024,7 @@ class Psyque::RulesEngine::_private::TReservoir
 
 		// ビット列とビット幅を構築する。
 		auto const LocalBitWidth(
-			ThisClass::FStatusValue::GetBitWidth(InBitFormat));
+			ThisClass::FStatusValue::MakeBitWidth(InBitFormat));
 		switch (LocalKind)
 		{
 			case EPsyqueRulesStatusKind::Bool:
@@ -1060,7 +1060,7 @@ class Psyque::RulesEngine::_private::TReservoir
 		bool const InMask)
 	{
 		auto const LocalBitWidth(
-			ThisClass::FStatusValue::GetBitWidth(InBitFormat));
+			ThisClass::FStatusValue::MakeBitWidth(InBitFormat));
 		if (ThisClass::FStatusValue::IsUnsigned(InBitFormat))
 		{
 			// 符号なし整数のビット列を構築する。

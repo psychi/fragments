@@ -1,4 +1,7 @@
 ﻿// Copyright (c) 2016, Hillco Psychi, All rights reserved.
+/// @file
+/// @brief UPsyqueRulesEngine で使う、列挙型と構造体の定義。
+/// @author Hillco Psychi (https://twitter.com/psychi)
 
 #pragma once
 
@@ -6,7 +9,9 @@
 #include "Runtime/Engine/Classes/Engine/DataTable.h"
 #include "PsyqueRulesStruct.generated.h"
 
+/// @cond
 DECLARE_LOG_CATEGORY_EXTERN(LogPsyqueRulesEngine, Log, All);
+/// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 //-----------------------------------------------------------------------------
@@ -113,7 +118,7 @@ enum class EPsyqueAccumulationDelay: uint8
 	///   EAccumulationDelay::Nonblock を
 	///   _private::TAccumulator::Accumulate に渡すと、
 	///   それ以前の状態変更が無視されることになるので、注意すること。
-	Nonblock UMETA(DisplayName="Nonblock"),
+	Nonblock = 3 UMETA(DisplayName="Nonblock"),
 
 }; // enum class EPsyqueAccumulationDelay
 
@@ -123,31 +128,31 @@ UENUM(BlueprintType)
 enum class EPsyqueStatusAssignment: uint8
 {
 	/// 単純代入。
-	Copy = 0 UMETA(DisplayName="="),
+	Copy = 0 UMETA(DisplayName="Copy"),
 
-	/// 加算代入。
-	Add = 1 UMETA(DisplayName="+="),
+	/// 加算代入。論理型の値は、加算代入できない。
+	Add = 1 UMETA(DisplayName="Add"),
 
-	/// 減算代入。
-	Sub = 2 UMETA(DisplayName="-="),
+	/// 減算代入。論理型の値は、加算代入できない。
+	Sub = 2 UMETA(DisplayName="Sub"),
 
-	/// 乗算代入。
-	Mul = 3 UMETA(DisplayName="*="),
+	/// 乗算代入。論理型の値は、乗算代入できない。
+	Mul = 3 UMETA(DisplayName="Mul"),
 
-	/// 除算代入。
-	Div = 4 UMETA(DisplayName="/="),
+	/// 除算代入。論理型の値は、除算代入できない。
+	Div = 4 UMETA(DisplayName="Div"),
 
-	/// 除算の余りの代入。
-	Mod = 5 UMETA(DisplayName="%="),
+	/// 除算の余りの代入。論理型の値は、除算の余りの代入ができない。
+	Mod = 5 UMETA(DisplayName="Mod"),
 
-	/// 論理和の代入。
-	Or = 6 UMETA(DisplayName="|="),
+	/// 論理和の代入。浮動小数点数型の値は、論理和の代入ができない。
+	Or = 6 UMETA(DisplayName="Or"),
 
-	/// 排他的論理和の代入。
-	Xor = 7 UMETA(DisplayName="^="),
+	/// 排他的論理和の代入。浮動小数点数型の値は、排他的論理和の代入ができない。
+	Xor = 7 UMETA(DisplayName="Xor"),
 
-	/// 論理積の代入。
-	And = 8 UMETA(DisplayName="&="),
+	/// 論理積の代入。浮動小数点数型の値は、論理積の代入ができない。
+	And = 8 UMETA(DisplayName="And"),
 
 }; // enum class EPsyqueStatusAssignment
 
@@ -169,10 +174,10 @@ enum class EPsyqueRulesStatusKind: uint8
 	Unsigned = 3 UMETA(DisplayName="Unsigned"),
 
 	/// 符号あり整数。
-	Signed = 65 UMETA(DisplayName="Signed"),
+	Signed = 66 UMETA(DisplayName="Signed"),
 
 	/// @cond
-	EPsyqueRulesStatusKind_Max = 127
+	EPsyqueRulesStatusKind_Max = 129
 	/// @endcond
 
 }; // enum class EPsyqueRulesStatusKind
@@ -191,7 +196,8 @@ struct FPsyqueRulesStatusTableRow: public FTableRowBase
 	/// @brief 状態値が整数型の場合のビット幅。
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="PsyqueRulesPlugin")
 	int32 BitWidth;
-};
+
+}; // struct FPsyqueRulesStatusTableRow
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief 条件式が記述されている UDataTable の行。
@@ -211,6 +217,22 @@ struct FPsyqueRulesExpressionTableRow: public FTableRowBase
 	/// @brief 条件式が持つ論理項の要素。
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="PsyqueRulesPlugin")
 	TArray<FString> Elements;
-};
+
+}; // FPsyqueRulesExpressionTableRow
+
+//-----------------------------------------------------------------------------
+/// @class FPsyqueRulesBehaviorDelegate
+/// @brief 条件挙動デリゲート。
+/// @par
+///   - 引数#0は、評価された条件式の名前ハッシュ値。
+///   - 引数#1は、条件式の今回の評価結果。
+///   - 引数#2は、条件式の前回の評価結果。
+/// @cond
+DECLARE_DELEGATE_ThreeParams(
+	FPsyqueRulesBehaviorDelegate,
+	int32 const,
+	EPsyqueKleene const,
+	EPsyqueKleene const);
+/// @endcond
 
 // vim: set noexpandtab:

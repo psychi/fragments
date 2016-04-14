@@ -80,7 +80,7 @@ class Psyque::RulesEngine::_private::TStatusValue
 
 	/// @brief 空値を構築する。
 	public: TStatusValue() PSYQUE_NOEXCEPT:
-	BitFormat(ThisClass::GetBitFormat(EPsyqueRulesStatusKind::Empty))
+	BitFormat(ThisClass::MakeBitFormat(EPsyqueRulesStatusKind::Empty))
 	{}
 
 	/// @brief 論理型の値を構築する。
@@ -88,7 +88,7 @@ class Psyque::RulesEngine::_private::TStatusValue
 		/// [in] 初期値となる論理値。
 		bool const InBool)
 	PSYQUE_NOEXCEPT:
-	BitFormat(ThisClass::GetBitFormat(EPsyqueRulesStatusKind::Bool))
+	BitFormat(ThisClass::MakeBitFormat(EPsyqueRulesStatusKind::Bool))
 	{
 		this->Bool = InBool;
 	}
@@ -99,7 +99,7 @@ class Psyque::RulesEngine::_private::TStatusValue
 		typename ThisClass::FUnsigned const InUnsigned)
 	PSYQUE_NOEXCEPT:
 	BitFormat(
-		ThisClass::GetBitFormat(
+		ThisClass::MakeBitFormat(
 			EPsyqueRulesStatusKind::Unsigned, sizeof(InUnsigned) * CHAR_BIT))
 	{
 		this->Unsigned = InUnsigned;
@@ -111,7 +111,7 @@ class Psyque::RulesEngine::_private::TStatusValue
 		typename ThisClass::FSigned const InSigned)
 	PSYQUE_NOEXCEPT:
 	BitFormat(
-		ThisClass::GetBitFormat(
+		ThisClass::MakeBitFormat(
 			EPsyqueRulesStatusKind::Signed, sizeof(InSigned) * CHAR_BIT))
 	{
 		this->Signed = InSigned;
@@ -122,7 +122,7 @@ class Psyque::RulesEngine::_private::TStatusValue
 		/// [in] 初期値となる浮動小数点数。
 		typename ThisClass::FFloat const InFloat)
 	PSYQUE_NOEXCEPT:
-	BitFormat(ThisClass::GetBitFormat(EPsyqueRulesStatusKind::Float))
+	BitFormat(ThisClass::MakeBitFormat(EPsyqueRulesStatusKind::Float))
 	{
 		this->Float = InFloat;
 	}
@@ -136,7 +136,7 @@ class Psyque::RulesEngine::_private::TStatusValue
 		/// EPsyqueRulesStatusKind::Empty の場合は、自動で決定する。
 		EPsyqueRulesStatusKind const InKind = EPsyqueRulesStatusKind::Empty)
 	PSYQUE_NOEXCEPT:
-	BitFormat(ThisClass::GetBitFormat(EPsyqueRulesStatusKind::Empty))
+	BitFormat(ThisClass::MakeBitFormat(EPsyqueRulesStatusKind::Empty))
 	{
 		this->Assign(InValue, InKind);
 	}
@@ -202,7 +202,7 @@ class Psyque::RulesEngine::_private::TStatusValue
 	/// @return 格納値の型の種類。
 	public: EPsyqueRulesStatusKind GetKind() const PSYQUE_NOEXCEPT
 	{
-		return ThisClass::GetKind(this->BitFormat);
+		return ThisClass::MakeKind(this->BitFormat);
 	}
 	/// @}
 	//-------------------------------------------------------------------------
@@ -425,7 +425,7 @@ class Psyque::RulesEngine::_private::TStatusValue
 	/// @brief 状態値を空にする。
 	public: void AssignEmpty() PSYQUE_NOEXCEPT
 	{
-		this->BitFormat = ThisClass::GetBitFormat(EPsyqueRulesStatusKind::Empty);
+		this->BitFormat = ThisClass::MakeBitFormat(EPsyqueRulesStatusKind::Empty);
 	}
 
 	/// @brief 論理値を代入する。
@@ -435,7 +435,7 @@ class Psyque::RulesEngine::_private::TStatusValue
 	PSYQUE_NOEXCEPT
 	{
 		this->Bool = InValue;
-		this->BitFormat = ThisClass::GetBitFormat(EPsyqueRulesStatusKind::Bool);
+		this->BitFormat = ThisClass::MakeBitFormat(EPsyqueRulesStatusKind::Bool);
 	}
 
 	/// @brief 符号なし整数を代入する。
@@ -455,7 +455,7 @@ class Psyque::RulesEngine::_private::TStatusValue
 			if (static_cast<TemplateValue>(LocalUnsigned) == InValue)
 			{
 				this->Unsigned = LocalUnsigned;
-				this->BitFormat = ThisClass::GetBitFormat(
+				this->BitFormat = ThisClass::MakeBitFormat(
 					EPsyqueRulesStatusKind::Unsigned,
 					sizeof(LocalUnsigned) * CHAR_BIT);
 				return true;
@@ -480,7 +480,7 @@ class Psyque::RulesEngine::_private::TStatusValue
 			if (static_cast<TemplateValue>(LocalSigned) == InValue)
 			{
 				this->Signed = LocalSigned;
-				this->BitFormat = ThisClass::GetBitFormat(
+				this->BitFormat = ThisClass::MakeBitFormat(
 					EPsyqueRulesStatusKind::Signed,
 					sizeof(LocalSigned) * CHAR_BIT);
 				return true;
@@ -510,7 +510,7 @@ class Psyque::RulesEngine::_private::TStatusValue
 		{
 			this->Float = LocalFloat;
 			this->BitFormat =
-				ThisClass::GetBitFormat(EPsyqueRulesStatusKind::Float);
+				ThisClass::MakeBitFormat(EPsyqueRulesStatusKind::Float);
 			return true;
 		}
 		return false;
@@ -705,7 +705,7 @@ class Psyque::RulesEngine::_private::TStatusValue
 	PSYQUE_NOEXCEPT
 	{
 		return InBitFormat
-			== ThisClass::GetBitFormat(EPsyqueRulesStatusKind::Empty);
+			== ThisClass::MakeBitFormat(EPsyqueRulesStatusKind::Empty);
 	}
 
 	/// @brief 真偽型のビット構成か判定する。
@@ -715,7 +715,7 @@ class Psyque::RulesEngine::_private::TStatusValue
 	PSYQUE_NOEXCEPT
 	{
 		return InBitFormat
-			== ThisClass::GetBitFormat(EPsyqueRulesStatusKind::Bool);
+			== ThisClass::MakeBitFormat(EPsyqueRulesStatusKind::Bool);
 	}
 
 	/// @brief 符号なし整数型のビット構成か判定する。
@@ -724,7 +724,7 @@ class Psyque::RulesEngine::_private::TStatusValue
 		typename ThisClass::FBitFormat const InBitFormat)
 	PSYQUE_NOEXCEPT
 	{
-		return ThisClass::GetBitFormat(EPsyqueRulesStatusKind::Bool)
+		return ThisClass::MakeBitFormat(EPsyqueRulesStatusKind::Bool)
 			< InBitFormat;
 	}
 
@@ -735,7 +735,7 @@ class Psyque::RulesEngine::_private::TStatusValue
 	PSYQUE_NOEXCEPT
 	{
 		return InBitFormat
-			< ThisClass::GetBitFormat(EPsyqueRulesStatusKind::Float);
+			< ThisClass::MakeBitFormat(EPsyqueRulesStatusKind::Float);
 	}
 
 	/// @brief 浮動小数点数型のビット構成か判定する。
@@ -748,9 +748,9 @@ class Psyque::RulesEngine::_private::TStatusValue
 			EPsyqueRulesStatusKind::Float);
 	}
 
-	/// @brief 状態値のビット構成から、状態値の型を取得する。
+	/// @brief 状態値のビット構成から、状態値の型を構築する。
 	/// @return 状態値の型の種類。
-	public: static EPsyqueRulesStatusKind PSYQUE_CONSTEXPR GetKind(
+	public: static EPsyqueRulesStatusKind PSYQUE_CONSTEXPR MakeKind(
 		/// [in] 状態値のビット構成。
 		typename ThisClass::FBitFormat const InBitFormat)
 	PSYQUE_NOEXCEPT
@@ -762,9 +762,9 @@ class Psyque::RulesEngine::_private::TStatusValue
 				static_cast<typename EPsyqueRulesStatusKind>(InBitFormat);
 	}
 
-	/// @brief 状態値の型とビット幅から、状態値のビット構成を取得する。
+	/// @brief 状態値の型とビット幅から、状態値のビット構成を構築する。
 	/// @return 状態値のビット構成。ただしビット構成が存在しない場合は0を戻す。
-	public: static typename ThisClass::FBitFormat GetBitFormat(
+	public: static typename ThisClass::FBitFormat MakeBitFormat(
 		/// [in] 状態値の型の種類。
 		EPsyqueRulesStatusKind const InKind,
 		/// [in] 状態値が整数型の場合の、ビット幅。
@@ -801,9 +801,9 @@ class Psyque::RulesEngine::_private::TStatusValue
 		return 0;
 	}
 
-	/// @brief 状態値のビット構成から、状態値のビット幅を取得する。
+	/// @brief 状態値のビット構成から、状態値のビット幅を構築する。
 	/// @return 状態値のビット幅。
-	public: static typename ThisClass::FBitWidth GetBitWidth(
+	public: static typename ThisClass::FBitWidth MakeBitWidth(
 		/// [in] 状態値のビット構成。
 		typename ThisClass::FBitFormat const InBitFormat)
 	PSYQUE_NOEXCEPT
@@ -826,11 +826,11 @@ class Psyque::RulesEngine::_private::TStatusValue
 			static_assert(ThisClass::UnsignedBase < ThisClass::SignedBase, "");
 			if (ThisClass::SignedBase <= InBitFormat)
 			{
-				return InBitFormat + 2 - ThisClass::SignedBase;
+				return InBitFormat - ThisClass::SignedBase + 2;
 			}
 			if (ThisClass::UnsignedBase <= InBitFormat)
 			{
-				return InBitFormat + 2 - ThisClass::UnsignedBase;
+				return InBitFormat - ThisClass::UnsignedBase + 2;
 			}
 			return 0;
 		}

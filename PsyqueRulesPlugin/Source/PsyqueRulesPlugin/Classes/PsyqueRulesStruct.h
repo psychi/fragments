@@ -6,7 +6,6 @@
 #pragma once
 
 #include <memory>
-#include "Runtime/Engine/Classes/Engine/DataTable.h"
 #include "PsyqueRulesStruct.generated.h"
 
 /// @cond
@@ -219,20 +218,5 @@ struct FPsyqueRulesExpressionTableRow: public FTableRowBase
 	TArray<FString> Elements;
 
 }; // FPsyqueRulesExpressionTableRow
-
-//-----------------------------------------------------------------------------
-/// @class FPsyqueRulesBehaviorDelegate
-/// @brief 条件挙動デリゲート。
-/// @par
-///   - 引数#0は、評価された条件式の名前ハッシュ値。
-///   - 引数#1は、条件式の今回の評価結果。
-///   - 引数#2は、条件式の前回の評価結果。
-/// @cond
-DECLARE_DELEGATE_ThreeParams(
-	FPsyqueRulesBehaviorDelegate,
-	int32 const,
-	EPsyqueKleene const,
-	EPsyqueKleene const);
-/// @endcond
 
 // vim: set noexpandtab:

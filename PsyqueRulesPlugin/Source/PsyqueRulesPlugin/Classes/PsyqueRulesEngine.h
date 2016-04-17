@@ -10,6 +10,32 @@
 #include "PsyqueRulesEngine.generated.h"
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/// @class FPsyqueRulesBehaviorDelegate
+/// @brief 条件挙動で実行するデリゲートを表す型。
+/// @par
+///   - 引数#0は、評価された条件式の名前ハッシュ値。
+///   - 引数#1は、条件式の今回の評価結果。
+///   - 引数#2は、条件式の前回の評価結果。
+/// @cond
+DECLARE_DELEGATE_ThreeParams(
+	FPsyqueRulesBehaviorDelegate,
+	int32 const,
+	EPsyqueKleene const,
+	EPsyqueKleene const);
+/// @endcond
+
+/// @class FPsyqueRulesBehaviorDynamicDelegate
+/// @brief 条件挙動で実行する動的デリゲートを表す型。
+/// @par
+///   - 引数#0は、評価された条件式の名前ハッシュ値。
+///   - 引数#1は、条件式の今回の評価結果。
+///   - 引数#2は、条件式の前回の評価結果。
+/// @cond
+DECLARE_DYNAMIC_DELEGATE_ThreeParams(
+	FPsyqueRulesBehaviorDynamicDelegate, int32 const, InExpressionKey, EPsyqueKleene const, InNowEvaluation, EPsyqueKleene const, InLastEvaluation);
+/// @endcond
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief Blueprintからは、このクラスを介してルールエンジンを操作する。
 /// @par 使い方の概略
 /// - UPsyqueRulesEngine::Get で、ルールエンジン駆動器を取得する。
@@ -450,6 +476,53 @@ class PSYQUERULESPLUGIN_API UPsyqueRulesEngine: public UObject
 	}
 	/// @}
 	//-------------------------------------------------------------------------
+	/// @name 条件挙動
+	/// @{
+	public:
+	/// @brief 条件挙動を登録する。
+	/// @details 条件式の評価が変化した際に実行するデリゲートを登録する。
+	/// @param InExpressionKey デリゲート実行判定をする条件式の名前ハッシュ値。
+	///   UPsyqueRulesEngine::MakeHash から取得する。
+	/// @param InCondition デリゲート実行判定に合格する条件。
+	///   UPsyqueRulesEngine::MakeCondition から取得する。
+	/// @param InPriority デリゲートの実行優先順位。降順に実行される。
+	/// @param InDelegate 実行するデリゲート。
+	bool RegisterBehavior(
+		int32 const InExpressionKey,
+		uint8 const InCondition,
+		int32 const InPriority,
+		FPsyqueRulesBehaviorDelegate const& InDelegate)
+	{
+		if (!InDelegate.IsBound())
+		{
+			return false;
+		}
+		return true;
+	}
+
+	/// @brief 条件挙動を登録する。
+	/// @details 条件式の評価が変化した際に実行する動的デリゲートを登録する。
+	/// @param InExpressionKey デリゲート実行判定をする条件式の名前ハッシュ値。
+	///   UPsyqueRulesEngine::MakeHash から取得する。
+	/// @param InCondition デリゲート実行判定に合格する条件。
+	///   UPsyqueRulesEngine::MakeCondition から取得する。
+	/// @param InPriority デリゲートの実行優先順位。降順に実行される。
+	/// @param InDelegate 実行する動的デリゲート。
+	UFUNCTION(BlueprintCallable, Category="PsyqueRulesPlugin")
+	bool RegisterDynamicBehavior(
+		int32 const InExpressionKey,
+		uint8 const InCondition,
+		int32 const InPriority,
+		FPsyqueRulesBehaviorDynamicDelegate const& InDelegate)
+	{
+		if (!InDelegate.IsBound())
+		{
+			return false;
+		}
+		return true;
+	}
+	/// @}
+	//-------------------------------------------------------------------------
 	/// @name チャンク
 	/// @{
 	public:
@@ -574,5 +647,6 @@ class PSYQUERULESPLUGIN_API UPsyqueRulesEngine: public UObject
 	ThisClass::FDriver Driver;
 
 }; // class UPsyqueRulesEngine
+
 
 // vim: set noexpandtab:

@@ -255,7 +255,7 @@ class Psyque::RulesEngine::_private::TStatusValue
 				break;
 			}
 		}
-		return EPsyqueKleene::TernaryUnknown;
+		return EPsyqueKleene::Unknown;
 	}
 
 	/// @brief 値を比較する。

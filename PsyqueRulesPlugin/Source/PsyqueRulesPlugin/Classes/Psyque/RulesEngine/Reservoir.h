@@ -406,7 +406,7 @@ class Psyque::RulesEngine::_private::TReservoir
 		auto const LocalFind(this->Properties.find(InStatusKey));
 		return LocalFind != this->Properties.end()?
 			static_cast<EPsyqueKleene>(LocalFind->second.GetTransition()):
-			EPsyqueKleene::TernaryUnknown;
+			EPsyqueKleene::Unknown;
 	}
 
 	/// @brief 状態値を取得する。
@@ -517,7 +517,7 @@ class Psyque::RulesEngine::_private::TReservoir
 				InComparison.GetOperator(),
 				LocalRightKey);
 		}
-		return EPsyqueKleene::TernaryUnknown;
+		return EPsyqueKleene::Unknown;
 	}
 
 	/// @brief 状態値を比較する。
@@ -777,7 +777,7 @@ class Psyque::RulesEngine::_private::TReservoir
 
 		// 状態値に初期値を設定する。
 		if (LocalProperty != nullptr
-			&& EPsyqueKleene::TernaryUnknown != LocalChunk.second.SetBitset(
+			&& EPsyqueKleene::Unknown != LocalChunk.second.SetBitset(
 				LocalProperty->second.GetBitPosition(),
 				ThisClass::FStatusValue::MakeBitWidth(InBitFormat),
 				InBitset))
@@ -864,9 +864,9 @@ class Psyque::RulesEngine::_private::TReservoir
 						OutProperty.GetBitPosition(),
 						InBitset.second,
 						InBitset.first));
-				if (LocalSetBitset != EPsyqueKleene::TernaryUnknown)
+				if (LocalSetBitset != EPsyqueKleene::Unknown)
 				{
-					if (LocalSetBitset == EPsyqueKleene::TernaryTrue)
+					if (LocalSetBitset == EPsyqueKleene::IsTrue)
 					{
 						// 状態値の変更を記録する。
 						OutProperty.SetTransition(true);

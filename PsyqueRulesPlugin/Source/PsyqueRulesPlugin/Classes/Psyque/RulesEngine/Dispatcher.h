@@ -214,6 +214,42 @@ class Psyque::RulesEngine::_private::TDispatcher
 	/// @brief 条件挙動ハンドラを登録する。
 	/// @sa
 	///   ThisClass::_dispatch で、 InExpressionKey に対応する条件式の評価が変化し
+	///   InCondition と合致すると、 InDelegate を実行する。
+	/// @sa
+	///   InDelegate が無効になると、対応する
+	///   ThisClass::FHandler は自動的に削除される。
+	///   明示的に削除するには ThisClass::UnregisterHandler を使う。
+	/// @return InDelegate を指すハンドル。
+	///   ただし登録に失敗した場合は、空のハンドルを戻す。
+	///   - InCondition が EPsyqueRulesUnitCondition::Invalid だと、失敗する。
+	///   - InDelegate が無効だと、失敗する。
+	///   - InExpressionKey と対応する ThisClass::FHandler に、
+	///     InDelegate が既に登録されていると、失敗する。
+	public: ::FDelegateHandle RegisterHandler(
+		/// [in] InDelegate を実行するか判定する、
+		/// TEvaluator::FExpression の識別値。
+		typename ThisClass::FEvaluator::FExpressionKey const InExpressionKey,
+		/// [in] InDelegate の実行判定に合格する条件。
+		/// THandler::MakeCondition から作る。
+		typename ThisClass::FHandler::FCondition const InCondition,
+		/// [in] InDelegate の実行優先順位。降順に実行される。
+		typename ThisClass::FHandler::FPriority const InPriority,
+		/// [in] 条件挙動で実行するデリゲート。
+		/// InExpressionKey に対応する条件式の評価が変化して
+		/// InCondition に合致すると、実行される。
+		::FPsyqueRulesBehaviorDelegate const& InDelegate)
+	{
+		return ThisClass::FExpressionMonitorMap::mapped_type::RegisterHandler(
+			this->ExpressionMonitors,
+			InExpressionKey,
+			InCondition,
+			InPriority,
+			InDelegate);
+	}
+
+	/// @brief 条件挙動ハンドラを登録する。
+	/// @sa
+	///   ThisClass::_dispatch で、 InExpressionKey に対応する条件式の評価が変化し
 	///   InCondition と合致すると、 InFunction の指す条件挙動関数が呼び出される。
 	/// @sa
 	///   InFunction の指す条件挙動関数が解体されると、それを弱参照している
@@ -224,7 +260,7 @@ class Psyque::RulesEngine::_private::TDispatcher
 	///   ThisClass::FHandler を構築し、 *this に登録した。
 	/// @retval false
 	///   失敗。 ThisClass::FHandler は構築されなかった。
-	///   - InCondition が THandler::EUnitCondition::Invalid だと、失敗する。
+	///   - InCondition が EPsyqueRulesUnitCondition::Invalid だと、失敗する。
 	///   - InFunction が空か、空の関数を指していると、失敗する。
 	///   - InExpressionKey と対応する ThisClass::FHandler に、
 	///     InFunction の指す条件挙動関数が既に登録されていると、失敗する。
@@ -313,7 +349,7 @@ class Psyque::RulesEngine::_private::TDispatcher
 	///   ThisClass::RegisterHandler で *this に登録された、 InExpressionKey
 	///   に対応し *InFunction を弱参照している ThisClass::FHandler 。
 	///   該当するものがない場合は、 ThisClass::FHandler::GetCondition が
-	///   ThisClass::FHandler::EUnitCondition::Invalid となる値を返す。
+	///   EPsyqueRulesUnitCondition::Invalid となる値を返す。
 	public: typename ThisClass::FHandler const* FindHandler(
 		/// [in] 取得する ThisClass::FHandler に対応する
 		/// TEvaluator::FExpression の識別値。
@@ -375,7 +411,7 @@ class Psyque::RulesEngine::_private::TDispatcher
 
 		// 変化した状態値を参照する条件式を評価し、
 		// 挙動条件に合致した条件挙動ハンドラをキャッシュに貯めて、
-		// 優先順位で並び替える。
+		// 優先順位の降順で並び替える。
 		ThisClass::FExpressionMonitorMap::mapped_type::CacheHandlers(
 			LocalCachedHandlers,
 			this->ExpressionMonitors,
@@ -389,7 +425,7 @@ class Psyque::RulesEngine::_private::TDispatcher
 				typename ThisClass::FHandler const& InRight)
 			->bool
 			{
-				return InLeft.GetPriority() < InRight.GetPriority();
+				return InRight.GetPriority() < InLeft.GetPriority();
 			});
 
 		// 条件式の評価が済んだので、状態変化フラグを初期化する。
@@ -418,7 +454,7 @@ class Psyque::RulesEngine::_private::TDispatcher
 	//-------------------------------------------------------------------------
 	/// @brief 監視器を再構築する。
 	private: template<
-		 typename TemplateMonitorMap, typename TemplateRebuildFunction>
+		typename TemplateMonitorMap, typename TemplateRebuildFunction>
 	static void RebuildMonitors(
 		/// [in,out] 再構築する監視器の辞書。
 		TemplateMonitorMap& OutMonitors,

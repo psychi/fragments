@@ -351,9 +351,9 @@ class Psyque::RulesEngine::_private::TEvaluator
 	/// @brief 登録されている条件式を評価する。
 	/// @sa ThisClass::RegisterExpression で、条件式を登録できる。
 	/// @return 条件式の評価結果。
-	/// - 条件式が登録されていないと、 EPsyqueKleene::TernaryUnknown となる。
+	/// - 条件式が登録されていないと、 EPsyqueKleene::Unknown となる。
 	/// - 条件式が参照する状態値が登録されていないと、
-	///   EPsyqueKleene::TernaryUnknown となる。
+	///   EPsyqueKleene::Unknown となる。
 	public: EPsyqueKleene EvaluateExpression(
 		/// [in] 評価する条件式に対応する識別値。
 		typename ThisClass::FExpressionKey const InExpressionKey,
@@ -366,7 +366,7 @@ class Psyque::RulesEngine::_private::TEvaluator
 			this->Expressions.find(InExpressionKey));
 		if (local_expression_iterator == this->Expressions.end())
 		{
-			return EPsyqueKleene::TernaryUnknown;
+			return EPsyqueKleene::Unknown;
 		}
 		auto const& LocalExpression(local_expression_iterator->second);
 		auto const LocalChunk(
@@ -375,7 +375,7 @@ class Psyque::RulesEngine::_private::TEvaluator
 		{
 			// 条件式があれば、論理項要素チャンクもあるはず。
 			check(false);
-			return EPsyqueKleene::TernaryUnknown;
+			return EPsyqueKleene::Unknown;
 		}
 
 		// 条件式の種別によって評価方法を分岐する。
@@ -393,13 +393,13 @@ class Psyque::RulesEngine::_private::TEvaluator
 					auto const LocalEvaluateExpression(
 						this->EvaluateExpression(
 							InExpression.GetKey(), InReservoir));
-					if (LocalEvaluateExpression == EPsyqueKleene::TernaryUnknown)
+					if (LocalEvaluateExpression == EPsyqueKleene::Unknown)
 					{
-						return EPsyqueKleene::TernaryUnknown;
+						return EPsyqueKleene::Unknown;
 					}
 					return static_cast<EPsyqueKleene>(
 						InExpression.CompareCondition(
-							LocalEvaluateExpression == EPsyqueKleene::TernaryTrue));
+							LocalEvaluateExpression == EPsyqueKleene::IsTrue));
 				});
 
 			// 状態変化条件式を評価する。
@@ -429,7 +429,7 @@ class Psyque::RulesEngine::_private::TEvaluator
 			// 条件式の種別が未知だった。
 			default:
 			check(false);
-			return EPsyqueKleene::TernaryUnknown;
+			return EPsyqueKleene::Unknown;
 		}
 	}
 	/// @}

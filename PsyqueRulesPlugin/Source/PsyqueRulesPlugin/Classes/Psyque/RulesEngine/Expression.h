@@ -116,27 +116,27 @@ class Psyque::RulesEngine::_private::TExpression
 		{
 			// 条件式が空か、範囲外の論理項要素を参照している。
 			check(this->IsEmpty());
-			return EPsyqueKleene::TernaryUnknown;
+			return EPsyqueKleene::Unknown;
 		}
 		auto const LocalEnd(InElements.begin() + this->EndIndex);
 		auto const LocalAnd(this->Logic == EPsyqueRulesExpressionLogic::And);
 		for (auto i(InElements.begin() + this->BeginIndex); i != LocalEnd; ++i)
 		{
 			auto const LocalEvaluation(InEvaluator(*i));
-			if (LocalEvaluation == EPsyqueKleene::TernaryUnknown)
+			if (LocalEvaluation == EPsyqueKleene::Unknown)
 			{
-				return EPsyqueKleene::TernaryUnknown;
+				return EPsyqueKleene::Unknown;
 			}
-			else if (LocalEvaluation == EPsyqueKleene::TernaryTrue)
+			else if (LocalEvaluation == EPsyqueKleene::IsTrue)
 			{
 				if (!LocalAnd)
 				{
-					return EPsyqueKleene::TernaryTrue;
+					return EPsyqueKleene::IsTrue;
 				}
 			}
 			else if (LocalAnd)
 			{
-				return EPsyqueKleene::TernaryFalse;
+				return EPsyqueKleene::IsFalse;
 			}
 		}
 		return static_cast<EPsyqueKleene>(LocalAnd);

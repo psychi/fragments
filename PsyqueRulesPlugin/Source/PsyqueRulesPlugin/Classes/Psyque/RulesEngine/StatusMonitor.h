@@ -202,8 +202,8 @@ class Psyque::RulesEngine::_private::TStatusMonitor
 		EPsyqueKleene const InTransition)
 	{
 		// 状態変化を検知する。
-		auto const LocalExistence(InTransition != EPsyqueKleene::TernaryUnknown);
-		if (InTransition == EPsyqueKleene::TernaryTrue
+		auto const LocalExistence(InTransition != EPsyqueKleene::Unknown);
+		if (InTransition == EPsyqueKleene::IsTrue
 			|| LocalExistence != this->LastExistence)
 		{
 			TemplateExpressionMonitorMap::mapped_type::NotifyStatusTransition(

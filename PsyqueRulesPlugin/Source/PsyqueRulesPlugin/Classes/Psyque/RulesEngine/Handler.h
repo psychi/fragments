@@ -41,35 +41,14 @@ class Psyque::RulesEngine::_private::THandler
 	///   TExpressionMonitor::CacheHandlers で条件式の評価の変化を検知した際に、
 	///   挙動条件と条件式の評価が合致すると、 THandler::FFunction が呼び出される。
 	/// @sa
-	///   THandler::MakeCondition
+	///   UPsyqueRulesEngine::MakeCondition
 	///   で、条件式の最新の評価と前回の評価を組み合わせて作る。
 	public: using FCondition = uint8;
-	/// @brief 単位条件。 THandler::FCondition を構成する単位となる条件。
-	/// @details THandler::MakeCondition で条件を作る引数として使う。
-	public: struct EUnitCondition
-	{
-		enum Type: typename THandler::FCondition
-		{
-			/// @brief 無効な条件。
-			Invalid = 0,
-			/// @brief 条件式の評価に失敗していることが条件。
-			Failed = 1,
-			/// @brief 条件式の評価が偽であることが条件。
-			False = 2,
-			/// @brief 条件式の評価が真であることが条件。
-			True = 4,
-			/// @brief 条件式の評価に失敗してないことが条件。
-			NotFailed = False | True,
-			/// @brief 条件式の評価が偽以外であることが条件。
-			NotFalse = Failed | True,
-			/// @brief 条件式の評価が真以外であることが条件。
-			NotTrue = False | Failed,
-			/// @brief 条件式の評価を問わない。
-			Any = Failed | False | True,
-		};
-	};
 
 	//-------------------------------------------------------------------------
+	/// @brief デリゲート。
+	public: using FDelegateInstance
+		= ::FPsyqueRulesBehaviorDelegate::TDelegateInstanceInterface;
 	/// @brief 条件挙動関数。挙動条件に合致すると呼び出される関数。
 	/// @details
 	///   TExpressionMonitor::CacheHandlers で条件式の評価の変化を検知した際に、
@@ -87,12 +66,6 @@ class Psyque::RulesEngine::_private::THandler
 		typename ThisClass::FFunction>;
 	/// @brief THandler::FFunction の弱参照スマートポインタ。
 	public: using FFunctionWeakPtr = std::weak_ptr<typename ThisClass::FFunction>;
-
-	//-------------------------------------------------------------------------
-	private: enum: uint8
-	{
-		UnitConditionBitWidth = 3, ///< 単位条件に使うビット幅。
-	};
 
 	//-------------------------------------------------------------------------
 	/// @brief 条件挙動ハンドラのキャッシュ。
@@ -154,6 +127,16 @@ class Psyque::RulesEngine::_private::THandler
 					this->CurrentEvaluation,
 					this->LastEvaluation);
 			}
+			auto const LocalDelegate(
+				static_cast<typename Super::FDelegateInstance*>(
+					this->Delegate.GetDelegateInstance()));
+			if (LocalDelegate != nullptr)
+			{
+				LocalDelegate->ExecuteIfSafe(
+					this->ExpressionKey,
+					this->CurrentEvaluation,
+					this->LastEvaluation);
+			}
 		}
 
 		/// @brief 条件式の識別値。
@@ -170,10 +153,22 @@ class Psyque::RulesEngine::_private::THandler
 	public: THandler(
 		/// [in] THandler::Condition の初期値。 THandler::MakeCondition で作る。
 		typename ThisClass::FCondition const InCondition,
-		/// [in] THandler::Function の初期値。
-		typename ThisClass::FFunctionWeakPtr InFunction,
 		/// [in] THandler::Priority の初期値。
-		typename ThisClass::FPriority const InPriority):
+		typename ThisClass::FPriority const InPriority,
+		/// [in] THandler::Delegate の初期値。
+		typename ThisClass::FDelegateInstance* const InDelegate):
+	Delegate((PSYQUE_ASSERT(InDelegate != nullptr), InDelegate)),
+	Priority(InPriority),
+	Condition(InCondition)
+	{}
+	public: THandler(
+		/// [in] THandler::Condition の初期値。 THandler::MakeCondition で作る。
+		typename ThisClass::FCondition const InCondition,
+		/// [in] THandler::Priority の初期値。
+		typename ThisClass::FPriority const InPriority,
+		/// [in] THandler::Function の初期値。
+		typename ThisClass::FFunctionWeakPtr InFunction):
+	Delegate(nullptr),
 	Function(MoveTemp(InFunction)),
 	Priority(InPriority),
 	Condition(InCondition)
@@ -184,6 +179,7 @@ class Psyque::RulesEngine::_private::THandler
 	public: THandler(
 		/// [in,out] ムーブ元となるインスタンス。
 		ThisClass&& OutSource):
+	Delegate(MoveTemp(OutSource.Delegate)),
 	Function(MoveTemp(OutSource.Function)),
 	Priority(MoveTemp(OutSource.Priority)),
 	Condition(MoveTemp(OutSource.Condition))
@@ -195,6 +191,7 @@ class Psyque::RulesEngine::_private::THandler
 		/// [in,out] ムーブ元となるインスタンス。
 		ThisClass&& OutSource)
 	{
+		this->Delegate = MoveTemp(OutSource.Delegate);
 		this->Function = MoveTemp(OutSource.Function);
 		this->Priority = MoveTemp(OutSource.Priority);
 		this->Condition = MoveTemp(OutSource.Condition);
@@ -225,110 +222,24 @@ class Psyque::RulesEngine::_private::THandler
 		return this->Priority;
 	}
 
-	//-------------------------------------------------------------------------
 	/// @brief 条件式の評価の遷移と挙動条件が合致するか判定する。
 	public: bool IsMatched(
 		/// [in] 条件式の評価の、最新と前回を合成した値。
 		typename ThisClass::FCondition const InTransition)
 	const
 	{
-		return (
-			PSYQUE_ASSERT(InTransition != ThisClass::EUnitCondition::Invalid),
-			InTransition == (InTransition & this->GetCondition()));
-	}
-
-	/// @brief 単位条件を合成して挙動条件を作る。
-	/// @warning
-	///   条件式の評価が最新と前回で同じ場合は、
-	///   FExpressionMonitor::CacheHandlers で挙動条件の判定が行われない。
-	///   このため、以下の単位条件の組み合わせは無効となることに注意。
-	///   @code
-	///     MakeCondition(THandler::EUnitCondition::Failed, THandler::EUnitCondition::Failed);
-	///     MakeCondition(THandler::EUnitCondition::False, THandler::EUnitCondition::False);
-	///     MakeCondition(THandler::EUnitCondition::True, THandler::EUnitCondition::True);
-	///   @endcode
-	/// @return
-	///   関数が呼び出される挙動条件。単位条件の組み合わせが無効な場合は
-	///   ThisClass::EUnitCondition::Invalid を返す。
-	public: static typename ThisClass::FCondition MakeCondition(
-		/// [in] 条件式の、最新の評価の単位条件。
-		typename ThisClass::EUnitCondition::Type const InNowCondition,
-		/// [in] 条件式の、前回の評価の単位条件。
-		typename ThisClass::EUnitCondition::Type const InLastCondition)
-	{
-		return ThisClass::MixUnitCondition(
-			InNowCondition != ThisClass::EUnitCondition::Invalid
-				&& InLastCondition != ThisClass::EUnitCondition::Invalid
-				&& (InNowCondition != InLastCondition
-					// 2のべき乗か判定する。
-					|| (InNowCondition & (InNowCondition - 1)) != 0),
-			InNowCondition,
-			InLastCondition);
-	}
-
-	/// @brief 条件式の評価を合成して挙動条件を作る。
-	/// @warning
-	///   条件式の評価が最新と前回で同じ場合は、
-	///   FExpressionMonitor::CacheHandlers で挙動条件の判定が行われない。
-	///   このため、以下の評価の組み合わせは無効となることに注意。
-	///   @code
-	///     // NとMは、それぞれ任意の正の整数。
-	///     MakeCondition(N, M);
-	///     MakeCondition(0, 0);
-	///     MakeCondition(-N, -M);
-	///   @endcode
-	/// @return
-	///   関数が呼び出される挙動条件。評価の組み合わせが無効な場合は
-	///   ThisClass::EUnitCondition::Invalid を返す。
-	public: static typename ThisClass::FCondition MakeCondition(
-		/// [in] 条件となる、条件式の最新の評価。
-		EPsyqueKleene const InNowEvaluation,
-		/// [in] 条件となる、条件式の前回の評価。
-		EPsyqueKleene const InLastEvaluation)
-	{
-		auto const LocalNowCondition(
-			ThisClass::MakeUnitCondition(InNowEvaluation));
-		auto const LocalLastCondition(
-			ThisClass::MakeUnitCondition(InLastEvaluation));
-		return ThisClass::MixUnitCondition(
-			LocalNowCondition != LocalLastCondition,
-			LocalNowCondition,
-			LocalLastCondition);
-	}
-
-	/// @brief 条件式の評価から単位条件を作る。
-	public: static typename ThisClass::EUnitCondition::Type MakeUnitCondition(
-		/// [in] 条件式の評価。
-		EPsyqueKleene const InEvaluation)
-	{
-		return InEvaluation == EPsyqueKleene::TernaryTrue?
-			ThisClass::EUnitCondition::True:
-			InEvaluation == EPsyqueKleene::TernaryFalse?
-				ThisClass::EUnitCondition::False:
-				ThisClass::EUnitCondition::Failed;
-	}
-
-	/// @brief 単位条件を合成して挙動条件を作る。
-	/// @return 挙動条件。
-	private: static typename ThisClass::FCondition MixUnitCondition(
-		/// [in] 合成可能かどうか。
-		bool const InMix,
-		/// [in] 条件となる、最新の条件式の評価。
-		typename ThisClass::EUnitCondition::Type const InNowCondition,
-		/// [in] 条件となる、前回の条件式の評価。
-		typename ThisClass::EUnitCondition::Type const InLastCondition)
-	{
-		return InMix?
-			InNowCondition | (InLastCondition << ThisClass::UnitConditionBitWidth):
-			ThisClass::EUnitCondition::Invalid;
+		check(InTransition != static_cast<uint8>(EPsyqueRulesUnitCondition::Invalid));
+		return InTransition == (InTransition & this->GetCondition());
 	}
 
 	//---------------------------------------------------------------------
+	/// @brief 条件に合致した際に実行するデリゲート。
+	public: ::FDelegateBase<> Delegate;
 	/// @brief 条件挙動関数を指すスマートポインタ。
 	private: typename ThisClass::FFunctionWeakPtr Function;
-	/// @brief 条件挙動関数の呼び出し優先順位。
+	/// @brief デリゲートの実行優先順位。
 	private: typename ThisClass::FPriority Priority;
-	/// @brief 条件挙動関数を呼び出す挙動条件。
+	/// @brief デリゲートを実行する条件。
 	private: typename ThisClass::FCondition Condition;
 
 }; // class Psyque::RulesEngine::_private::THandler

@@ -199,7 +199,7 @@ class Psyque::RulesEngine::_private::TAccumulator
 			{
 				if (LocalFlush
 					&& OutReservoir.FindTransition(j->first.GetKey())
-						== EPsyqueKleene::TernaryTrue)
+						== EPsyqueKleene::IsTrue)
 				{
 					// すでに状態変更されていたら、今回は状態変更しない。
 					LocalFlush = false;

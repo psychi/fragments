@@ -82,7 +82,73 @@ class Psyque::RulesEngine::_private::TExpressionMonitor
 	}
 #endif // !defined(PSYQUE_NO_STD_DEFAULTED_FUNCTION)
 
+	public: ~TExpressionMonitor()
+	{
+		for (auto& LocalHandler: this->Handlers)
+		{
+			LocalHandler.Delegate.Unbind();
+		}
+	}
+
 	//-------------------------------------------------------------------------
+	/// @brief 条件挙動を登録する。
+	/// @details
+	///   TDispatcher::_dispatch で、
+	///   InExpressionKey に対応する条件式の評価が変化して
+	///   InCondition と合致すると、 InDelegate が実行される。
+	/// @sa
+	///   InDelegate が無効になると、対応する
+	///   ThisClass::FHandler は自動的に削除される。明示的に削除するには
+	///   ThisClass::UnregisterBehavior を使う。
+	/// @return InDelegate を指すハンドル。
+	///   ただし登録に失敗した場合は、空のハンドルを戻す。
+	///   - InCondition が EPsyqueRulesUnitCondition::Invalid だと、失敗する。
+	///   - InDelegate が無効だと失敗する。
+	///   - InExpressionKey と対応する ThisClass::FHandler に、
+	///     InDelegate が既に登録されていると、失敗する。
+	public: template<typename TemplateExpressionMonitorMap>
+	static ::FDelegateHandle RegisterHandler(
+		/// [in,out] ThisClass::FHandler を登録する TExpressionMonitor の辞書。
+		TemplateExpressionMonitorMap& OutExpressionMonitors,
+		/// [in] InDelegate を実行するか判定する、
+		/// TEvaluator::FExpression の識別値。
+		typename ThisClass::FHandler::FExpressionKey const InExpressionKey,
+		/// [in] InDelegate の実行判定に合格する条件。
+		/// UPsyqueRulesFunctionLibrary::MakeCondition から作る。
+		typename ThisClass::FHandler::FCondition const InCondition,
+		/// [in] InDelegate の実行優先順位。降順に実行される。
+		typename ThisClass::FHandler::FPriority const InPriority,
+		/// [in] 条件挙動で実行するデリゲート。
+		/// InExpressionKey に対応する条件式の評価が変化して
+		/// InCondition に合致すると、実行される。
+		::FPsyqueRulesBehaviorDelegate const& InDelegate)
+	{
+		if (InCondition != static_cast<uint8>(EPsyqueRulesUnitCondition::Invalid)
+			&& InDelegate.IsBound())
+		{
+			// 条件式監視器を用意し、同じ関数が登録されてないか判定する。
+			auto const LocalEmplace(
+				OutExpressionMonitors.emplace(
+					InExpressionKey,
+					ThisClass(OutExpressionMonitors.get_allocator())));
+			auto& LocalHandlers(LocalEmplace.first->second.Handlers);
+			if (LocalEmplace.second
+				|| !ThisClass::TrimHandlers(
+					LocalHandlers, InDelegate.GetHandle(), false))
+			{
+				// 条件式監視器へ条件挙動ハンドラを追加する。
+				auto const LocalDelegate(
+					static_cast<typename ThisClass::FHandler::FDelegateInstance*>(
+						InDelegate.GetDelegateInstance()));
+				check(LocalDelegate != nullptr);
+				LocalHandlers.emplace_back(
+					InCondition, InPriority, LocalDelegate->CreateCopy());
+				return LocalHandlers.back().Delegate.GetHandle();
+			}
+		}
+		return ::FDelegateHandle();
+	}
+
 	/// @brief 条件挙動ハンドラを登録する。
 	/// @sa
 	///   TDispatcher::_dispatch で、 InExpressionKey に対応する条件式の評価が変化し
@@ -96,7 +162,7 @@ class Psyque::RulesEngine::_private::TExpressionMonitor
 	///   ThisClass::FHandler を構築し、 OutExpressionMonitors に登録した。
 	/// @retval false
 	///   失敗。 ThisClass::FHandler は構築されなかった。
-	///   - InCondition が ThisClass::FHandler::EUnitCondition::Invalid だと、失敗する。
+	///   - InCondition が EPsyqueRulesUnitCondition::Invalid だと、失敗する。
 	///   - InFunction が空か、空の関数を指していると、失敗する。
 	///   - InExpressionKey と対応する ThisClass::FHandler に、
 	///     InFunction の指す条件挙動関数が既に登録されていると、失敗する。
@@ -108,7 +174,7 @@ class Psyque::RulesEngine::_private::TExpressionMonitor
 		/// FEvaluator::FExpression の識別値。
 		typename ThisClass::FHandler::FExpressionKey const& InExpressionKey,
 		/// [in] InFunction の指す条件挙動関数を呼び出す挙動条件。
-		/// FHandler::MakeCondition から作る。
+		/// UPsyqueRulesFunctionLibrary::MakeCondition から作る。
 		typename ThisClass::FHandler::FCondition const InCondition,
 		/// [in] 登録する FHandler::FFunction を強参照するスマートポインタ。
 		/// InExpressionKey に対応する条件式の評価が変化して
@@ -119,7 +185,7 @@ class Psyque::RulesEngine::_private::TExpressionMonitor
 		typename ThisClass::FHandler::FPriority const InPriority)
 	{
 		auto const LocalFunction(InFunction.get());
-		if (InCondition != ThisClass::FHandler::EUnitCondition::Invalid
+		if (InCondition != static_cast<uint8>(EPsyqueRulesUnitCondition::Invalid)
 			&& LocalFunction != nullptr
 			&& static_cast<bool>(*LocalFunction))
 		{
@@ -130,10 +196,10 @@ class Psyque::RulesEngine::_private::TExpressionMonitor
 					ThisClass(OutExpressionMonitors.get_allocator())));
 			auto& LocalHandlers(LocalEmplace.first->second.Handlers);
 			if (LocalEmplace.second
-				|| !ThisClass::trim_handlers(LocalHandlers, LocalFunction, false))
+				|| !ThisClass::TrimHandlers(LocalHandlers, LocalFunction, false))
 			{
 				// 条件式監視器へ条件挙動ハンドラを追加する。
-				LocalHandlers.emplace_back(InCondition, InFunction, InPriority);
+				LocalHandlers.emplace_back(InCondition, InPriority, InFunction);
 				return true;
 			}
 		}
@@ -147,7 +213,7 @@ class Psyque::RulesEngine::_private::TExpressionMonitor
 		/// [in] 削除する ThisClass::FHandler に対応する条件挙動関数。
 		typename ThisClass::FHandler::FFunction const& InFunction)
 	{
-		return ThisClass::trim_handlers(this->Handlers, &InFunction, true);
+		return ThisClass::TrimHandlers(this->Handlers, &InFunction, true);
 	}
 
 	/// @brief 条件挙動ハンドラを整理する。
@@ -155,7 +221,7 @@ class Psyque::RulesEngine::_private::TExpressionMonitor
 	/// @retval false ThisClass::FHandler はまだある。
 	public: bool ShrinkHandlers()
 	{
-		ThisClass::trim_handlers(this->Handlers, nullptr, false);
+		ThisClass::TrimHandlers(this->Handlers, nullptr, false);
 		this->Handlers.shrink_to_fit();
 		return this->Handlers.empty();
 	}
@@ -415,7 +481,40 @@ class Psyque::RulesEngine::_private::TExpressionMonitor
 	/// @brief 条件挙動ハンドラを検索しつつ、コンテナを整理する。
 	/// @retval true  OutHandlers から InFunction が見つかった。
 	/// @retval false OutHandlers から InFunction が見つからなかった。
-	private: static bool trim_handlers(
+	private: static bool TrimHandlers(
+		/// [in,out] 走査する条件挙動ハンドラのコンテナ。
+		typename ThisClass::FHandlerArray& OutHandlers,
+		/// [in] 検索する挙動挙動デリゲートに対応するハンドル。
+		::FDelegateHandle const& InDelegateHandle,
+		/// [in] 検索する条件挙動ハンドラを削除するかどうか。
+		bool const InErase)
+	{
+		auto LocalFind(!InDelegateHandle.IsValid());
+		for (auto i(OutHandlers.begin()); i != OutHandlers.end();)
+		{
+			bool LocalErase;
+			if (LocalFind)
+			{
+				LocalErase = !i->Delegate.IsBound();
+			}
+			else
+			{
+				LocalFind = i->Delegate.GetHandle() == InDelegateHandle;
+				LocalErase = LocalFind? InErase: !i->Delegate.IsBound();
+			}
+			if (LocalErase)
+			{
+				i->Delegate.Unbind();
+				i = OutHandlers.erase(i);
+			}
+			else
+			{
+				++i;
+			}
+		}
+		return LocalFind && InDelegateHandle.IsValid();
+	}
+	private: static bool TrimHandlers(
 		/// [in,out] 走査する条件挙動ハンドラのコンテナ。
 		typename ThisClass::FHandlerArray& OutHandlers,
 		/// [in] 検索する挙動挙動ハンドラに対応する条件挙動関数。
@@ -430,16 +529,19 @@ class Psyque::RulesEngine::_private::TExpressionMonitor
 			bool LocalErase;
 			if (LocalFind)
 			{
+				LocalErase = !i->Delegate.IsBound();
 				LocalErase = LocalObserber.expired();
 			}
 			else
 			{
 				auto const LocalPointer(LocalObserber.lock().get());
 				LocalFind = LocalPointer == InFunction;
+				LocalErase = LocalFind? InErase: !i->Delegate.IsBound();
 				LocalErase = LocalFind? InErase: LocalPointer == nullptr;
 			}
 			if (LocalErase)
 			{
+				i->Delegate.Unbind();
 				i = OutHandlers.erase(i);
 			}
 			else
@@ -475,9 +577,9 @@ class Psyque::RulesEngine::_private::TExpressionMonitor
 				InExpressionKey,
 				LocalFlushCondition));
 		auto const LocalTransition(
-			ThisClass::FHandler::MakeCondition(
+			UPsyqueRulesFunctionLibrary::MakeConditionFromKleene(
 				LocalNowEvaluation, LocalLastEvaluation));
-		if (LocalTransition != ThisClass::FHandler::EUnitCondition::Invalid)
+		if (LocalTransition != static_cast<uint8>(EPsyqueRulesUnitCondition::Invalid))
 		{
 			// 条件式の評価の変化が挙動条件と合致すれば、
 			// 条件挙動ハンドラをキャッシュに貯める。
@@ -531,7 +633,7 @@ class Psyque::RulesEngine::_private::TExpressionMonitor
 		{
 			this->Flags.reset(ThisClass::EFlag::LastEvaluation);
 			this->Flags.reset(ThisClass::EFlag::LastCondition);
-			return EPsyqueKleene::TernaryUnknown;
+			return EPsyqueKleene::Unknown;
 		}
 
 		// 条件式を評価し、結果を記録する。
@@ -539,10 +641,10 @@ class Psyque::RulesEngine::_private::TExpressionMonitor
 			InEvaluator.EvaluateExpression(InExpressionKey, InReservoir));
 		this->Flags.set(
 			ThisClass::EFlag::LastEvaluation,
-			LocalEvaluateExpression != EPsyqueKleene::TernaryUnknown);
+			LocalEvaluateExpression != EPsyqueKleene::Unknown);
 		this->Flags.set(
 			ThisClass::EFlag::LastCondition,
-			LocalEvaluateExpression == EPsyqueKleene::TernaryTrue);
+			LocalEvaluateExpression == EPsyqueKleene::IsTrue);
 		return this->GetLastEvaluation(false);
 	}
 
@@ -584,7 +686,7 @@ class Psyque::RulesEngine::_private::TExpressionMonitor
 		return this->Flags.test(ThisClass::EFlag::LastEvaluation)?
 			static_cast<EPsyqueKleene>(
 				!InFlush && this->Flags.test(ThisClass::EFlag::LastCondition)):
-			EPsyqueKleene::TernaryUnknown;
+			EPsyqueKleene::Unknown;
 	}
 
 	/// @brief Psyque::RulesEngine 管理者以外は使用禁止。

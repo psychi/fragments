@@ -422,8 +422,7 @@ class Psyque::RulesEngine::TDriver
 	/// @retval false
 	///   失敗。 FDispatcher::FHandler は構築されず、
 	///   条件挙動関数の強参照はチャンクに追加されなかった。
-	///   - InCondition が
-	///     FDispatcher::FHandler::EUnitCondition::Invalid だと、失敗する。
+	///   - InCondition が EPsyqueRulesUnitCondition::Invalid だと、失敗する。
 	///   - InFunction が空か、空の関数を指していると、失敗する。
 	///   - InExpressionKey と対応する FDispatcher::FHandler に、
 	///     InFunction の指す条件挙動関数が既に登録されていると、失敗する。

@@ -19,8 +19,7 @@
 /// @brief 文字列表で、NULL条件が記述されている属性の名前。
 /// @details
 ///   Psyque::RulesEngine::THandlerBuilder で解析する文字列表で、
-///   Psyque::RulesEngine::TDriver::FDispatcher::FHandler::EUnitCondition::Failed
-///   として解析する文字列。
+///   EPsyqueRulesUnitCondition::Unknown として解析する文字列。
 #ifndef PSYQUE_RULES_ENGINE_HANDLER_BUILDER_CONDITION_NULL
 #define PSYQUE_RULES_ENGINE_HANDLER_BUILDER_CONDITION_NULL "NULL"
 #endif // !defined(PSYQUE_RULES_ENGINE_HANDLER_BUILDER_COLUMN_ARGUMENT)
@@ -28,8 +27,7 @@
 /// @brief 文字列表で、Any条件が記述されている属性の名前。
 /// @details
 ///   Psyque::RulesEngine::THandlerBuilder で解析する文字列表で、
-///   Psyque::RulesEngine::TDriver::FDispatcher::FHandler::EUnitCondition::Any
-///   として解析する文字列。
+///   EPsyqueRulesUnitCondition::Any として解析する文字列。
 #ifndef PSYQUE_RULES_ENGINE_HANDLER_BUILDER_CONDITION_ANY
 #define PSYQUE_RULES_ENGINE_HANDLER_BUILDER_CONDITION_ANY "Any"
 #endif // !defined(PSYQUE_RULES_ENGINE_HANDLER_BUILDER_COLUMN_ARGUMENT)
@@ -278,7 +276,7 @@ class Psyque::RulesEngine::THandlerBuilder
 	/// @brief 文字列表の行を解析し、挙動条件を構築する。
 	/// @return
 	///   文字列表から構築した挙動条件。構築に失敗した場合は
-	///   TDriver::TDispatcher::FHandler::EUnitCondition::Invalid を返す。
+	///   EPsyqueRulesUnitCondition::Invalid を返す。
 	/// @tparam TemplateHandler
 	///   構築した挙動条件を使う TDriver::TDispatcher::FHandler 。
 	public: template<typename TemplateHandler, typename TemplateRelationTable>
@@ -293,7 +291,7 @@ class Psyque::RulesEngine::THandlerBuilder
 		if (InAttribute.second < 2)
 		{
 			PSYQUE_ASSERT(false);
-			return TemplateHandler::EUnitCondition::Invalid;
+			return EPsyqueRulesUnitCondition::Invalid;
 		}
 		auto const LocalCondition(
 			TemplateHandler::MakeCondition(
@@ -301,19 +299,18 @@ class Psyque::RulesEngine::THandlerBuilder
 					InTable.FindCell(InRowNumber, InAttribute.first + 1)),
 				ThisClass::ParseUnitCondition<TemplateHandler>(
 					InTable.FindCell(InRowNumber, InAttribute.first))));
-		PSYQUE_ASSERT(LocalCondition != TemplateHandler::EUnitCondition::Invalid);
+		PSYQUE_ASSERT(LocalCondition != EPsyqueRulesUnitCondition::Invalid);
 		return LocalCondition;
 	}
 
 	/// @brief 文字列を解析し、単位条件を取得する。
 	/// @return
-	///   文字列から取得した TDriver::TDispatcher::FHandler::EUnitCondition::Type 。
-	///   取得に失敗した場合は
-	///   TDriver::TDispatcher::FHandler::EUnitCondition::Invalid を返す。
+	///   文字列から取得した EPsyqueRulesUnitCondition 値。
+	///   取得に失敗した場合は EPsyqueRulesUnitCondition::Invalid を返す。
 	/// @tparam TemplateHandler
 	///   構築した単位条件を使う TDriver::TDispatcher::FHandler 。
 	public: template<typename TemplateHandler, typename TemplateString>
-	static typename TemplateHandler::EUnitCondition::Type ParseUnitCondition(
+	static EPsyqueRulesUnitCondition ParseUnitCondition(
 		/// [in] 解析する std::basic_string_view 互換の文字列。
 		TemplateString const& InString)
 	{
@@ -333,14 +330,14 @@ class Psyque::RulesEngine::THandlerBuilder
 				if (LocalParser.GetValue())
 				{
 					return local_not?
-						TemplateHandler::EUnitCondition::NotTrue:
-						TemplateHandler::EUnitCondition::True;
+						EPsyqueRulesUnitCondition::NotTrue:
+						EPsyqueRulesUnitCondition::IsTrue;
 				}
 				else
 				{
 					return local_not?
-						TemplateHandler::EUnitCondition::NotFalse:
-						TemplateHandler::EUnitCondition::False;
+						EPsyqueRulesUnitCondition::NotFalse:
+						EPsyqueRulesUnitCondition::IsFalse;
 				}
 			}
 			else if (
@@ -348,18 +345,18 @@ class Psyque::RulesEngine::THandlerBuilder
 					PSYQUE_RULES_ENGINE_HANDLER_BUILDER_CONDITION_NULL)
 			{
 				return local_not?
-					TemplateHandler::EUnitCondition::NotFailed:
-					TemplateHandler::EUnitCondition::Failed;
+					EPsyqueRulesUnitCondition::Known:
+					EPsyqueRulesUnitCondition::Unknown;
 			}
 			else if (
 				!local_not
 				&& local_string ==
 					PSYQUE_RULES_ENGINE_HANDLER_BUILDER_CONDITION_ANY)
 			{
-				return TemplateHandler::EUnitCondition::Any;
+				return EPsyqueRulesUnitCondition::Any;
 			}
 		}
-		return TemplateHandler::EUnitCondition::Invalid;
+		return EPsyqueRulesUnitCondition::Invalid;
 	}
 	/// @}
 	//-------------------------------------------------------------------------

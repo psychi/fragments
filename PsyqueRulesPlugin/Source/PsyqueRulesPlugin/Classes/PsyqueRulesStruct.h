@@ -20,20 +20,20 @@ UENUM(BlueprintType)
 enum class EPsyqueKleene: uint8
 {
 	/// 偽。
-	TernaryFalse = 0 UMETA(DisplayName="TernaryFalse"),
+	IsFalse = 0 UMETA(DisplayName="False"),
 
 	/// 真。
-	TernaryTrue = 1 UMETA(DisplayName="TernaryTrue"),
+	IsTrue = 1 UMETA(DisplayName="True"),
 
 	/// 真か偽か不明。
-	TernaryUnknown = 128 UMETA(DisplayName="TernaryUnknown")
+	Unknown = 128 UMETA(DisplayName="Unknown")
 
 }; // enum class EPsyqueKleene
 
 static_assert(
-	static_cast<int8>(EPsyqueKleene::TernaryFalse) == false
-	&& static_cast<int8>(EPsyqueKleene::TernaryTrue) == true
-	&& static_cast<int8>(EPsyqueKleene::TernaryUnknown) < 0,
+	static_cast<int8>(EPsyqueKleene::IsFalse) == false
+	&& static_cast<int8>(EPsyqueKleene::IsTrue) == true
+	&& static_cast<int8>(EPsyqueKleene::Unknown) < 0,
 	"");
 
 //-----------------------------------------------------------------------------
@@ -181,6 +181,38 @@ enum class EPsyqueRulesStatusKind: uint8
 
 }; // enum class EPsyqueRulesStatusKind
 
+//---------------------------------------------------------------------
+/// @brief 単位条件。 THandler::FCondition を構成する単位となる条件。
+/// @details THandler::MakeCondition で条件を作る引数として使う。
+UENUM(BlueprintType)
+enum class EPsyqueRulesUnitCondition: uint8
+{
+	/// 無効な条件。
+	Invalid = 0 UMETA(DisplayName="Invalid"),
+
+	/// 条件式が評価不能であることが条件。
+	Unknown = 1 UMETA(DisplayName="Unknown"),
+
+	/// 条件式の評価が偽であることが条件。
+	IsFalse = 2 UMETA(DisplayName="False"),
+
+	/// 条件式の評価が真以外であることが条件。
+	NotTrue = 3 UMETA(DisplayName="NotTrue"),
+
+	/// 条件式の評価が真であることが条件。
+	IsTrue = 4 UMETA(DisplayName="True"),
+
+	/// 条件式の評価が偽以外であることが条件。
+	NotFalse = 5 UMETA(DisplayName="NotFalse"),
+
+	/// 条件式が評価可能であることが条件。
+	Known = 6 UMETA(DisplayName="Known"),
+
+	/// 条件式の評価を問わない。
+	Any = 7 UMETA(DisplayName="Any"),
+
+}; // enum class EPsyqueRulesUnitCondition
+
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief 状態値が記述されている UDataTable の行。
 USTRUCT(BlueprintType)
@@ -218,5 +250,136 @@ struct FPsyqueRulesExpressionTableRow: public FTableRowBase
 	TArray<FString> Elements;
 
 }; // FPsyqueRulesExpressionTableRow
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/// @class FPsyqueRulesBehaviorDelegate
+/// @brief 条件挙動で実行するデリゲートを表す型。
+/// @par
+///   - 引数#0は、評価された条件式の名前ハッシュ値。
+///   - 引数#1は、条件式の今回の評価結果。
+///   - 引数#2は、条件式の前回の評価結果。
+/// @cond
+DECLARE_DELEGATE_ThreeParams(
+	FPsyqueRulesBehaviorDelegate,
+	int32 const,
+	EPsyqueKleene const,
+	EPsyqueKleene const);
+/// @endcond
+
+/// @class FPsyqueRulesBehaviorDynamicDelegate
+/// @brief 条件挙動で実行する動的デリゲートを表す型。
+/// @par
+///   - 引数#0は、評価された条件式の名前ハッシュ値。
+///   - 引数#1は、条件式の今回の評価結果。
+///   - 引数#2は、条件式の前回の評価結果。
+/// @note マクロ引数の記述を1行に収めないと、UE4.11以前ではビルド時にエラーが出る。
+/// @cond
+DECLARE_DYNAMIC_DELEGATE_ThreeParams(
+	FPsyqueRulesBehaviorDynamicDelegate, int32 const, InExpressionKey, EPsyqueKleene const, InNowEvaluation, EPsyqueKleene const, InLastEvaluation);
+/// @endcond
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+UCLASS()
+class UPsyqueRulesFunctionLibrary: public UBlueprintFunctionLibrary
+{
+	GENERATED_BODY()
+
+	//-------------------------------------------------------------------------
+	public:
+	/// @brief 単位条件を合成して挙動条件を作る。
+	/// @warning
+	///   条件式の評価が最新と前回で同じ場合は、
+	///   TExpressionMonitor::CacheHandlers で挙動条件の判定が行われない。
+	///   このため、以下の単位条件の組み合わせは無効となることに注意。
+	///   @code
+	///     MakeCondition(EPsyqueRulesUnitCondition::Unknown, EPsyqueRulesUnitCondition::Unknown);
+	///     MakeCondition(EPsyqueRulesUnitCondition::IsFalse, EPsyqueRulesUnitCondition::IsFalse);
+	///     MakeCondition(EPsyqueRulesUnitCondition::IsTrue, EPsyqueRulesUnitCondition::IsTrue);
+	///   @endcode
+	/// @return
+	///   関数が呼び出される挙動条件。単位条件の組み合わせが無効な場合は
+	///   EPsyqueRulesUnitCondition::Invalid を返す。
+	/// @param InNowCondition  条件式の、最新の評価の単位条件。
+	/// @param InLastCondition 条件式の、前回の評価の単位条件。
+	UFUNCTION(BlueprintPure, Category="PsyqueRulesPlugin")
+	static uint8 MakeCondition(
+		EPsyqueRulesUnitCondition const InNowCondition,
+		EPsyqueRulesUnitCondition const InLastCondition)
+	{
+		return ThisClass::MixUnitCondition(
+			InNowCondition != EPsyqueRulesUnitCondition::Invalid
+				&& InLastCondition != EPsyqueRulesUnitCondition::Invalid
+				&& (InNowCondition != InLastCondition
+					// 2のべき乗か判定する。
+					|| 0 != (
+						static_cast<uint8>(InNowCondition)
+							& (static_cast<uint8>(InNowCondition) - 1))),
+			InNowCondition,
+			InLastCondition);
+	}
+
+	/// @brief 条件式の評価を合成して挙動条件を作る。
+	/// @warning
+	///   条件式の評価が最新と前回で同じ場合は、
+	///   TExpressionMonitor::CacheHandlers で挙動条件の判定が行われない。
+	///   このため、以下の評価の組み合わせは無効となることに注意。
+	///   @code
+	///     MakeCondition(EPsyqueKleene::IsTrue, EPsyqueKleene::IsTrue);
+	///     MakeCondition(EPsyqueKleene::IsFalse, EPsyqueKleene::IsFalse);
+	///     MakeCondition(EPsyqueKleene::Unknown, EPsyqueKleene::Unknown);
+	///   @endcode
+	/// @return
+	///   関数が呼び出される挙動条件。評価の組み合わせが無効な場合は
+	///   EPsyqueRulesUnitCondition::Invalid を返す。
+	/// @param InNowEvaluation  条件となる、条件式の最新の評価。
+	/// @param InLastEvaluation 条件となる、条件式の前回の評価。
+	UFUNCTION(BlueprintPure, Category="PsyqueRulesPlugin")
+	static uint8 MakeConditionFromKleene(
+		EPsyqueKleene const InNowEvaluation,
+		EPsyqueKleene const InLastEvaluation)
+	{
+		auto const LocalNowCondition(
+			ThisClass::MakeUnitCondition(InNowEvaluation));
+		auto const LocalLastCondition(
+			ThisClass::MakeUnitCondition(InLastEvaluation));
+		return ThisClass::MixUnitCondition(
+			LocalNowCondition != LocalLastCondition,
+			LocalNowCondition,
+			LocalLastCondition);
+	}
+
+	/// @brief 条件式の評価から、単位条件を作る。
+	/// @param InEvaluation 条件式の評価。
+	UFUNCTION(BlueprintPure, Category="PsyqueRulesPlugin")
+	static EPsyqueRulesUnitCondition MakeUnitCondition(
+		EPsyqueKleene const InEvaluation)
+	{
+		return InEvaluation == EPsyqueKleene::IsTrue?
+			EPsyqueRulesUnitCondition::IsTrue:
+			InEvaluation == EPsyqueKleene::IsFalse?
+				EPsyqueRulesUnitCondition::IsFalse:
+				EPsyqueRulesUnitCondition::Unknown;
+	}
+
+	//-------------------------------------------------------------------------
+	private:
+	/// @brief 単位条件を合成して挙動条件を作る。
+	/// @return 挙動条件。
+	static uint8 MixUnitCondition(
+		/// [in] 合成可能かどうか。
+		bool const InMix,
+		/// [in] 条件となる、最新の条件式の評価。
+		EPsyqueRulesUnitCondition const InNowCondition,
+		/// [in] 条件となる、前回の条件式の評価。
+		EPsyqueRulesUnitCondition const InLastCondition)
+	{
+		enum: uint8 {UnitConditionBitWidth = 3}; // 単位条件に使うビット幅。
+		return InMix?
+			static_cast<uint8>(InNowCondition) | (
+				static_cast<uint8>(InLastCondition) << UnitConditionBitWidth):
+			static_cast<uint8>(EPsyqueRulesUnitCondition::Invalid);
+	}
+
+}; // class UPsyqueRulesFunctionLibrary
 
 // vim: set noexpandtab:

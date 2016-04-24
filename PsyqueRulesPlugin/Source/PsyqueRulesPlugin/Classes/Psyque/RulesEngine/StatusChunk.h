@@ -176,14 +176,14 @@ class Psyque::RulesEngine::_private::TStatusChunk
 	{
 		if (Psyque::ShiftRightBitwise(InValue, InBitWidth) != 0)
 		{
-			return EPsyqueKleene::TernaryUnknown;
+			return EPsyqueKleene::Unknown;
 		}
 		auto const LocalBlockIndex(
 			InBitPosition / ThisClass::BLOCK_BIT_WIDTH);
 		if (this->BitBlocks.size() <= LocalBlockIndex)
 		{
 			check(false);
-			return EPsyqueKleene::TernaryUnknown;
+			return EPsyqueKleene::Unknown;
 		}
 
 		// ビット列単位でのビット位置を決定し、値を埋め込む。

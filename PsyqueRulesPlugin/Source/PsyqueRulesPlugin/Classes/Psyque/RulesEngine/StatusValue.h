@@ -704,8 +704,7 @@ class Psyque::RulesEngine::_private::TStatusValue
 		typename ThisClass::FBitFormat const InBitFormat)
 	PSYQUE_NOEXCEPT
 	{
-		return InBitFormat
-			== ThisClass::MakeBitFormat(EPsyqueRulesStatusKind::Empty);
+		return InBitFormat == static_cast<uint8>(EPsyqueRulesStatusKind::Empty);
 	}
 
 	/// @brief 真偽型のビット構成か判定する。
@@ -714,8 +713,7 @@ class Psyque::RulesEngine::_private::TStatusValue
 		typename ThisClass::FBitFormat const InBitFormat)
 	PSYQUE_NOEXCEPT
 	{
-		return InBitFormat
-			== ThisClass::MakeBitFormat(EPsyqueRulesStatusKind::Bool);
+		return InBitFormat == static_cast<uint8>(EPsyqueRulesStatusKind::Bool);
 	}
 
 	/// @brief 符号なし整数型のビット構成か判定する。
@@ -724,8 +722,8 @@ class Psyque::RulesEngine::_private::TStatusValue
 		typename ThisClass::FBitFormat const InBitFormat)
 	PSYQUE_NOEXCEPT
 	{
-		return ThisClass::MakeBitFormat(EPsyqueRulesStatusKind::Bool)
-			< InBitFormat;
+		return static_cast<uint8>(EPsyqueRulesStatusKind::Unsigned) <= InBitFormat
+			&& !ThisClass::IsSigned(InBitFormat);
 	}
 
 	/// @brief 符号あり整数型のビット構成か判定する。
@@ -734,8 +732,7 @@ class Psyque::RulesEngine::_private::TStatusValue
 		typename ThisClass::FBitFormat const InBitFormat)
 	PSYQUE_NOEXCEPT
 	{
-		return InBitFormat
-			< ThisClass::MakeBitFormat(EPsyqueRulesStatusKind::Float);
+		return static_cast<uint8>(EPsyqueRulesStatusKind::Signed) <= InBitFormat;
 	}
 
 	/// @brief 浮動小数点数型のビット構成か判定する。
@@ -744,8 +741,7 @@ class Psyque::RulesEngine::_private::TStatusValue
 		typename ThisClass::FBitFormat const InBitFormat)
 	PSYQUE_NOEXCEPT
 	{
-		return InBitFormat == static_cast<typename ThisClass::FBitFormat>(
-			EPsyqueRulesStatusKind::Float);
+		return InBitFormat == static_cast<uint8>(EPsyqueRulesStatusKind::Float);
 	}
 
 	/// @brief 状態値のビット構成から、状態値の型を構築する。

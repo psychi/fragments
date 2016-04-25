@@ -25,8 +25,8 @@
 #include "./Accumulator.h"
 #include "./Evaluator.h"
 #include "./Dispatcher.h"
-#include "./HandlerChunk.h"
-#include "./HandlerBuilder.h"
+//#include "./HandlerChunk.h"
+//#include "./HandlerBuilder.h"
 #include "./StatusBuilder.h"
 #include "./ExpressionBuilder.h"
 
@@ -79,7 +79,7 @@ template<> struct std::hash<FName>
 /// .
 /// @tparam TemplateUnsigned  @copydoc FReservoir::FStatusValue::FUnsigned
 /// @tparam TemplateFloat     @copydoc FReservoir::FStatusValue::FFloat
-/// @tparam TemplatePriority  @copydoc FDispatcher::FHandler::FPriority
+/// @tparam TemplatePriority  @copydoc FDispatcher::FHook::FPriority
 /// @tparam TemplateHasher    @copydoc FHasher
 /// @tparam TemplateAllocator @copydoc FAllocator
 template<
@@ -120,11 +120,6 @@ class Psyque::RulesEngine::TDriver
 	public: using FChunkKey = typename ThisClass::FReservoir::FChunkKey;
 
 	//-------------------------------------------------------------------------
-	/// @brief 駆動器で用いる条件挙動チャンクの型。
-	private: using FHandlerChunk = Psyque::RulesEngine::_private::THandlerChunk<
-		typename ThisClass::FDispatcher>;
-
-	//-------------------------------------------------------------------------
 	/// @name 構築と代入
 	/// @{
 
@@ -144,12 +139,8 @@ class Psyque::RulesEngine::TDriver
 		PSYQUE_RULES_ENGINE_DRIVER_STATUS_CAPACITY_DEFAULT,
 		PSYQUE_RULES_ENGINE_DRIVER_EXPRESSION_CAPACITY_DEFAULT,
 		PSYQUE_RULES_ENGINE_DRIVER_CACHE_CAPACITY_DEFAULT,
-		ThisClass::FAllocator()),
-	HandlerChunks(ThisClass::FAllocator())
-	{
-		this->HandlerChunks.reserve(
-			PSYQUE_RULES_ENGINE_DRIVER_CHUNK_CAPACITY_DEFAULT);
-	}
+		ThisClass::FAllocator())
+	{}
 
 	/// @brief 空の駆動器を構築する。
 	public: TDriver(
@@ -170,40 +161,8 @@ class Psyque::RulesEngine::TDriver
 	Evaluator(InChunkCapacity, InExpressionCapacity, InAllocator),
 	Dispatcher(
 		InStatusCapacity, InExpressionCapacity, InCacheCapacity, InAllocator),
-	HandlerChunks(InAllocator),
 	HashFunction(MoveTemp(InHashFunction))
-	{
-		this->HandlerChunks.reserve(InChunkCapacity);
-	}
-
-#ifdef PSYQUE_NO_STD_DEFAULTED_FUNCTION
-	/// @brief ムーブ構築子。
-	public: TDriver(
-		/// [in,out] ムーブ元となるインスタンス。
-		ThisClass&& OutSource):
-	Reservoir(MoveTemp(OutSource.Reservoir)),
-	Accumulator(MoveTemp(OutSource.Accumulator)),
-	Evaluator(MoveTemp(OutSource.Evaluator)),
-	Dispatcher(MoveTemp(OutSource.Dispatcher)),
-	HandlerChunks(MoveTemp(OutSource.HandlerChunks)),
-	HashFunction(MoveTemp(OutSource.HashFunction))
 	{}
-
-	/// @brief ムーブ代入演算子。
-	/// @return *this
-	public: ThisClass& operator=(
-		/// [in,out] ムーブ元となるインスタンス。
-		ThisClass&& OutSource)
-	{
-		this->Reservoir = MoveTemp(OutSource.Reservoir);
-		this->Accumulator = MoveTemp(OutSource.Accumulator);
-		this->Evaluator = MoveTemp(OutSource.Evaluator);
-		this->Dispatcher = MoveTemp(OutSource.Dispatcher);
-		this->HandlerChunks = MoveTemp(OutSource.HandlerChunks);
-		this->HashFunction = MoveTemp(OutSource.HashFunction);
-		return *this;
-	}
-#endif // defined(PSYQUE_NO_STD_DEFAULTED_FUNCTION)
 
 	/// @brief 駆動器を再構築する。
 	public: void Rebuild(
@@ -222,11 +181,6 @@ class Psyque::RulesEngine::TDriver
 		this->Evaluator.Rebuild(InChunkCapacity, InExpressionCapacity);
 		this->Dispatcher.Rebuild(
 			InStatusCapacity, InExpressionCapacity, InCacheCapacity);
-		this->HandlerChunks.shrink_to_fit();
-		for (auto& LocalHandlerChunk: this->HandlerChunks)
-		{
-			LocalHandlerChunk.shrink_to_fit();
-		}
 	}
 	/// @}
 	//-------------------------------------------------------------------------
@@ -400,61 +354,6 @@ class Psyque::RulesEngine::TDriver
 	{
 		this->Reservoir.RemoveChunk(InChunkKey);
 		this->Evaluator.RemoveChunk(InChunkKey);
-		ThisClass::FHandlerChunk::erase(this->HandlerChunks, InChunkKey);
-	}
-	/// @}
-	//-------------------------------------------------------------------------
-	/// @name 条件挙動ハンドラ
-	/// @{
-
-	/// @brief 条件挙動ハンドラを登録し、条件挙動関数を強参照する。
-	/// @sa
-	///   ThisClass::Tick で、 InExpressionKey に対応する条件式の評価が変化し
-	///   InCondition と合致すると、 InFunction の指す条件挙動関数が呼び出される。
-	/// @sa
-	///   InFunction の指す条件挙動関数が解体されると、それを弱参照している
-	///   FDispatcher::FHandler は自動的に削除される。明示的に削除するには、
-	///   ThisClass::Dispatcher に対して FDispatcher::UnregisterHandler を使う。
-	/// @retval true
-	///   成功。 InFunction の指す条件挙動関数を弱参照する
-	///   FDispatcher::FHandler を構築して ThisClass::Dispatcher
-	///   に登録し、登録した条件挙動関数の強参照をチャンクに追加した。
-	/// @retval false
-	///   失敗。 FDispatcher::FHandler は構築されず、
-	///   条件挙動関数の強参照はチャンクに追加されなかった。
-	///   - InCondition が EPsyqueRulesUnitCondition::Invalid だと、失敗する。
-	///   - InFunction が空か、空の関数を指していると、失敗する。
-	///   - InExpressionKey と対応する FDispatcher::FHandler に、
-	///     InFunction の指す条件挙動関数が既に登録されていると、失敗する。
-	public: bool RegisterHandler(
-		/// [in] 条件挙動関数を追加するチャンクの識別値。
-		typename ThisClass::FChunkKey const InChunkKey,
-		/// [in] InFunction の指す条件挙動関数に対応する
-		/// FEvaluator::FExpression の識別値。
-		typename ThisClass::FEvaluator::FExpressionKey const InExpressionKey,
-		/// [in] InFunction の指す条件挙動関数を呼び出す挙動条件。
-		/// FDispatcher::FHandler::MakeCondition から作る。
-		typename ThisClass::FDispatcher::FHandler::FCondition const InCondition,
-		/// [in] 登録する FDispatcher::FHandler::FFunction を指すスマートポインタ。
-		/// InExpressionKey に対応する条件式の評価が変化して
-		/// InCondition に合致すると、呼び出される。
-		typename ThisClass::FDispatcher::FHandler::FFunctionSharedPtr InFunction,
-		/// [in] InFunction の指す条件挙動関数の呼び出し優先順位。
-		/// 昇順に呼び出される。
-		typename ThisClass::FDispatcher::FHandler::FPriority const InPriority =
-			PSYQUE_RULES_ENGINE_DISPATCHER_FUNCTION_PRIORITY_DEFAULT)
-	{
-		// 条件挙動関数を条件挙動器へ登録する。
-		auto const local_register_handler(
-			this->Dispatcher.RegisterHandler(
-				InExpressionKey, InCondition, InFunction, InPriority));
-		if (local_register_handler)
-		{
-			// 条件挙動関数を条件挙動チャンクへ追加する。
-			ThisClass::FHandlerChunk::Extend(
-				this->HandlerChunks, InChunkKey, MoveTemp(InFunction));
-		}
-		return local_register_handler;
 	}
 	/// @}
 	//-------------------------------------------------------------------------
@@ -544,9 +443,6 @@ class Psyque::RulesEngine::TDriver
 
 	/// @brief 駆動器で用いる条件挙動器。
 	public: typename ThisClass::FDispatcher Dispatcher;
-
-	/// @brief 駆動器で用いる条件挙動チャンクのコンテナ。
-	private: typename ThisClass::FHandlerChunk::FArray HandlerChunks;
 
 	/// @brief 駆動器で用いる文字列ハッシュ関数オブジェクト。
 	public: typename ThisClass::FHasher HashFunction;

@@ -453,27 +453,7 @@ class PSYQUERULESPLUGIN_API UPsyqueRulesEngine: public UObject
 	/// @name 条件挙動
 	/// @{
 	public:
-	/// @brief 条件イベントを登録する。
-	/// @details 条件式の評価が変化した際に実行するデリゲートを登録する。
-	/// @return InDelegate を指すハンドル。
-	///   ただし登録に失敗した場合は、空のハンドルを戻す。
-	/// @param InExpressionKey デリゲート実行判定をする条件式の名前ハッシュ値。
-	///   UPsyqueRulesEngine::MakeHash から取得する。
-	/// @param InCondition デリゲート実行判定に合格する条件。
-	///   UPsyqueRulesFunctionLibrary::MakeCondition から取得する。
-	/// @param InPriority デリゲートの実行優先順位。降順に実行される。
-	/// @param InDelegate 実行するデリゲート。
-	FDelegateHandle RegisterEvent(
-		int32 const InExpressionKey,
-		uint8 const InCondition,
-		int32 const InPriority,
-		FPsyqueRulesBehaviorDelegate const& InDelegate)
-	{
-		return this->Driver.Dispatcher.RegisterHandler(
-			InExpressionKey, InCondition, InPriority, InDelegate);
-	}
-
-	/// @brief 条件イベントを登録する。
+	/// @brief 条件挙動を登録する。
 	/// @details 条件式の評価が変化した際に実行する動的デリゲートを登録する。
 	/// @param InExpressionKey デリゲート実行判定をする条件式の名前ハッシュ値。
 	///   UPsyqueRulesEngine::MakeHash から取得する。
@@ -488,7 +468,7 @@ class PSYQUERULESPLUGIN_API UPsyqueRulesEngine: public UObject
 		int32 const InPriority,
 		FPsyqueRulesBehaviorDynamicDelegate const& InDelegate)
 	{
-		return this->RegisterEvent(
+		return this->Driver.Dispatcher.RegisterHook(
 			InExpressionKey,
 			InCondition,
 			InPriority,

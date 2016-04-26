@@ -243,7 +243,7 @@ DECLARE_DELEGATE_ThreeParams(
 /// @note マクロ引数の記述を1行に収めないと、UE4.11以前ではビルド時にエラーが出る。
 /// @cond
 DECLARE_DYNAMIC_DELEGATE_ThreeParams(
-	FPsyqueRulesDynamicDelegate, int32 const, InExpressionKey, EPsyqueKleene const, InNowEvaluation, EPsyqueKleene const, InLastEvaluation);
+	FPsyqueRulesDynamicDelegate, int32 const, InExpressionKey, EPsyqueKleene const, InBeforeEvaluation, EPsyqueKleene const, InLatestEvaluation);
 /// @endcond
 
 // vim: set noexpandtab:

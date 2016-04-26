@@ -50,7 +50,7 @@ class PSYQUERULESPLUGIN_API UPsyqueRulesEngine: public UObject
 	/// @return InName に対応する名前ハッシュ値。
 	/// @param InName 名前ハッシュ値のもととなる FName インスタンス。
 	UFUNCTION(BlueprintPure, Category="PsyqueRulesPlugin")
-	int32 MakeHash(FName const& InName) const
+	int32 MakeHash(FName const InName) const
 	{
 		return this->Driver.HashFunction(InName);
 	}
@@ -495,22 +495,23 @@ class PSYQUERULESPLUGIN_API UPsyqueRulesEngine: public UObject
 	UFUNCTION(BlueprintCallable, Category="PsyqueRulesPlugin")
 	void UnregisterEvents(FPsyqueRulesDynamicDelegate const& InDelegate)
 	{
-		auto const LocalObject(InDelegate.GetUObject());
-		if (LocalObject != nullptr)
-		{
-			this->Driver.Dispatcher.UnregisterHooks(
-				*LocalObject, InDelegate.GetFunctionName());
-		}
+		this->UnregisterEventsByObject(
+			InDelegate.GetUObject(), InDelegate.GetFunctionName());
 	}
 
 	/// @brief UObject に対応する条件イベントを、すべて取り除く。
 	/// @param InObject 取り除く条件イベントに対応する UObject を指すポインタ。
+	/// @param InFunctionName
+	///   取り除く条件イベントに対応する UObject のメソッド名。
+	///   ただし空文字列の場合は、すべてのメソッドが対象となる。
 	UFUNCTION(BlueprintCallable, Category="PsyqueRulesPlugin")
-	void UnregisterEventsByObject(UObject const* const InObject)
+	void UnregisterEventsByObject(
+		UObject const* const InObject,
+		FName const InFunctionName)
 	{
 		if (InObject != nullptr)
 		{
-			this->Driver.Dispatcher.UnregisterHooks(*InObject);
+			this->Driver.Dispatcher.UnregisterHooks(*InObject, InFunctionName);
 		}
 	}
 
@@ -524,12 +525,10 @@ class PSYQUERULESPLUGIN_API UPsyqueRulesEngine: public UObject
 		int32 const InExpressionKey,
 		FPsyqueRulesDynamicDelegate const& InDelegate)
 	{
-		auto const LocalObject(InDelegate.GetUObject());
-		if (LocalObject != nullptr)
-		{
-			this->Driver.Dispatcher.UnregisterHooks(
-				InExpressionKey, *LocalObject, InDelegate.GetFunctionName());
-		}
+		this->UnregisterEventsOfEachExpressionByObject(
+			InExpressionKey,
+			InDelegate.GetUObject(),
+			InDelegate.GetFunctionName());
 	}
 
 	/// @brief 条件式と UObject に対応する条件イベントを、すべて取り除く。
@@ -537,14 +536,21 @@ class PSYQUERULESPLUGIN_API UPsyqueRulesEngine: public UObject
 	///   取り除く条件イベントに対応する条件式を指す名前ハッシュ値。
 	///   UPsyqueRulesEngine::MakeHash から取得する。
 	/// @param InObject 取り除く条件イベントに対応する UObject を指すポインタ。
+	///   取り除く条件イベントに対応する UObject のメソッド名。
+	///   ただし空文字列の場合は、すべてのメソッドが対象となる。
+	/// @param InFunctionName
+	///   取り除く条件イベントに対応する UObject のメソッド名。
+	///   ただし空文字列の場合は、すべてのメソッドが対象となる。
 	UFUNCTION(BlueprintCallable, Category="PsyqueRulesPlugin")
 	void UnregisterEventsOfEachExpressionByObject(
 		int32 const InExpressionKey,
-		UObject const* const InObject)
+		UObject const* const InObject,
+		FName const InFunctionName)
 	{
 		if (InObject != nullptr)
 		{
-			this->Driver.Dispatcher.UnregisterHooks(InExpressionKey, *InObject);
+			this->Driver.Dispatcher.UnregisterHooks(
+				InExpressionKey, *InObject, InFunctionName);
 		}
 	}
 

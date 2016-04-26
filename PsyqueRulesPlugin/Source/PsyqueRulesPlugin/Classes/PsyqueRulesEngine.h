@@ -50,9 +50,7 @@ class PSYQUERULESPLUGIN_API UPsyqueRulesEngine: public UObject
 	/// @return InName に対応する名前ハッシュ値。
 	/// @param InName 名前ハッシュ値のもととなる FName インスタンス。
 	UFUNCTION(BlueprintPure, Category="PsyqueRulesPlugin")
-	int32 MakeHash(
-		FName const& InName)
-	const
+	int32 MakeHash(FName const& InName) const
 	{
 		return this->Driver.HashFunction(InName);
 	}
@@ -450,32 +448,132 @@ class PSYQUERULESPLUGIN_API UPsyqueRulesEngine: public UObject
 	}
 	/// @}
 	//-------------------------------------------------------------------------
-	/// @name 条件挙動
+	/// @name 条件イベント
 	/// @{
 	public:
-	/// @brief 条件挙動を登録する。
+	/// @brief 条件イベントを登録する。
 	/// @details 条件式の評価が変化した際に実行する動的デリゲートを登録する。
-	/// @param InExpressionKey デリゲート実行判定をする条件式の名前ハッシュ値。
+	/// @sa 登録した条件イベントは、以下の関数によって取り除ける。
+	///   - UPsyqueRulesEngine::UnregisterEvents
+	///   - UPsyqueRulesEngine::UnregisterEventsByObject
+	///   - UPsyqueRulesEngine::UnregisterEventsOfEachExpression
+	///   - UPsyqueRulesEngine::UnregisterEventsOfEachExpressionByObject
+	///   - UPsyqueRulesEngine::UnregisterEventsOfEachCondition
+	/// @return 登録に成功したかどうか。
+	///   - InBeforeCondition と InLatestCondition が等価だと、失敗する。
+	///   - InDelegate が無効だと、失敗する。
+	/// @param InExpressionKey
+	///   InDelegate を実行するか判定する条件式を指す名前ハッシュ値。
 	///   UPsyqueRulesEngine::MakeHash から取得する。
-	/// @param InCondition デリゲート実行判定に合格する条件。
-	///   UPsyqueRulesFunctionLibrary::MakeCondition から取得する。
-	/// @param InPriority デリゲートの実行優先順位。降順に実行される。
-	/// @param InDelegate 実行する動的デリゲート。
+	/// @param InBeforeCondition
+	///   InDelegate を実行する条件となる、条件式の直前の評価。
+	/// @param InLatestCondition
+	///   InDelegate を実行する条件となる、条件式の最新の評価。
+	/// @param InPriority InDelegate の実行優先順位。降順に実行される。
+	/// @param InDelegate 条件イベントで実行する動的デリゲート。
 	UFUNCTION(BlueprintCallable, Category="PsyqueRulesPlugin")
 	bool RegisterEvent(
 		int32 const InExpressionKey,
-		uint8 const InCondition,
+		EPsyqueKleene const InBeforeCondition,
+		EPsyqueKleene const InLatestCondition,
 		int32 const InPriority,
-		FPsyqueRulesBehaviorDynamicDelegate const& InDelegate)
+		FPsyqueRulesDynamicDelegate const& InDelegate)
 	{
 		return this->Driver.Dispatcher.RegisterHook(
 			InExpressionKey,
-			InCondition,
+			InBeforeCondition,
+			InLatestCondition,
 			InPriority,
-			FPsyqueRulesBehaviorDelegate::CreateUFunction(
+			FPsyqueRulesDelegate::CreateUFunction(
 				const_cast<UObject*>(InDelegate.GetUObject()),
 				InDelegate.GetFunctionName()))
 		.IsValid();
+	}
+
+	/// @brief デリゲートに対応する条件イベントを、すべて取り除く。
+	/// @param InDelegate 取り除く条件イベントのデリゲート。
+	UFUNCTION(BlueprintCallable, Category="PsyqueRulesPlugin")
+	void UnregisterEvents(FPsyqueRulesDynamicDelegate const& InDelegate)
+	{
+		auto const LocalObject(InDelegate.GetUObject());
+		if (LocalObject != nullptr)
+		{
+			this->Driver.Dispatcher.UnregisterHooks(
+				*LocalObject, InDelegate.GetFunctionName());
+		}
+	}
+
+	/// @brief UObject に対応する条件イベントを、すべて取り除く。
+	/// @param InObject 取り除く条件イベントに対応する UObject を指すポインタ。
+	UFUNCTION(BlueprintCallable, Category="PsyqueRulesPlugin")
+	void UnregisterEventsByObject(UObject const* const InObject)
+	{
+		if (InObject != nullptr)
+		{
+			this->Driver.Dispatcher.UnregisterHooks(*InObject);
+		}
+	}
+
+	/// @brief 条件式とデリゲートに対応する条件イベントを、すべて取り除く。
+	/// @param InExpressionKey
+	///   取り除く条件イベントに対応する条件式を指す名前ハッシュ値。
+	///   UPsyqueRulesEngine::MakeHash から取得する。
+	/// @param InDelegate 取り除く条件イベントのデリゲート。
+	UFUNCTION(BlueprintCallable, Category="PsyqueRulesPlugin")
+	void UnregisterEventsOfEachExpression(
+		int32 const InExpressionKey,
+		FPsyqueRulesDynamicDelegate const& InDelegate)
+	{
+		auto const LocalObject(InDelegate.GetUObject());
+		if (LocalObject != nullptr)
+		{
+			this->Driver.Dispatcher.UnregisterHooks(
+				InExpressionKey, *LocalObject, InDelegate.GetFunctionName());
+		}
+	}
+
+	/// @brief 条件式と UObject に対応する条件イベントを、すべて取り除く。
+	/// @param InExpressionKey
+	///   取り除く条件イベントに対応する条件式を指す名前ハッシュ値。
+	///   UPsyqueRulesEngine::MakeHash から取得する。
+	/// @param InObject 取り除く条件イベントに対応する UObject を指すポインタ。
+	UFUNCTION(BlueprintCallable, Category="PsyqueRulesPlugin")
+	void UnregisterEventsOfEachExpressionByObject(
+		int32 const InExpressionKey,
+		UObject const* const InObject)
+	{
+		if (InObject != nullptr)
+		{
+			this->Driver.Dispatcher.UnregisterHooks(InExpressionKey, *InObject);
+		}
+	}
+
+	/// @brief 条件式と遷移条件とデリゲートに対応する条件イベントを取り除く。
+	/// @param InExpressionKey
+	///   取り除く条件イベントに対応する条件式を指す名前ハッシュ値。
+	///   UPsyqueRulesEngine::MakeHash から取得する。
+	/// @param InBeforeCondition
+	///   取り除く条件イベントに対応する条件式の前回の評価。
+	/// @param InLatestCondition
+	///   取り除く条件イベントに対応する条件式の最新の評価。
+	/// @param InDelegate 取り除く条件イベントのデリゲート。
+	UFUNCTION(BlueprintCallable, Category="PsyqueRulesPlugin")
+	void UnregisterEventsOfEachCondition(
+		int32 const InExpressionKey,
+		EPsyqueKleene const InBeforeCondition,
+		EPsyqueKleene const InLatestCondition,
+		FPsyqueRulesDynamicDelegate const& InDelegate)
+	{
+		auto const LocalObject(InDelegate.GetUObject());
+		if (LocalObject != nullptr)
+		{
+			this->Driver.Dispatcher.UnregisterHooks(
+				InExpressionKey,
+				InBeforeCondition,
+				InLatestCondition,
+				*LocalObject,
+				InDelegate.GetFunctionName());
+		}
 	}
 	/// @}
 	//-------------------------------------------------------------------------
@@ -549,8 +647,7 @@ class PSYQUERULESPLUGIN_API UPsyqueRulesEngine: public UObject
 	/// @return 状態値の型の種類。
 	/// @param InBitFormat 状態値のビット構成。
 	UFUNCTION(BlueprintPure, Category="PsyqueRulesPlugin")
-	static EPsyqueRulesStatusKind MakeStatusKind(
-		uint8 const InBitFormat)
+	static EPsyqueRulesStatusKind MakeStatusKind(uint8 const InBitFormat)
 	{
 		using FStatusValue = ThisClass::FDriver::FReservoir::FStatusValue;
 		return FStatusValue::MakeKind(InBitFormat);
@@ -574,8 +671,7 @@ class PSYQUERULESPLUGIN_API UPsyqueRulesEngine: public UObject
 	/// @return 状態値のビット幅。
 	/// @param InBitFormat 状態値のビット構成。
 	UFUNCTION(BlueprintPure, Category="PsyqueRulesPlugin")
-	static uint8 MakeStatusBitWidth(
-		uint8 const InBitFormat)
+	static uint8 MakeStatusBitWidth(uint8 const InBitFormat)
 	{
 		using FStatusValue = ThisClass::FDriver::FReservoir::FStatusValue;
 		return FStatusValue::MakeBitWidth(InBitFormat);

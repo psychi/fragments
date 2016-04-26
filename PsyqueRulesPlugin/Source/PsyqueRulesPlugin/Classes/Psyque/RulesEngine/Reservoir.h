@@ -1119,6 +1119,10 @@ class Psyque::RulesEngine::_private::TReservoir
 		{
 			InBitWidth = 0;
 		}
+		else if (std::is_signed<TemplateInteger>::value)
+		{
+			LocalInteger &= Psyque::MakeBitMask<TemplateInteger>(InBitWidth);
+		}
 		return typename ThisClass::FBitset(LocalInteger, InBitWidth);
 	}
 

@@ -35,17 +35,20 @@ class Psyque::RulesEngine::_private::THook
 	public: using FExpressionKey = TemplateExpressionKey;
 	/// @brief THook::Delegate の実行優先順位。降順に実行される。
 	public: using FPriority = TemplatePriority;
-	/// @brief 挙動条件。 THook::Delegate を実行する条件。
+	/// @brief 条件式の評価の遷移条件。 THook::Delegate を実行する条件。
 	/// @details
 	///   TExpressionMonitor::CacheHooks で条件式の評価の変化を検知した際に、
-	///   挙動条件と条件式の評価が合致すると、 THook::Delegate が実行される。
+	///   条件式の前回の評価と最新の評価が合致すると、
+	///   THook::Delegate が実行される。
 	/// @sa
-	///   UPsyqueRulesFunctionLibrary::MakeCondition
+	///   ThisClass::MakeTransition
 	///   で、条件式の最新の評価と前回の評価を組み合わせて作る。
-	public: using FCondition = uint8;
+	public: using FTransition = uint8;
 	/// @brief 挙動条件で実行するデリゲートを表す型。
 	public: using FDelegateInstance
-		= ::FPsyqueRulesBehaviorDelegate::TDelegateInstanceInterface;
+		= ::FPsyqueRulesDelegate::TDelegateInstanceInterface;
+
+	private: enum{TransitionBitWidth = 2};
 
 	//-------------------------------------------------------------------------
 	/// @brief 条件挙動フックのキャッシュ。
@@ -59,15 +62,9 @@ class Psyque::RulesEngine::_private::THook
 			/// [in] キャッシュする条件挙動フック。
 			THook const& InHook,
 			/// [in] ThisClass::ExpressionKey の初期値。
-			typename Super::FExpressionKey InExpressionKey,
-			/// [in] ThisClass::CurrentEvaluation の初期値。
-			EPsyqueKleene const InCurrentEvaluation,
-			/// [in] ThisClass::LastEvaluation の初期値。
-			EPsyqueKleene const InLastEvaluation):
+			typename Super::FExpressionKey InExpressionKey):
 		Super(InHook),
-		ExpressionKey(MoveTemp(InExpressionKey)),
-		CurrentEvaluation(InCurrentEvaluation),
-		LastEvaluation(InLastEvaluation)
+		ExpressionKey(MoveTemp(InExpressionKey))
 		{}
 
 		/// @brief デリゲートを実行する。
@@ -79,24 +76,20 @@ class Psyque::RulesEngine::_private::THook
 			return LocalDelegate != nullptr
 				&& LocalDelegate->ExecuteIfSafe(
 					this->ExpressionKey,
-					this->CurrentEvaluation,
-					this->LastEvaluation);
+					Super::GetBeforeEvaluation(this->GetCondition()),
+					Super::GetLatestEvaluation(this->GetCondition()));
 		}
 
 		/// @brief 条件式の識別値。
 		private: typename Super::FExpressionKey ExpressionKey;
-		/// @brief 条件式の最新の評価結果。
-		private: EPsyqueKleene CurrentEvaluation;
-		/// @brief 条件式の前回の評価結果。
-		private: EPsyqueKleene LastEvaluation;
 
 	}; // class FCache
 
 	//---------------------------------------------------------------------
 	/// @brief 条件挙動フックを構築する。
 	public: THook(
-		/// [in] THook::Condition の初期値。 THook::MakeCondition で作る。
-		typename ThisClass::FCondition const InCondition,
+		/// [in] THook::Condition の初期値。 ThisClass::MakeTransition で作る。
+		typename ThisClass::FTransition const InCondition,
 		/// [in] THook::Priority の初期値。
 		typename ThisClass::FPriority const InPriority,
 		/// [in] THook::Delegate の初期値。
@@ -107,37 +100,58 @@ class Psyque::RulesEngine::_private::THook
 	{}
 
 	//-------------------------------------------------------------------------
-	/// @brief 挙動条件を取得する。
+	/// @brief 遷移条件を取得する。
 	/// @return @copydoc THook::Condition
-	public: typename ThisClass::FCondition GetCondition() const PSYQUE_NOEXCEPT
+	public: typename ThisClass::FTransition GetCondition() const PSYQUE_NOEXCEPT
 	{
 		return this->Condition;
 	}
 
-	/// @brief 条件挙動関数の呼び出し優先順位を取得する。
-	/// @return @copydoc THook::Priority
-	public: typename ThisClass::FPriority GetPriority() const PSYQUE_NOEXCEPT
+	/// @brief 条件式の評価の遷移を表す値を取得する。
+	public: static typename ThisClass::FTransition MakeTransition(
+		/// [in] 条件式の前回の評価。
+		::EPsyqueKleene const InBeforeCondition,
+		/// [in] 条件式の今回の評価。
+		::EPsyqueKleene const InLatestCondition)
 	{
-		return this->Priority;
+		return InBeforeCondition != InLatestCondition?
+			ThisClass::MakeCondition(InLatestCondition) | (
+				ThisClass::MakeCondition(InBeforeCondition)
+					<< ThisClass::TransitionBitWidth):
+			0;
 	}
 
-	/// @brief 条件式の評価の遷移と挙動条件が合致するか判定する。
-	public: bool IsMatched(
-		/// [in] 条件式の評価の、最新と前回を合成した値。
-		typename ThisClass::FCondition const InTransition)
-	const
+	protected: static EPsyqueKleene GetBeforeEvaluation(
+		typename ThisClass::FTransition const InTransition)
 	{
-		check(InTransition != static_cast<uint8>(EPsyqueRulesUnitCondition::Invalid));
-		return InTransition == (InTransition & this->GetCondition());
+		return ThisClass::GetLatestEvaluation(
+			InTransition >> ThisClass::TransitionBitWidth);
+	}
+
+	protected: static EPsyqueKleene GetLatestEvaluation(
+		typename ThisClass::FTransition const InTransition)
+	{
+		auto const LocalEvaluation(
+			InTransition & ((1 << ThisClass::TransitionBitWidth) - 1));
+		return LocalEvaluation == static_cast<uint8>(EPsyqueKleene::IsFalse)?
+			EPsyqueKleene::IsFalse:
+			LocalEvaluation == static_cast<uint8>(EPsyqueKleene::IsTrue)?
+				EPsyqueKleene::IsTrue: EPsyqueKleene::Unknown;
+	}
+
+	private: static typename ThisClass::FTransition MakeCondition(
+		::EPsyqueKleene const InCondition)
+	{
+		return static_cast<typename ThisClass::FTransition>(InCondition) & 3;
 	}
 
 	//---------------------------------------------------------------------
 	/// @brief 条件に合致した際に実行するデリゲート。
 	public: ::FDelegateBase<> Delegate;
 	/// @brief デリゲートの実行優先順位。
-	private: typename ThisClass::FPriority Priority;
-	/// @brief デリゲートを実行する条件。
-	private: typename ThisClass::FCondition Condition;
+	public: typename ThisClass::FPriority Priority;
+	/// @brief デリゲートを実行する遷移条件。
+	private: typename ThisClass::FTransition Condition;
 
 }; // class Psyque::RulesEngine::_private::THook
 

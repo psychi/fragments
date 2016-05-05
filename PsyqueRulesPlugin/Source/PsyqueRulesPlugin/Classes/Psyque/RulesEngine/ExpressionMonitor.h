@@ -163,9 +163,9 @@ class Psyque::RulesEngine::_private::TExpressionMonitor
 				typename ThisClass::FHook const& InHook)
 			->bool
 			{
-				return InHook.Delegate.IsBound()
-					&& (LocalCondition != InHook.GetCondition()
-						|| InHook.Delegate.GetHandle() != InDelegateHandle);
+				return !InHook.Delegate.IsBound()
+					|| (LocalCondition == InHook.GetCondition()
+						&& InHook.Delegate.GetHandle() == InDelegateHandle);
 			});
 	}
 
@@ -190,9 +190,11 @@ class Psyque::RulesEngine::_private::TExpressionMonitor
 				typename ThisClass::FHook const& InHook)
 			->bool
 			{
-				return LocalCondition != InHook.GetCondition()
-					|| !ThisClass::IsEqualDelegate(
-						InHook.Delegate, InObject, InFunctionName);
+				auto const LocalDelegate(InHook.Delegate.GetDelegateInstance());
+				return ThisClass::IsInvalidDelegate(LocalDelegate)
+					|| (LocalCondition == InHook.GetCondition()
+						&& ThisClass::IsEqualDelegate(
+							*LocalDelegate, InObject, InFunctionName));
 			});
 	}
 
@@ -206,8 +208,8 @@ class Psyque::RulesEngine::_private::TExpressionMonitor
 		this->EraseHooks(
 			[&InDelegateHandle](typename ThisClass::FHook const& InHook)->bool
 			{
-				return InHook.Delegate.IsBound()
-					&& InHook.Delegate.GetHandle() != InDelegateHandle;
+				return !InHook.Delegate.IsBound()
+					|| InHook.Delegate.GetHandle() == InDelegateHandle;
 			});
 	}
 
@@ -225,8 +227,10 @@ class Psyque::RulesEngine::_private::TExpressionMonitor
 				typename ThisClass::FHook const& InHook)
 			->bool
 			{
-				return !ThisClass::IsEqualDelegate(
-					InHook.Delegate, InObject, InFunctionName);
+				auto const LocalDelegate(InHook.Delegate.GetDelegateInstance());
+				return ThisClass::IsInvalidDelegate(LocalDelegate)
+					|| ThisClass::IsEqualDelegate(
+						*LocalDelegate, InObject, InFunctionName);
 			});
 	}
 
@@ -238,7 +242,7 @@ class Psyque::RulesEngine::_private::TExpressionMonitor
 		this->EraseHooks(
 			[](typename ThisClass::FHook const& InHook)->bool
 			{
-				return InHook.IsBound();
+				return !InHook.Delegate.IsBound();
 			});
 		this->Hooks.shrink_to_fit();
 		return this->Hooks.empty();
@@ -372,21 +376,25 @@ class Psyque::RulesEngine::_private::TExpressionMonitor
 	}
 
 	//-------------------------------------------------------------------------
+	/// @brief 無効なデリゲートか判定する。
+	private: static bool IsInvalidDelegate(
+		::IDelegateInstance* const InDelegate)
+	{
+		return !::FDelegateBase<>(InDelegate).IsBound();
+	}
+
 	/// @brief 等価なデリゲートか判定する。
 	private: static bool IsEqualDelegate(
-		/// [in] 比較の左辺となるデリゲート。
-		::FDelegateBase<> const& InDelegate,
-		/// [in] 比較の右辺となるデリゲートが参照している UObject 。
+		/// [in] 等価比較の左辺となるデリゲート。
+		::IDelegateInstance const& InDelegate,
+		/// [in] 等価比較の右辺となるデリゲートから参照するオブジェクト。
 		::UObject const& InObject,
-		/// [in] 比較の右辺となるデリゲートが参照している関数の名前。
+		/// [in] 等価比較の右辺となるデリゲートから参照するメソッド名。
 		::FName const& InFunctionName)
 	{
-		auto const LocalDelegate(InDelegate.GetDelegateInstance());
-		return LocalDelegate != nullptr
-			&& LocalDelegate->IsSafeToExecute()
-			&& (InFunctionName.IsNone()
-				|| InFunctionName == LocalDelegate->GetFunctionName())
-			&& &InObject == LocalDelegate->GetRawUserObject();
+		return (InFunctionName.IsNone()
+				|| InDelegate.GetFunctionName() == InFunctionName)
+			&& InDelegate.GetRawUserObject() == &InObject;
 	}
 
 	/// @brief 条件式が参照する状態値を状態監視器へ登録する。
@@ -521,12 +529,12 @@ class Psyque::RulesEngine::_private::TExpressionMonitor
 			auto& LocalHook(this->Hooks[i]);
 			if (InFunction(LocalHook))
 			{
-				++i;
+				LocalHook.Delegate.Unbind();
+				this->Hooks.erase(this->Hooks.begin() + i);
 			}
 			else
 			{
-				LocalHook.Delegate.Unbind();
-				this->Hooks.erase(this->Hooks.begin() + i);
+				++i;
 			}
 		}
 	}

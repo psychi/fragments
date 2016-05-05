@@ -26,7 +26,7 @@ enum class EPsyqueKleene: uint8
 	IsTrue = 1 UMETA(DisplayName="True"),
 
 	/// 真か偽か不明。
-	Unknown = 128 UMETA(DisplayName="Unknown")
+	Unknown = 254 UMETA(DisplayName="Unknown")
 
 }; // enum class EPsyqueKleene
 

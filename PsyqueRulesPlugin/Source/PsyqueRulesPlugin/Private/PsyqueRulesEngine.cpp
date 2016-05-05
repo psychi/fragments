@@ -98,30 +98,4 @@ void UPsyqueRulesEngine::ExtendChunkFromJsonString(
 		StringToJsonArray(InBehaviorJson));
 }
 
-//-----------------------------------------------------------------------------
-UPsyqueRulesEngine* UPsyqueRulesEngine::Create()
-{
-	auto const LocalEngine(NewObject<UPsyqueRulesEngine>());
-	if (LocalEngine != nullptr)
-	{
-		::UnnamedEngine = LocalEngine;
-		return LocalEngine;
-	}
-	return nullptr;
-}
-
-bool UPsyqueRulesEngine::Destroy()
-{
-	if (::UnnamedEngine.IsValid())
-	{
-		::UnnamedEngine.Reset();
-		return true;
-	}
-	return false;
-}
-
-UPsyqueRulesEngine* UPsyqueRulesEngine::Get()
-{
-	return ::UnnamedEngine.Get();
-}
 // vim: set noexpandtab:

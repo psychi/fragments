@@ -24,16 +24,10 @@ void FPsyqueRulesPlugin::StartupModule()
 	// このモジュールがメモリにロードされた後で、この関数が呼び出される。
 	// (もちろん、大域変数は初期化された後)
 	this->Super::StartupModule();
-
-	// ドライバを構築する。
-	UPsyqueRulesEngine::Create();
 }
 
 void FPsyqueRulesPlugin::ShutdownModule()
 {
-	// ドライバを破棄する。
-	UPsyqueRulesEngine::Destroy();
-
 	// This function may be called during shutdown to clean up your module.
 	// For modules that support dynamic reloading,
 	// we call this function before unloading the module.

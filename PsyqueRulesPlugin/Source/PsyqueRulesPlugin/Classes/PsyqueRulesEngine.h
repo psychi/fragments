@@ -12,15 +12,28 @@
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief Blueprintからは、このクラスを介してルールエンジンを操作する。
 /// @par 使い方の概略
-/// - UPsyqueRulesEngine::Get で、ルールエンジン駆動器を取得する。
+/// - ブループリントグラフの「Construct Object from Class」ノードや、
+///   C++の NewObject 関数などで、ルールエンジンをインスタンス化する。
 /// - UPsyqueRulesEngine::ExtendChunkFromDataTable
-///   で、状態値と条件式と条件挙動をルールエンジン駆動器に登録する。
-/// - UPsyqueRulesEngine::AccumulateAssignmentBool などで、
-///   状態値を書き換える。
-/// - UPsyqueRulesEngine::Tick
-///   を時間フレーム毎に呼び出し、ルールエンジン駆動器を更新する。
-UCLASS(BlueprintType)
-class PSYQUERULESPLUGIN_API UPsyqueRulesEngine: public UObject
+///   で、状態値と条件式と条件イベントをルールエンジンに登録する。
+///   - 以下の関数からでも、状態値をルールエンジンに登録できる。
+///     - UPsyqueRulesEngine::RegisterBoolStatus
+///     - UPsyqueRulesEngine::RegisterUnsignedStatus
+///     - UPsyqueRulesEngine::RegisterSignedStatus
+///     - UPsyqueRulesEngine::RegisterFloatStatus
+///   - UPsyqueRulesEngine::RegisterEvent
+///     からでも、条件イベントをルールエンジンに登録できる。
+/// - 以下の関数で、ルールエンジンの状態値を書き換える。
+///   - UPsyqueRulesEngine::AccumulateAssignmentBool
+///   - UPsyqueRulesEngine::AccumulateAssignmentUnsigned
+///   - UPsyqueRulesEngine::AccumulateAssignmentSigned
+///   - UPsyqueRulesEngine::AccumulateAssignmentFloat
+/// - 状態値を書き換えると、書き換えられた状態値を参照する条件式が再評価され、
+///   UPsyqueRulesEngine::RegisterEvent で登録した評価の遷移条件に合致していれば、
+///   登録した条件イベントが実行される。
+UCLASS(BlueprintType, Blueprintable)
+class PSYQUERULESPLUGIN_API UPsyqueRulesEngine:
+	public UObject, public FTickableGameObject
 {
 	GENERATED_UCLASS_BODY()
 
@@ -32,20 +45,6 @@ class PSYQUERULESPLUGIN_API UPsyqueRulesEngine: public UObject
 
 	//-------------------------------------------------------------------------
 	public:
-	/// @brief ルールエンジンを更新する。
-	/// @details
-	///   - ルールエンジン駆動器は、状態値の変化を検知する。
-	///   - ルールエンジン駆動器は、変化した状態値を参照している条件式を評価する。
-	///   - ルールエンジン駆動器は、
-	///     評価結果が変化した条件式を参照している条件挙動を呼び出す。
-	/// .
-	///   基本的には、時間フレーム毎に1度ずつ呼び出すこと。
-	UFUNCTION(BlueprintCallable, Category="PsyqueRulesPlugin")
-	void Tick()
-	{
-		this->Driver.Tick();
-	}
-
 	/// @brief 名前文字列から名前ハッシュ値を取得する。
 	/// @return InName に対応する名前ハッシュ値。
 	/// @param InName 名前ハッシュ値のもととなる FName インスタンス。
@@ -55,6 +54,38 @@ class PSYQUERULESPLUGIN_API UPsyqueRulesEngine: public UObject
 		return this->Driver.HashFunction(InName);
 	}
 
+	//-------------------------------------------------------------------------
+	/// @name ルールエンジンの更新
+	/// @{
+	public:
+	/// @brief ルールエンジンを更新する。
+	/// @details
+	///   - ルールエンジン駆動器は、状態値の変化を検知する。
+	///   - ルールエンジン駆動器は、変化した状態値を参照している条件式を評価する。
+	///   - ルールエンジン駆動器は、
+	///     評価結果が変化した条件式を参照している条件挙動を呼び出す。
+	/// @param InDeltaTime 前回の更新からの差分時間。
+	virtual void Tick(float InDeltaTime) override
+	{
+		if (0 < InDeltaTime)
+		{
+			this->Driver.Tick();
+		}
+	}
+
+	/// @brief UPsyqueRulesEngine::Tick が可能か判定する。
+	UFUNCTION(BlueprintPure, Category="PsyqueRulesPlugin")
+	virtual bool IsTickable() const override
+	{
+		return true;
+	}
+
+	/// @brief UPsyqueRulesEngine::Tick するための識別値を取得する。
+	virtual TStatId GetStatId() const override
+	{
+		RETURN_QUICK_DECLARE_CYCLE_STAT(UPsyqueRulesEngine, STATGROUP_Tickables);
+	}
+	/// @}
 	//-------------------------------------------------------------------------
 	/// @name 状態値の登録
 	/// @{
@@ -168,9 +199,7 @@ class PSYQUERULESPLUGIN_API UPsyqueRulesEngine: public UObject
 	/// @param InStatusKey 取得する状態値の名前ハッシュ値。
 	///   UPsyqueRulesEngine::MakeHash から取得する。
 	UFUNCTION(BlueprintPure, Category="PsyqueRulesPlugin")
-	EPsyqueKleene FindBoolStatus(
-		int32 const InStatusKey)
-	const
+	EPsyqueKleene FindBoolStatus(int32 const InStatusKey) const
 	{
 		auto const LocalValue(
 			this->Driver.GetReservoir().FindStatus(InStatusKey));
@@ -189,9 +218,7 @@ class PSYQUERULESPLUGIN_API UPsyqueRulesEngine: public UObject
 	/// @param InStatusKey 取得する状態値の名前ハッシュ値。
 	///   UPsyqueRulesEngine::MakeHash から取得する。
 	UFUNCTION(BlueprintPure, Category="PsyqueRulesPlugin")
-	int32 FindUnsignedStatus(
-		int32 const InStatusKey)
-	const
+	int32 FindUnsignedStatus(int32 const InStatusKey) const
 	{
 		auto const LocalValue(
 			this->Driver.GetReservoir().FindStatus(InStatusKey));
@@ -209,9 +236,7 @@ class PSYQUERULESPLUGIN_API UPsyqueRulesEngine: public UObject
 	/// @param InStatusKey 取得する状態値の名前ハッシュ値。
 	///   UPsyqueRulesEngine::MakeHash から取得する。
 	UFUNCTION(BlueprintPure, Category="PsyqueRulesPlugin")
-	int32 FindSignedStatus(
-		int32 const InStatusKey)
-	const
+	int32 FindSignedStatus(int32 const InStatusKey) const
 	{
 		auto const LocalValue(
 			this->Driver.GetReservoir().FindStatus(InStatusKey));
@@ -233,9 +258,7 @@ class PSYQUERULESPLUGIN_API UPsyqueRulesEngine: public UObject
 	/// @param InStatusKey 取得する状態値の名前ハッシュ値。
 	///   UPsyqueRulesEngine::MakeHash から取得する。
 	UFUNCTION(BlueprintPure, Category="PsyqueRulesPlugin")
-	float FindFloatStatus(
-		int32 const InStatusKey)
-	const
+	float FindFloatStatus(int32 const InStatusKey) const
 	{
 		auto const LocalValue(
 			this->Driver.GetReservoir().FindStatus(InStatusKey));
@@ -263,9 +286,7 @@ class PSYQUERULESPLUGIN_API UPsyqueRulesEngine: public UObject
 	/// @param InStatusKey ビット幅を取得する状態値の名前ハッシュ値。
 	///   UPsyqueRulesEngine::MakeHash から取得する。
 	UFUNCTION(BlueprintPure, Category="PsyqueRulesPlugin")
-	uint8 FindStatusBitWidth(
-		int32 const InStatusKey)
-	const
+	uint8 FindStatusBitWidth(int32 const InStatusKey) const
 	{
 		return this->Driver.GetReservoir().FindBitWidth(InStatusKey);
 	}
@@ -423,9 +444,7 @@ class PSYQUERULESPLUGIN_API UPsyqueRulesEngine: public UObject
 	/// @param InExpressionKey 判定する条件式の名前ハッシュ値。
 	///   UPsyqueRulesEngine::MakeHash から取得する。
 	UFUNCTION(BlueprintPure, Category="PsyqueRulesPlugin")
-	bool FindExpression(
-		int32 const InExpressionKey)
-	const
+	bool FindExpression(int32 const InExpressionKey) const
 	{
 		return this->Driver.Evaluator.FindExpression(InExpressionKey)
 			!= nullptr;
@@ -439,9 +458,7 @@ class PSYQUERULESPLUGIN_API UPsyqueRulesEngine: public UObject
 	/// @param InExpressionKey 評価する条件式の名前ハッシュ値。
 	///   UPsyqueRulesEngine::MakeHash から取得する。
 	UFUNCTION(BlueprintPure, Category="PsyqueRulesPlugin")
-	EPsyqueKleene EvaluateExpression(
-		int32 const InExpressionKey)
-	const
+	EPsyqueKleene EvaluateExpression(int32 const InExpressionKey) const
 	{
 		return this->Driver.Evaluator.EvaluateExpression(
 			InExpressionKey, this->Driver.GetReservoir());
@@ -636,19 +653,6 @@ class PSYQUERULESPLUGIN_API UPsyqueRulesEngine: public UObject
 	/// @}
 	//-------------------------------------------------------------------------
 	public:
-	/// @brief 現在のルールエンジンを取得する。
-	UFUNCTION(BlueprintPure, Category="PsyqueRulesPlugin")
-	static UPsyqueRulesEngine* Get();
-
-	/// @brief 新たなルールエンジンを生成する。
-	//UFUNCTION(BlueprintCallable, Category="PsyqueRulesPlugin")
-	static UPsyqueRulesEngine* Create();
-
-	/// @brief 現在のルールエンジンを破棄する。
-	/// @return ルールエンジンを破棄したか否か。
-	//UFUNCTION(BlueprintCallable, Category="PsyqueRulesPlugin")
-	static bool Destroy();
-
 	/// @brief 状態値のビット構成から、状態値の型を構築する。
 	/// @return 状態値の型の種類。
 	/// @param InBitFormat 状態値のビット構成。

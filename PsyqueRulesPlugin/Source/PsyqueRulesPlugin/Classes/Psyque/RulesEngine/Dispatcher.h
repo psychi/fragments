@@ -285,16 +285,14 @@ class Psyque::RulesEngine::_private::TDispatcher
 		::EPsyqueKleene const InBeforeCondition,
 		/// [in] 取り除く ThisClass::FHook に対応する条件式の最新の評価。
 		::EPsyqueKleene const InLatestCondition,
-		/// [in] 取り除く ThisClass::FHook が持つデリゲートから参照している UObject 。
-		::UObject const& InObject,
-		/// [in] 取り除く ThisClass::FHook が持つデリゲートから参照している関数の名前。
-		::FName const& InFunctionName)
+		/// [in] 取り除く ThisClass::FHook が持つデリゲートの識別子。
+		Psyque::RulesEngine::FDelegateIdentifier const& InDelegate)
 	{
 		auto const LocalFind(this->ExpressionMonitors.find(InExpressionKey));
 		if (LocalFind != this->ExpressionMonitors.end())
 		{
 			LocalFind->second.UnregisterHooks(
-				InBeforeCondition, InLatestCondition, InObject, InFunctionName);
+				InBeforeCondition, InLatestCondition, InDelegate);
 		}
 	}
 
@@ -326,15 +324,13 @@ class Psyque::RulesEngine::_private::TDispatcher
 		/// [in] 取り除く ThisClass::FHook に対応する
 		/// TEvaluator::FExpression の識別値。
 		typename ThisClass::FEvaluator::FExpressionKey const InExpressionKey,
-		/// [in] 取り除く ThisClass::FHook が持つデリゲートから参照している UObject 。
-		::UObject const& InObject,
-		/// [in] 取り除く ThisClass::FHook が持つデリゲートから参照している関数の名前。
-		::FName const& InFunctionName = ::FName())
+		/// [in] 取り除く ThisClass::FHook が持つデリゲートの識別子。
+		Psyque::RulesEngine::FDelegateIdentifier const& InDelegate)
 	{
 		auto const LocalFind(this->ExpressionMonitors.find(InExpressionKey));
 		if (LocalFind != this->ExpressionMonitors.end())
 		{
-			LocalFind->second.UnregisterHooks(InObject, InFunctionName);
+			LocalFind->second.UnregisterHooks(InDelegate);
 		}
 	}
 
@@ -357,14 +353,12 @@ class Psyque::RulesEngine::_private::TDispatcher
 	///   ThisClass::RegisterHook で登録した ThisClass::FHook のうち、
 	///   InObject を参照するデリゲートを持つ ThisClass::FHook をすべて取り除く。
 	public: void UnregisterHooks(
-		/// [in] 取り除く ThisClass::FHook のデリゲートが参照する UObject 。
-		::UObject const& InObject,
-		/// [in] 取り除く ThisClass::FHook が持つデリゲートから参照している関数の名前。
-		::FName const& InFunctionName = ::FName())
+		/// [in] 取り除く ThisClass::FHook が持つデリゲートの識別子。
+		Psyque::RulesEngine::FDelegateIdentifier const& InDelegate)
 	{
 		for (auto& LocalExpressionMonitor: this->ExpressionMonitors)
 		{
-			LocalExpressionMonitor.second.UnregisterHooks(InObject, InFunctionName);
+			LocalExpressionMonitor.second.UnregisterHooks(InDelegate);
 		}
 	}
 

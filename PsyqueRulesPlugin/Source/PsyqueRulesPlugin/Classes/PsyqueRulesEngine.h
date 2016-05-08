@@ -512,8 +512,8 @@ class PSYQUERULESPLUGIN_API UPsyqueRulesEngine:
 	UFUNCTION(BlueprintCallable, Category="PsyqueRulesPlugin")
 	void UnregisterEvents(FPsyqueRulesDynamicDelegate const& InDelegate)
 	{
-		this->UnregisterEventsByObject(
-			InDelegate.GetUObject(), InDelegate.GetFunctionName());
+		this->Driver.Dispatcher.UnregisterHooks(
+			Psyque::RulesEngine::FDelegateIdentifier(InDelegate));
 	}
 
 	/// @brief UObject に対応する条件イベントを、すべて取り除く。
@@ -528,7 +528,9 @@ class PSYQUERULESPLUGIN_API UPsyqueRulesEngine:
 	{
 		if (InObject != nullptr)
 		{
-			this->Driver.Dispatcher.UnregisterHooks(*InObject, InFunctionName);
+			this->Driver.Dispatcher.UnregisterHooks(
+				Psyque::RulesEngine::FDelegateIdentifier(
+					*InObject, InFunctionName));
 		}
 	}
 
@@ -542,10 +544,9 @@ class PSYQUERULESPLUGIN_API UPsyqueRulesEngine:
 		int32 const InExpressionKey,
 		FPsyqueRulesDynamicDelegate const& InDelegate)
 	{
-		this->UnregisterEventsOfEachExpressionByObject(
+		this->Driver.Dispatcher.UnregisterHooks(
 			InExpressionKey,
-			InDelegate.GetUObject(),
-			InDelegate.GetFunctionName());
+			Psyque::RulesEngine::FDelegateIdentifier(InDelegate));
 	}
 
 	/// @brief 条件式と UObject に対応する条件イベントを、すべて取り除く。
@@ -567,7 +568,9 @@ class PSYQUERULESPLUGIN_API UPsyqueRulesEngine:
 		if (InObject != nullptr)
 		{
 			this->Driver.Dispatcher.UnregisterHooks(
-				InExpressionKey, *InObject, InFunctionName);
+				InExpressionKey,
+				Psyque::RulesEngine::FDelegateIdentifier(
+					*InObject, InFunctionName));
 		}
 	}
 
@@ -587,16 +590,11 @@ class PSYQUERULESPLUGIN_API UPsyqueRulesEngine:
 		EPsyqueKleene const InLatestCondition,
 		FPsyqueRulesDynamicDelegate const& InDelegate)
 	{
-		auto const LocalObject(InDelegate.GetUObject());
-		if (LocalObject != nullptr)
-		{
-			this->Driver.Dispatcher.UnregisterHooks(
-				InExpressionKey,
-				InBeforeCondition,
-				InLatestCondition,
-				*LocalObject,
-				InDelegate.GetFunctionName());
-		}
+		this->Driver.Dispatcher.UnregisterHooks(
+			InExpressionKey,
+			InBeforeCondition,
+			InLatestCondition,
+			Psyque::RulesEngine::FDelegateIdentifier(InDelegate));
 	}
 	/// @}
 	//-------------------------------------------------------------------------

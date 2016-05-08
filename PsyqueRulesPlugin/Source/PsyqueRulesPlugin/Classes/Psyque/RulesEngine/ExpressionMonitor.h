@@ -13,6 +13,7 @@ namespace Psyque
 {
 	namespace RulesEngine
 	{
+		class FDelegateIdentifier;
 		namespace _private
 		{
 			template<typename> class TExpressionMonitor;
@@ -22,12 +23,129 @@ namespace Psyque
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+/// @brief デリゲートの識別子。
+class Psyque::RulesEngine::FDelegateIdentifier
+{
+	/// @copydoc _private::TDispatcher::ThisClass
+	private: using ThisClass = FDelegateIdentifier;
+
+	//-------------------------------------------------------------------------
+	/// @brief デリゲートインスタンスから、デリゲート識別子を構築する。
+	public: explicit FDelegateIdentifier(
+		/// [in] 識別子のもととなるデリゲートインスタンスを指すポインタ。
+		::IDelegateInstance const* const InDelegate)
+	{
+		this->Reset(InDelegate);
+	}
+
+	/// @brief シングルキャストデリゲートから、デリゲート識別子を構築する。
+	public: explicit FDelegateIdentifier(
+		/// [in] 識別子のもととなるシングルキャストデリゲート。
+		::FDelegateBase<> const& InDelegate)
+	{
+		this->Reset(InDelegate.GetDelegateInstance());
+	}
+
+	/// @brief 動的デリゲートから、デリゲート識別子を構築する。
+	public: explicit FDelegateIdentifier(
+		/// [in] 識別子のもととなる動的デリゲート。
+		::TScriptDelegate<> const& InDelegate):
+	Object(InDelegate.GetUObject()),
+	Method(nullptr),
+	Name(this->Object == nullptr? ::FName(): InDelegate.GetFunctionName())
+	{}
+
+	/// @brief オブジェクトとメソッドから、デリゲート識別子を構築する。
+	public: explicit FDelegateIdentifier(
+		/// [in] デリゲートから参照するオブジェクト。
+		::UObject const& InObject,
+		/// [in] デリゲートから参照するメソッドの名前。
+		::FName const& InFunctionName = FName()):
+	Object(&InObject),
+	Method(nullptr),
+	Name(InFunctionName.IsNone()? ThisClass::GetWildcard(): InFunctionName)
+	{}
+
+	/// @brief 等価比較演算子。
+	public: bool operator==(ThisClass const& InRight) const
+	{
+		return this->Object == InRight.Object
+			&& (this->Name == ThisClass::GetWildcard()
+				|| InRight.Name == ThisClass::GetWildcard()
+				|| (this->Method == InRight.Method
+					&& this->Name == InRight.Name
+					&& this->Name != ThisClass::GetFunctorName()));
+	}
+
+	/// @brief 不等価比較演算子。
+	public: bool operator!=(ThisClass const& InRight) const
+	{
+		return !this->operator==(InRight);
+	}
+
+	/// @brief 空デリゲートの識別子か判定する。
+	public: bool IsEmpty() const
+	{
+		return this->Method == nullptr && this->Name.IsNone();
+	}
+
+	//-------------------------------------------------------------------------
+	/// @brief *thisを初期化する。
+	private: void Reset(::IDelegateInstance const* const InDelegate)
+	{
+		if (!::FDelegateBase<>(const_cast<IDelegateInstance*>(InDelegate)).IsBound())
+		{
+			this->Name = NAME_None;
+		}
+		else if (InDelegate->GetType() == EDelegateInstanceType::Functor)
+		{
+			this->Name = ThisClass::GetFunctorName();
+		}
+		else
+		{
+			this->Object = InDelegate->GetRawUserObject();
+			this->Method = InDelegate->GetRawMethodPtr();
+			this->Name = InDelegate->GetFunctionName();
+			check(!this->IsEmpty());
+			return;
+		}
+		this->Object = nullptr;
+		this->Method = nullptr;
+	}
+
+	/// @brief オブジェクトのすべてのメソッドを対象とする名前を取得する。
+	private: static FName const& GetWildcard()
+	{
+		static FName const StaticWildcard(TEXT("UObject::*"));
+		return StaticWildcard;
+	}
+
+	/// @brief 関数オブジェクトを示す名前を取得する。
+	private: static FName const& GetFunctorName()
+	{
+		static FName const StaticName(TEXT("EDelegateInstanceType::Functor"));
+		return StaticName;
+	}
+
+	//-------------------------------------------------------------------------
+	private:
+	/// @brief デリゲートから参照するオブジェクトを指すポインタ。
+	void const* Object;
+	/// @brief デリゲートから参照するメソッドを指すポインタ。
+	void const* Method;
+	/// @brief デリゲートから参照するメソッドの名前。
+	FName Name;
+
+}; // class Psyque::RulesEngine::FDelegateIdentifier
+
+//ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 /// @brief 条件式監視器。条件式の評価の変化を検知し、条件挙動フックに通知する。
 /// @tparam TemplateHookArray @copydoc TExpressionMonitor::FHookArray
 template<typename TemplateHookArray>
 class Psyque::RulesEngine::_private::TExpressionMonitor
 {
-	private: using ThisClass = TExpressionMonitor; ///< @copydoc TDispatcher::ThisClass
+	/// @copydoc TDispatcher::ThisClass
+	private: using ThisClass = TExpressionMonitor;
 
 	//-------------------------------------------------------------------------
 	/// @brief TDispatcher で保持する THook のコンテナ。
@@ -114,22 +232,35 @@ class Psyque::RulesEngine::_private::TExpressionMonitor
 				ThisClass(OutExpressionMonitors.get_allocator())));
 		auto& LocalHooks(LocalEmplace.first->second.Hooks);
 		auto const& LocalDelegateHandle(InDelegate.GetHandle());
+		Psyque::RulesEngine::FDelegateIdentifier const
+			LocalDelegateIdentifier(InDelegate);
 		for (std::size_t i(0); i < LocalHooks.size();)
 		{
 			auto& LocalHook(LocalHooks[i]);
-			if (!LocalHook.Delegate.IsBound())
+			if (LocalHook.Delegate.IsBound())
+			{
+				// 等価な条件か判定する。
+				if (LocalHook.GetCondition() == LocalCondition)
+				{
+					// 等価なデリゲートか判定する。
+					auto const LocalHookHandle(LocalHook.Delegate.GetHandle());
+					if (LocalHookHandle == LocalDelegateHandle
+						|| LocalDelegateIdentifier
+							== Psyque::RulesEngine::FDelegateIdentifier(
+								LocalHook.Delegate))
+					{
+						// 条件とデリゲートが等価なフックがすでにあるので、
+						// 優先順位だけ書き換える。
+						LocalHook.Priority = InPriority;
+						return LocalHookHandle;
+					}
+				}
+				++i;
+			}
+			else
 			{
 				LocalHook.Delegate.Unbind();
 				LocalHooks.erase(LocalHooks.begin() + i);
-			}
-			else if (
-				LocalCondition == LocalHook.GetCondition()
-				&& LocalDelegateHandle == LocalHook.Delegate.GetHandle())
-			{
-				// 条件とデリゲートが等価なフックがすでにあるので、
-				// 優先順位だけ書き換える。
-				LocalHook.Priority = InPriority;
-				return LocalDelegateHandle;
 			}
 		}
 
@@ -177,24 +308,21 @@ class Psyque::RulesEngine::_private::TExpressionMonitor
 		::EPsyqueKleene const InBeforeCondition,
 		/// [in] 取り除く ThisClass::FHook に対応する条件式の今回の評価。
 		::EPsyqueKleene const InLatestCondition,
-		/// [in] 取り除く ThisClass::FHook が持つデリゲートから参照している UObject 。
-		::UObject const& InObject,
-		/// [in] 取り除く ThisClass::FHook が持つデリゲートから参照している関数の名前。
-		::FName const& InFunctionName)
+		/// [in] 取り除く ThisClass::FHook が持つデリゲートの識別子。
+		Psyque::RulesEngine::FDelegateIdentifier const& InDelegate)
 	{
 		auto const LocalCondition(
 			ThisClass::FHook::MakeTransition(
 				InBeforeCondition, InLatestCondition));
-		this->EraseHooks(
-			[&InObject, &InFunctionName, LocalCondition](
+		this->EraseHooks([&InDelegate, LocalCondition](
 				typename ThisClass::FHook const& InHook)
 			->bool
 			{
-				auto const LocalDelegate(InHook.Delegate.GetDelegateInstance());
-				return ThisClass::IsInvalidDelegate(LocalDelegate)
+				Psyque::RulesEngine::FDelegateIdentifier const
+					LocalDelegate(InHook.Delegate);
+				return LocalDelegate.IsEmpty()
 					|| (LocalCondition == InHook.GetCondition()
-						&& ThisClass::IsEqualDelegate(
-							*LocalDelegate, InObject, InFunctionName));
+						&& LocalDelegate == InDelegate);
 			});
 	}
 
@@ -217,20 +345,15 @@ class Psyque::RulesEngine::_private::TExpressionMonitor
 	/// @details ThisClass::RegisterHook で登録した ThisClass::FHook のうち、
 	///   InObject を参照するデリゲートを持つものを取り除く。
 	public: void UnregisterHooks(
-		/// [in] 取り除く ThisClass::FHook から参照される UObject 。
-		::UObject const& InObject,
-		/// [in] 取り除く ThisClass::FHook から参照される UObject の関数名。
-		::FName const& InFunctionName)
+		/// [in] 取り除く ThisClass::FHook が持つデリゲートの識別子。
+		Psyque::RulesEngine::FDelegateIdentifier const& InDelegate)
 	{
 		this->EraseHooks(
-			[&InObject, &InFunctionName](
-				typename ThisClass::FHook const& InHook)
-			->bool
+			[&InDelegate](typename ThisClass::FHook const& InHook)->bool
 			{
-				auto const LocalDelegate(InHook.Delegate.GetDelegateInstance());
-				return ThisClass::IsInvalidDelegate(LocalDelegate)
-					|| ThisClass::IsEqualDelegate(
-						*LocalDelegate, InObject, InFunctionName);
+				Psyque::RulesEngine::FDelegateIdentifier const
+					LocalDelegate(InHook.Delegate);
+				return LocalDelegate.IsEmpty() || LocalDelegate == InDelegate;
 			});
 	}
 
@@ -376,27 +499,6 @@ class Psyque::RulesEngine::_private::TExpressionMonitor
 	}
 
 	//-------------------------------------------------------------------------
-	/// @brief 無効なデリゲートか判定する。
-	private: static bool IsInvalidDelegate(
-		::IDelegateInstance* const InDelegate)
-	{
-		return !::FDelegateBase<>(InDelegate).IsBound();
-	}
-
-	/// @brief 等価なデリゲートか判定する。
-	private: static bool IsEqualDelegate(
-		/// [in] 等価比較の左辺となるデリゲート。
-		::IDelegateInstance const& InDelegate,
-		/// [in] 等価比較の右辺となるデリゲートから参照するオブジェクト。
-		::UObject const& InObject,
-		/// [in] 等価比較の右辺となるデリゲートから参照するメソッド名。
-		::FName const& InFunctionName)
-	{
-		return (InFunctionName.IsNone()
-				|| InDelegate.GetFunctionName() == InFunctionName)
-			&& InDelegate.GetRawUserObject() == &InObject;
-	}
-
 	/// @brief 条件式が参照する状態値を状態監視器へ登録する。
 	/// @retval 正 成功。条件式の評価を維持する。
 	/// @retval 負 成功。条件式の評価を維持しない。

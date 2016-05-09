@@ -50,41 +50,6 @@ class Psyque::RulesEngine::_private::THook
 
 	private: enum{TransitionBitWidth = 2};
 
-	//-------------------------------------------------------------------------
-	/// @brief 条件挙動フックのキャッシュ。
-	public: class FCache: public THook
-	{
-		private: using ThisClass = FCache; ///< @copydoc THook::ThisClass
-		public: using Super = THook;       ///< @brief ThisClass の基底型。
-
-		/// @brief 条件挙動フックのキャッシュを構築する。
-		public: FCache(
-			/// [in] キャッシュする条件挙動フック。
-			THook const& InHook,
-			/// [in] ThisClass::ExpressionKey の初期値。
-			typename Super::FExpressionKey InExpressionKey):
-		Super(InHook),
-		ExpressionKey(MoveTemp(InExpressionKey))
-		{}
-
-		/// @brief デリゲートを実行する。
-		public: bool ExecuteDelegate() const
-		{
-			auto const LocalDelegate(
-				static_cast<typename Super::FDelegateInstance*>(
-					this->Delegate.GetDelegateInstance()));
-			return LocalDelegate != nullptr
-				&& LocalDelegate->ExecuteIfSafe(
-					this->ExpressionKey,
-					Super::GetBeforeEvaluation(this->GetCondition()),
-					Super::GetLatestEvaluation(this->GetCondition()));
-		}
-
-		/// @brief 条件式の識別値。
-		private: typename Super::FExpressionKey ExpressionKey;
-
-	}; // class FCache
-
 	//---------------------------------------------------------------------
 	/// @brief 条件挙動フックを構築する。
 	public: THook(
@@ -93,18 +58,31 @@ class Psyque::RulesEngine::_private::THook
 		/// [in] THook::Priority の初期値。
 		typename ThisClass::FPriority const InPriority,
 		/// [in] THook::Delegate の初期値。
-		typename ThisClass::FDelegateInstance* const InDelegate):
-	Delegate((PSYQUE_ASSERT(InDelegate != nullptr), InDelegate)),
+		::FPsyqueRulesDelegate const& InDelegate):
+	Delegate(InDelegate),
 	Priority(InPriority),
 	Condition(InCondition)
 	{}
 
 	//-------------------------------------------------------------------------
-	/// @brief 遷移条件を取得する。
+	/// @brief ThisClass::Delegate を実行する条件を取得する。
 	/// @return @copydoc THook::Condition
 	public: typename ThisClass::FTransition GetCondition() const PSYQUE_NOEXCEPT
 	{
 		return this->Condition;
+	}
+
+	/// @brief ThisClass::Delegate を実行する条件となる、条件式の直前の評価を取得する。
+	public: EPsyqueKleene GetBeforeCondition() const
+	{
+		return ThisClass::GetUnitCondition(
+			this->GetCondition() >> ThisClass::TransitionBitWidth);
+	}
+
+	/// @brief ThisClass::Delegate を実行する条件となる、条件式の最新の評価を取得する。
+	public: EPsyqueKleene GetLatestCondition() const
+	{
+		return ThisClass::GetUnitCondition(this->GetCondition());
 	}
 
 	/// @brief 条件式の評価の遷移を表す値を取得する。
@@ -115,20 +93,13 @@ class Psyque::RulesEngine::_private::THook
 		::EPsyqueKleene const InLatestCondition)
 	{
 		return InBeforeCondition != InLatestCondition?
-			ThisClass::MakeCondition(InLatestCondition) | (
-				ThisClass::MakeCondition(InBeforeCondition)
+			ThisClass::GetUnitTransition(InLatestCondition) | (
+				ThisClass::GetUnitTransition(InBeforeCondition)
 					<< ThisClass::TransitionBitWidth):
 			0;
 	}
 
-	protected: static EPsyqueKleene GetBeforeEvaluation(
-		typename ThisClass::FTransition const InTransition)
-	{
-		return ThisClass::GetLatestEvaluation(
-			InTransition >> ThisClass::TransitionBitWidth);
-	}
-
-	protected: static EPsyqueKleene GetLatestEvaluation(
+	private: static EPsyqueKleene GetUnitCondition(
 		typename ThisClass::FTransition const InTransition)
 	{
 		auto const LocalEvaluation(
@@ -139,7 +110,7 @@ class Psyque::RulesEngine::_private::THook
 				EPsyqueKleene::IsTrue: EPsyqueKleene::Unknown;
 	}
 
-	private: static typename ThisClass::FTransition MakeCondition(
+	private: static typename ThisClass::FTransition GetUnitTransition(
 		::EPsyqueKleene const InCondition)
 	{
 		return static_cast<typename ThisClass::FTransition>(InCondition) & 3;
@@ -147,7 +118,7 @@ class Psyque::RulesEngine::_private::THook
 
 	//---------------------------------------------------------------------
 	/// @brief 条件に合致した際に実行するデリゲート。
-	public: ::FDelegateBase<> Delegate;
+	public: ::FPsyqueRulesDelegate Delegate;
 	/// @brief デリゲートの実行優先順位。
 	public: typename ThisClass::FPriority Priority;
 	/// @brief デリゲートを実行する遷移条件。

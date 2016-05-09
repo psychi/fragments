@@ -10,11 +10,6 @@
 #include "./ExpressionMonitor.h"
 #include "./Hook.h"
 
-/// @brief 挙動関数の呼び出し優先順位のデフォルト値。
-#ifndef PSYQUE_RULES_ENGINE_DISPATCHER_FUNCTION_PRIORITY_DEFAULT
-#define PSYQUE_RULES_ENGINE_DISPATCHER_FUNCTION_PRIORITY_DEFAULT 0
-#endif // !defined(PSYQUE_RULES_ENGINE_DISPATCHER_FUNCTION_PRIORITY_DEFAULT)
-
 /// @cond
 namespace Psyque
 {
@@ -74,8 +69,49 @@ class Psyque::RulesEngine::_private::TDispatcher
 		std::equal_to<typename ThisClass::FEvaluator::FExpressionKey>,
 		typename ThisClass::FAllocator>;
 	/// @copydoc ThisClass::CachedHooks
-	private: using FHookCacheArray = std::vector<
-		typename ThisClass::FHook::FCache, typename ThisClass::FAllocator>;
+
+	//-------------------------------------------------------------------------
+	/// @brief 条件挙動フックのキャッシュ。
+	private: class FHookCache
+	{
+		/// @copydoc TDispatcher::ThisClass
+		private: using ThisClass = FHookCache;
+
+		public: using FArray
+			= std::vector<ThisClass, typename TDispatcher::FAllocator>;
+
+		/// @brief 条件挙動フックのキャッシュを構築する。
+		public: FHookCache(
+			/// [in] キャッシュする条件挙動フック。
+			typename TDispatcher::FHook const& InHook,
+			/// [in] ThisClass::ExpressionKey の初期値。
+			typename TDispatcher::FHook::FExpressionKey const InExpressionKey):
+		Hook(&InHook),
+		ExpressionKey(InExpressionKey)
+		{}
+
+		public: typename TDispatcher::FHook::FPriority GetPriority() const
+		{
+			check(this->Hook != nullptr);
+			return this->Hook->Priority;
+		}
+
+		/// @brief デリゲートを実行する。
+		public: bool ExecuteDelegate() const
+		{
+			check(this->Hook != nullptr);
+			return this->Hook->Delegate.ExecuteIfBound(
+				this->ExpressionKey,
+				this->Hook->GetBeforeCondition(),
+				this->Hook->GetLatestCondition());
+		}
+
+		/// @brief 実行する条件挙動フック。
+		private: typename TDispatcher::FHook const* Hook;
+		/// @brief 条件式の識別値。
+		private: typename TDispatcher::FHook::FExpressionKey ExpressionKey;
+
+	}; // class FHookCache
 
 	//-------------------------------------------------------------------------
 	/// @name 構築と代入
@@ -449,11 +485,11 @@ class Psyque::RulesEngine::_private::TDispatcher
 			LocalCachedHooks.begin(),
 			LocalCachedHooks.end(),
 			[](
-				typename ThisClass::FHook const& InLeft,
-				typename ThisClass::FHook const& InRight)
+				typename ThisClass::FHookCache const& InLeft,
+				typename ThisClass::FHookCache const& InRight)
 			->bool
 			{
-				return InRight.Priority < InLeft.Priority;
+				return InRight.GetPriority() < InLeft.GetPriority();
 			});
 
 		// 条件式の評価が済んだので、状態変化フラグを初期化する。
@@ -510,8 +546,8 @@ class Psyque::RulesEngine::_private::TDispatcher
 	private: typename ThisClass::FStatusMonitorMap StatusMonitors;
 	/// @brief TExpressionMonitor の辞書。
 	private: typename ThisClass::FExpressionMonitorMap ExpressionMonitors;
-	/// @brief THook::FCache の配列。
-	private: typename ThisClass::FHookCacheArray CachedHooks;
+	/// @brief THookCache の配列。
+	private: typename ThisClass::FHookCache::FArray CachedHooks;
 	/// @brief 多重に ThisClass::_dispatch しないためのロック。
 	private: bool DispatchLock;
 

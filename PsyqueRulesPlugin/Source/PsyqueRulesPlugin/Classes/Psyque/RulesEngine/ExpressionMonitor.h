@@ -30,20 +30,30 @@ class Psyque::RulesEngine::FDelegateIdentifier
 	private: using ThisClass = FDelegateIdentifier;
 
 	//-------------------------------------------------------------------------
-	/// @brief デリゲートインスタンスから、デリゲート識別子を構築する。
-	public: explicit FDelegateIdentifier(
-		/// [in] 識別子のもととなるデリゲートインスタンスを指すポインタ。
-		::IDelegateInstance const* const InDelegate)
-	{
-		this->Reset(InDelegate);
-	}
-
 	/// @brief シングルキャストデリゲートから、デリゲート識別子を構築する。
 	public: explicit FDelegateIdentifier(
 		/// [in] 識別子のもととなるシングルキャストデリゲート。
-		::FDelegateBase<> const& InDelegate)
+		::FPsyqueRulesDelegate const& InDelegate)
 	{
-		this->Reset(InDelegate.GetDelegateInstance());
+		auto const LocalDelegate(InDelegate.GetDelegateInstanceProtected());
+		if (!InDelegate.IsBound())
+		{
+			this->Name = NAME_None;
+		}
+		else if (LocalDelegate->GetType() == EDelegateInstanceType::Functor)
+		{
+			this->Name = ThisClass::GetFunctorName();
+		}
+		else
+		{
+			this->Object = LocalDelegate->GetUObject();
+			this->Method = LocalDelegate->GetRawMethodPtr();
+			this->Name = LocalDelegate->GetFunctionName();
+			check(!this->IsEmpty());
+			return;
+		}
+		this->Object = nullptr;
+		this->Method = nullptr;
 	}
 
 	/// @brief 動的デリゲートから、デリゲート識別子を構築する。
@@ -90,29 +100,6 @@ class Psyque::RulesEngine::FDelegateIdentifier
 	}
 
 	//-------------------------------------------------------------------------
-	/// @brief *thisを初期化する。
-	private: void Reset(::IDelegateInstance const* const InDelegate)
-	{
-		if (!::FDelegateBase<>(const_cast<IDelegateInstance*>(InDelegate)).IsBound())
-		{
-			this->Name = NAME_None;
-		}
-		else if (InDelegate->GetType() == EDelegateInstanceType::Functor)
-		{
-			this->Name = ThisClass::GetFunctorName();
-		}
-		else
-		{
-			this->Object = InDelegate->GetRawUserObject();
-			this->Method = InDelegate->GetRawMethodPtr();
-			this->Name = InDelegate->GetFunctionName();
-			check(!this->IsEmpty());
-			return;
-		}
-		this->Object = nullptr;
-		this->Method = nullptr;
-	}
-
 	/// @brief オブジェクトのすべてのメソッドを対象とする名前を取得する。
 	private: static FName const& GetWildcard()
 	{
@@ -175,15 +162,6 @@ class Psyque::RulesEngine::_private::TExpressionMonitor
 		typename ThisClass::FHookArray::allocator_type const& InAllocator):
 	Hooks(InAllocator)
 	{}
-
-	/// @brief 条件式監視器を破壊する。
-	public: ~TExpressionMonitor()
-	{
-		for (auto& LocalHook: this->Hooks)
-		{
-			LocalHook.Delegate.Unbind();
-		}
-	}
 
 	//-------------------------------------------------------------------------
 	/// @brief 条件挙動を登録する。
@@ -259,18 +237,12 @@ class Psyque::RulesEngine::_private::TExpressionMonitor
 			}
 			else
 			{
-				LocalHook.Delegate.Unbind();
 				LocalHooks.erase(LocalHooks.begin() + i);
 			}
 		}
 
 		// 条件とデリゲートが等価なフックがないので、新たに追加する。
-		auto const LocalDelegate(
-			static_cast<typename ThisClass::FHook::FDelegateInstance*>(
-				InDelegate.GetDelegateInstance()));
-		check(LocalDelegate != nullptr);
-		LocalHooks.emplace_back(
-			LocalCondition, InPriority, LocalDelegate->CreateCopy());
+		LocalHooks.emplace_back(LocalCondition, InPriority, InDelegate);
 		check(LocalDelegateHandle == LocalHooks.back().Delegate.GetHandle());
 		return LocalDelegateHandle;
 	}
@@ -631,7 +603,6 @@ class Psyque::RulesEngine::_private::TExpressionMonitor
 			auto& LocalHook(this->Hooks[i]);
 			if (InFunction(LocalHook))
 			{
-				LocalHook.Delegate.Unbind();
 				this->Hooks.erase(this->Hooks.begin() + i);
 			}
 			else

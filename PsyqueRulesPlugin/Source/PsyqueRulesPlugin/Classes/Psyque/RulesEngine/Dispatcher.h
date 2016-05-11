@@ -100,7 +100,7 @@ class Psyque::RulesEngine::_private::TDispatcher
 		public: bool ExecuteDelegate() const
 		{
 			check(this->Hook != nullptr);
-			return this->Hook->Delegate.ExecuteIfBound(
+			return this->Hook->GetDelegate().ExecuteIfBound(
 				this->ExpressionKey,
 				this->Hook->GetBeforeCondition(),
 				this->Hook->GetLatestCondition());
@@ -149,7 +149,7 @@ class Psyque::RulesEngine::_private::TDispatcher
 		ThisClass const& InSource):
 	StatusMonitors(InSource.StatusMonitors),
 	ExpressionMonitors(InSource.ExpressionMonitors),
-	CachedHooks(InSource.CachedHooks.get_allocator()),
+	CachedHooks(InSource.CachedHooks._get_allocator()),
 	DispatchLock(false)
 	{
 		this->CachedHooks.reserve(InSource.CachedHooks.capacity());
@@ -205,7 +205,7 @@ class Psyque::RulesEngine::_private::TDispatcher
 
 	/// @brief 条件挙動器で使われているメモリ割当子を取得する。
 	/// @return *this で使われているメモリ割当子のコピー。
-	public: typename ThisClass::FAllocator get_allocator() const PSYQUE_NOEXCEPT
+	public: typename ThisClass::FAllocator _get_allocator() const PSYQUE_NOEXCEPT
 	{
 		return this->ExpressionMonitors.get_allocator();
 	}
@@ -248,15 +248,48 @@ class Psyque::RulesEngine::_private::TDispatcher
 	/// @{
 
 	/// @brief 条件挙動を登録する。
+	/// @details
+	///   InExpressionKey が指す条件式の評価が
+	///   ThisClass::_dispatch の呼び出し前後で変化し、遷移状態が
+	///   InTransition と合致すると、 InDelegate が実行される。
 	/// @sa
-	///   ThisClass::_dispatch で InExpressionKey が指す条件式の評価が、
-	///   InBeforeCondition から InLatestCondition へ変化すると、
+	///   InDelegate が無効になると、対応する
+	///   ThisClass::FHook は自動的に取り除かれる。
+	///   明示的に取り除くには ThisClass::UnregisterHooks を使う。
+	/// @return 登録した ThisClass::FHook が持つデリゲートを指すハンドル。
+	///   ただし登録に失敗した場合は、空のハンドルを戻す。
+	///   - InTransition が無効だと、失敗する。
+	///   - InDelegate が無効だと、失敗する。
+	public: ::FDelegateHandle RegisterHook(
+		/// [in] InDelegate を実行するか判定する、
+		/// TEvaluator::FExpression の識別値。
+		typename ThisClass::FEvaluator::FExpressionKey const InExpressionKey,
+		/// [in] InDelegate を実行する条件となる、条件式の評価の遷移状態。
+		typename ThisClass::FHook::FTransition const InTransition,
+		/// [in] InDelegate の実行優先順位。降順に実行される。
+		typename ThisClass::FHook::FPriority const InPriority,
+		/// [in] 条件に合致した際に実行するデリゲート。
+		::FPsyqueRulesDelegate const& InDelegate)
+	{
+		return ThisClass::FExpressionMonitorMap::mapped_type::RegisterHook(
+			this->ExpressionMonitors,
+			InExpressionKey,
+			InTransition,
+			InPriority,
+			InDelegate);
+	}
+
+	/// @brief 条件挙動を登録する。
+	/// @details
+	///   InExpressionKey が指す条件式の評価が
+	///   ThisClass::_dispatch の呼び出し前後で変化し、
+	///   InBeforeCondition から InLatestCondition へ遷移すると、
 	///   InDelegate が実行される。
 	/// @sa
 	///   InDelegate が無効になると、対応する
 	///   ThisClass::FHook は自動的に取り除かれる。
 	///   明示的に取り除くには ThisClass::UnregisterHooks を使う。
-	/// @return InDelegate を指すハンドル。
+	/// @return 登録した ThisClass::FHook が持つデリゲートを指すハンドル。
 	///   ただし登録に失敗した場合は、空のハンドルを戻す。
 	///   - InBeforeCondition と InLatestCondition が等価だと、失敗する。
 	///   - InDelegate が無効だと、失敗する。
@@ -264,22 +297,19 @@ class Psyque::RulesEngine::_private::TDispatcher
 		/// [in] InDelegate を実行するか判定する、
 		/// TEvaluator::FExpression の識別値。
 		typename ThisClass::FEvaluator::FExpressionKey const InExpressionKey,
-		/// [in] InDelegate を実行する条件となる、条件式の直前の評価。
+		/// [in] InDelegate を実行する条件となる、条件式の古い評価。
 		::EPsyqueKleene const InBeforeCondition,
-		/// [in] InDelegate を実行する条件となる、条件式の最新の評価。
+		/// [in] InDelegate を実行する条件となる、条件式の新しい評価。
 		::EPsyqueKleene const InLatestCondition,
 		/// [in] InDelegate の実行優先順位。降順に実行される。
 		typename ThisClass::FHook::FPriority const InPriority,
-		/// [in] 条件挙動で実行するデリゲート。
-		/// InExpressionKey に対応する条件式の評価が変化して
-		/// InCondition に合致すると、実行される。
+		/// [in] 条件に合致した際に実行するデリゲート。
 		::FPsyqueRulesDelegate const& InDelegate)
 	{
-		return ThisClass::FExpressionMonitorMap::mapped_type::RegisterHook(
-			this->ExpressionMonitors,
+		return this->RegisterHook(
 			InExpressionKey,
-			InBeforeCondition,
-			InLatestCondition,
+			ThisClass::FHook::MakeTransition(
+				InBeforeCondition, InLatestCondition),
 			InPriority,
 			InDelegate);
 	}
@@ -287,81 +317,80 @@ class Psyque::RulesEngine::_private::TDispatcher
 	/// @brief 指定した条件式と遷移条件とデリゲートに対応する条件挙動を取り除く。
 	/// @details
 	///   ThisClass::RegisterHook で登録した ThisClass::FHook のうち、
-	///   InExpressionKey が指す条件式を参照し、かつ、
-	///   InDelegateHandle が指すデリゲートを持つものを取り除く。
-	public: void UnregisterHooks(
+	///   以下のすべてに合致するものを取り除く。
+	///   - InExpressionKey が指す条件式を参照している。
+	///   - InTransition と同じ遷移条件。
+	///   - InDelegate が指すデリゲートを持つ。
+	public: template<typename TemplateDelegate>
+	void UnregisterHooks(
 		/// [in] 取り除く ThisClass::FHook に対応する
 		/// TEvaluator::FExpression の識別値。
 		typename ThisClass::FEvaluator::FExpressionKey const InExpressionKey,
-		/// [in] 取り除く ThisClass::FHook に対応する条件式の前回の評価。
-		::EPsyqueKleene const InBeforeCondition,
-		/// [in] 取り除く ThisClass::FHook に対応する条件式の最新の評価。
-		::EPsyqueKleene const InLatestCondition,
-		/// [in] 取り除く ThisClass::FHook が持つデリゲートを指すハンドル。
-		::FDelegateHandle const& InDelegateHandle)
+		/// [in] 取り除く ThisClass::FHook に対応する遷移条件。
+		typename ThisClass::FHook::FTransition const InTransition,
+		/// [in] 取り除く ThisClass::FHook が持つデリゲートを指すインスタンス。
+		/// 以下のいずれかの型のみが対応している。
+		/// - Psyque::RulesEngine::FDelegateIdentifier
+		/// - FPsyqueRulesDelegate
+		/// - FDelegateHandle
+		TemplateDelegate const& InDelegate)
 	{
 		auto const LocalFind(this->ExpressionMonitors.find(InExpressionKey));
 		if (LocalFind != this->ExpressionMonitors.end())
 		{
-			LocalFind->second.UnregisterHooks(
-				InBeforeCondition, InLatestCondition, InDelegateHandle);
+			LocalFind->second.UnregisterHooks(InTransition, InDelegate);
 		}
 	}
 
 	/// @brief 指定した条件式と遷移条件とデリゲートに対応する条件挙動を取り除く。
 	/// @details
 	///   ThisClass::RegisterHook で登録した ThisClass::FHook のうち、
-	///   InExpressionKey が指す条件式を参照し、かつ、
-	///   InDelegateHandle が指すデリゲートを持つものを取り除く。
-	public: void UnregisterHooks(
+	///   以下のすべてに合致するものを取り除く。
+	///   - InExpressionKey が指す条件式を参照している。
+	///   - 以前評価が InBeforeCondition で、最新評価が
+	///     InLatestCondition となる遷移条件。
+	///   - InDelegate が指すデリゲートを持つ。
+	public: template<typename TemplateDelegate>
+	void UnregisterHooks(
 		/// [in] 取り除く ThisClass::FHook に対応する
 		/// TEvaluator::FExpression の識別値。
 		typename ThisClass::FEvaluator::FExpressionKey const InExpressionKey,
-		/// [in] 取り除く ThisClass::FHook に対応する条件式の前回の評価。
+		/// [in] 取り除く ThisClass::FHook が持つデリゲートを実行する条件となる、
+		/// 条件式の古い評価。
 		::EPsyqueKleene const InBeforeCondition,
-		/// [in] 取り除く ThisClass::FHook に対応する条件式の最新の評価。
+		/// [in] 取り除く ThisClass::FHook が持つデリゲートを実行する条件となる、
+		/// 条件式の新しい評価。
 		::EPsyqueKleene const InLatestCondition,
-		/// [in] 取り除く ThisClass::FHook が持つデリゲートの識別子。
-		Psyque::RulesEngine::FDelegateIdentifier const& InDelegate)
+		/// [in] 取り除く ThisClass::FHook が持つデリゲートを指すインスタンス。
+		/// 以下のいずれかの型のインスタンスのみが対応している。
+		/// - Psyque::RulesEngine::FDelegateIdentifier
+		/// - FPsyqueRulesDelegate
+		/// - FDelegateHandle
+		TemplateDelegate const& InDelegate)
 	{
-		auto const LocalFind(this->ExpressionMonitors.find(InExpressionKey));
-		if (LocalFind != this->ExpressionMonitors.end())
-		{
-			LocalFind->second.UnregisterHooks(
-				InBeforeCondition, InLatestCondition, InDelegate);
-		}
+		this->UnregisterHooks(
+			InExpressionKey,
+			ThisClass::FHook::MakeTransition(
+				InBeforeCondition, InLatestCondition),
+			InDelegate);
 	}
 
-	/// @brief 指定した条件式とデリゲートに対応する条件挙動を取り除く。
+	/// @brief 指定した条件式とデリゲートに対応する条件挙動をすべて取り除く。
 	/// @details
 	///   ThisClass::RegisterHook で登録した ThisClass::FHook のうち、
 	///   InExpressionKey が指す条件式を参照し、かつ、
-	///   InDelegateHandle が指すデリゲートを持つものを取り除く。
-	public: void UnregisterHooks(
+	///   InDelegate が指すデリゲートを持つものを取り除く。
+	public: template<typename TemplateDelegate>
+	void UnregisterHooks(
 		/// [in] 取り除く ThisClass::FHook に対応する
 		/// TEvaluator::FExpression の識別値。
 		typename ThisClass::FEvaluator::FExpressionKey const InExpressionKey,
-		/// [in] 取り除く ThisClass::FHook が持つデリゲートを指すハンドル。
-		::FDelegateHandle const& InDelegateHandle)
-	{
-		auto const LocalFind(this->ExpressionMonitors.find(InExpressionKey));
-		if (LocalFind != this->ExpressionMonitors.end())
-		{
-			LocalFind->second.UnregisterHooks(InDelegateHandle);
-		}
-	}
-
-	/// @brief 指定した条件式と UObject に対応する条件挙動を取り除く。
-	/// @details
-	///   ThisClass::RegisterHook で登録した ThisClass::FHook のうち、
-	///   InExpressionKey が指す条件式を参照し、かつ、
-	///   InObject を参照するデリゲートを持つものを取り除く。
-	public: void UnregisterHooks(
-		/// [in] 取り除く ThisClass::FHook に対応する
-		/// TEvaluator::FExpression の識別値。
-		typename ThisClass::FEvaluator::FExpressionKey const InExpressionKey,
-		/// [in] 取り除く ThisClass::FHook が持つデリゲートの識別子。
-		Psyque::RulesEngine::FDelegateIdentifier const& InDelegate)
+		/// [in] 取り除く ThisClass::FHook が持つデリゲートを指すインスタンス。
+		/// 以下のいずれかの型のインスタンスのみが対応している。
+		/// - Psyque::RulesEngine::FDelegateIdentifier
+		/// - FPsyqueRulesDelegate
+		/// - FDelegateHandle
+		TemplateDelegate const& InDelegate)
 	{
 		auto const LocalFind(this->ExpressionMonitors.find(InExpressionKey));
 		if (LocalFind != this->ExpressionMonitors.end())
@@ -373,24 +402,15 @@ class Psyque::RulesEngine::_private::TDispatcher
 	/// @brief 指定したデリゲートに対応する条件挙動をすべて取り除く。
 	/// @details
 	///   ThisClass::RegisterHook で登録した ThisClass::FHook のうち、
-	///   InDelegateHandle が指すデリゲートを持つ ThisClass::FHook をすべて取り除く。
-	public: void UnregisterHooks(
-		/// [in] 取り除く ThisClass::FHook が持つデリゲートを指すハンドル。
-		::FDelegateHandle const& InDelegateHandle)
-	{
-		for (auto& LocalExpressionMonitor: this->ExpressionMonitors)
-		{
-			LocalExpressionMonitor.second.UnregisterHooks(InDelegateHandle);
-		}
-	}
-
-	/// @brief 指定した UObject に対応する条件挙動をすべて取り除く。
-	/// @details
-	///   ThisClass::RegisterHook で登録した ThisClass::FHook のうち、
-	///   InObject を参照するデリゲートを持つ ThisClass::FHook をすべて取り除く。
-	public: void UnregisterHooks(
-		/// [in] 取り除く ThisClass::FHook が持つデリゲートの識別子。
-		Psyque::RulesEngine::FDelegateIdentifier const& InDelegate)
+	///   InDelegate が指すデリゲートを持つ ThisClass::FHook をすべて取り除く。
+	public: template<typename TemplateDelegate>
+	void UnregisterHooks(
+		/// [in] 取り除く ThisClass::FHook が持つデリゲートを指すインスタンス。
+		/// 以下のいずれかの型のインスタンスのみが対応している。
+		/// - Psyque::RulesEngine::FDelegateIdentifier
+		/// - FPsyqueRulesDelegate
+		/// - FDelegateHandle
+		TemplateDelegate const& InDelegate)
 	{
 		for (auto& LocalExpressionMonitor: this->ExpressionMonitors)
 		{
@@ -400,7 +420,8 @@ class Psyque::RulesEngine::_private::TDispatcher
 
 	/// @brief 指定した条件式に対応する条件挙動をすべて取り除く。
 	/// @details
-	///   ThisClass::RegisterHook で登録した ThisClass::FHook を取り除く。
+	///   ThisClass::RegisterHook で登録した ThisClass::FHook のうち、
+	///   InExpressionKey が指す条件式を参照する ThisClass::FHook をすべて取り除く。
 	public: void UnregisterHooks(
 		/// [in] 取り除く ThisClass::FHook に対応する
 		/// TEvaluator::FExpression の識別値。
@@ -409,29 +430,28 @@ class Psyque::RulesEngine::_private::TDispatcher
 		this->ExpressionMonitors.erase(InExpressionKey);
 	}
 
-	/// @brief 登録されている条件挙動フックを取得する。
+	/// @brief Psyque::RulesEngine 管理者以外は、この関数は使用禁止。
+	/// @details 登録されている条件挙動フックを取得する。
 	/// @return
-	///   ThisClass::RegisterHook で *this に登録された、
+	///   ThisClass::RegisterHook で登録された、
 	///   InExpressionKey に対応し InDelegateHandle の指すデリゲートを持つ
-	///   ThisClass::FHook を指すポインタ。
-	public: typename ThisClass::FHook const* _find_hook(
+	///   ThisClass::FHook の何れかを指すポインタ。
+	public: template<typename TemplateDelegate>
+	typename ThisClass::FHook const* _find_hook(
 		/// [in] 取得する ThisClass::FHook に対応する
 		/// TEvaluator::FExpression の識別値。
 		typename ThisClass::FEvaluator::FExpressionKey const InExpressionKey,
-		/// [in] 取得する ThisClass::FHook が持つデリゲートを指すハンドル。
-		::FDelegateHandle const& InDelegateHandle)
+		/// [in] 取得する ThisClass::FHook が持つデリゲートを指すインスタンス。
+		/// 以下のいずれかの型のインスタンスのみが対応している。
+		/// - Psyque::RulesEngine::FDelegateIdentifier
+		/// - FPsyqueRulesDelegate
+		/// - FDelegateHandle
+		TemplateDelegate const& InDelegate)
 	const
 	{
-		if (InDelegateHandle.IsValid())
-		{
-			auto const LocalFind(
-				this->ExpressionMonitors.find(InExpressionKey));
-			if (LocalFind != this->ExpressionMonitors.end())
-			{
-				return LocalFind->second._find_hook(InDelegateHandle);
-			}
-		}
-		return nullptr;
+		auto const LocalFind(this->ExpressionMonitors.find(InExpressionKey));
+		return LocalFind != this->ExpressionMonitors.end()?
+			LocalFind->second.FindHook(InDelegate): nullptr;
 	}
 
 	/// @brief Psyque::RulesEngine 管理者以外は、この関数は使用禁止。
@@ -452,7 +472,7 @@ class Psyque::RulesEngine::_private::TDispatcher
 		/// [in] 条件式の評価に使う条件評価器。
 		typename ThisClass::FEvaluator const& InEvaluator)
 	{
-		// _dispatch を多重に実行しないようにロックする。
+		// this->_dispatch を多重に実行しないようにロックする。
 		if (this->DispatchLock)
 		{
 			check(false);
@@ -474,7 +494,7 @@ class Psyque::RulesEngine::_private::TDispatcher
 		LocalCachedHooks.swap(this->CachedHooks);
 
 		// 変化した状態値を参照する条件式を評価し、
-		// 挙動条件に合致した条件挙動フックをキャッシュに貯めて、
+		// 遷移条件に合致した条件挙動フックをキャッシュに貯めて、
 		// 優先順位の降順で並び替える。
 		ThisClass::FExpressionMonitorMap::mapped_type::CacheHooks(
 			LocalCachedHooks,

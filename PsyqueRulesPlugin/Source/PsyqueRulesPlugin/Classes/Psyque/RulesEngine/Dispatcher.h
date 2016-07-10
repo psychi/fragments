@@ -22,32 +22,33 @@ namespace Psyque
 	} // namespace RulesEngine
 } // namespace Psyque
 /// @endcond
-
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// @brief 条件挙動器。条件式の評価が条件と合致すると、関数を呼び出す。
+
+/// デリゲート実行器。条件式の評価が実行条件と合致すると、デリゲートを実行する。
+///
 /// @par 使い方の概略
-///   - TDispatcher::RegisterHook
-///     で、挙動条件に合致した際に呼び出す条件挙動関数を登録する。
+///   - TDispatcher::RegisterDelegate で、実行条件と実行するデリゲートを登録する。
 ///   - TDispatcher::_dispatch
-///     で状態値の変化を検知して、変化した状態値を参照する条件式を評価し、
-///     条件式の評価の変化が挙動条件と合致する条件挙動関数を呼び出す。
+///     で状態値の変化を検知し、変化した状態値を参照する条件式を評価して、
+///     条件式の評価の変化が実行条件と合致するデリゲートを実行する。
 /// @tparam TemplateEvaluator @copydoc TDispatcher::FEvaluator
 /// @tparam TemplatePriority  @copydoc TDispatcher::FHook::FPriority
 template<typename TemplateEvaluator, typename TemplatePriority>
 class Psyque::RulesEngine::_private::TDispatcher
 {
-	private: using ThisClass = TDispatcher; ///< @copydoc RulesEngine::TDriver::ThisClass
-
+	/// @copydoc RulesEngine::TDriver::ThisClass
+	private: using ThisClass = TDispatcher;
 	//-------------------------------------------------------------------------
-	/// @brief 条件挙動器で使う TEvaluator の型。
+
+	/// デリゲート実行器で使う TEvaluator の型。
 	public: using FEvaluator = TemplateEvaluator;
-	/// @brief コンテナで使うメモリ割当子の型。
+	/// コンテナで使うメモリ割当子の型。
 	public: using FAllocator = typename ThisClass::FEvaluator::FAllocator;
-	/// @brief 条件挙動器で使う条件挙動フック。
+	/// デリゲート実行器で使う実行フック。
 	public: using FHook = Psyque::RulesEngine::_private::THook<
 		typename ThisClass::FEvaluator::FExpressionKey, TemplatePriority>;
-
 	//-------------------------------------------------------------------------
+
 	/// @copydoc ThisClass::StatusMonitors
 	private: using FStatusMonitorMap = std::unordered_map<
 		typename ThisClass::FEvaluator::FReservoir::FStatusKey,
@@ -63,67 +64,23 @@ class Psyque::RulesEngine::_private::TDispatcher
 	private: using FExpressionMonitorMap = std::unordered_map<
 		typename ThisClass::FEvaluator::FExpressionKey,
 		Psyque::RulesEngine::_private::TExpressionMonitor<
-			std::vector<typename ThisClass::FHook, typename ThisClass::FAllocator>>,
+			std::vector<
+				typename ThisClass::FHook, typename ThisClass::FAllocator>>,
 		Psyque::Hash::TPrimitiveBits<
 			typename ThisClass::FEvaluator::FExpressionKey>,
 		std::equal_to<typename ThisClass::FEvaluator::FExpressionKey>,
 		typename ThisClass::FAllocator>;
-	/// @copydoc ThisClass::CachedHooks
-
-	//-------------------------------------------------------------------------
-	/// @brief 条件挙動フックのキャッシュ。
-	private: class FHookCache
-	{
-		/// @copydoc TDispatcher::ThisClass
-		private: using ThisClass = FHookCache;
-
-		public: using FArray
-			= std::vector<ThisClass, typename TDispatcher::FAllocator>;
-
-		/// @brief 条件挙動フックのキャッシュを構築する。
-		public: FHookCache(
-			/// [in] キャッシュする条件挙動フック。
-			typename TDispatcher::FHook const& InHook,
-			/// [in] ThisClass::ExpressionKey の初期値。
-			typename TDispatcher::FHook::FExpressionKey const InExpressionKey):
-		Hook(&InHook),
-		ExpressionKey(InExpressionKey)
-		{}
-
-		public: typename TDispatcher::FHook::FPriority GetPriority() const
-		{
-			check(this->Hook != nullptr);
-			return this->Hook->Priority;
-		}
-
-		/// @brief デリゲートを実行する。
-		public: bool ExecuteDelegate() const
-		{
-			check(this->Hook != nullptr);
-			return this->Hook->GetDelegate().ExecuteIfBound(
-				this->ExpressionKey,
-				this->Hook->GetBeforeCondition(),
-				this->Hook->GetLatestCondition());
-		}
-
-		/// @brief 実行する条件挙動フック。
-		private: typename TDispatcher::FHook const* Hook;
-		/// @brief 条件式の識別値。
-		private: typename TDispatcher::FHook::FExpressionKey ExpressionKey;
-
-	}; // class FHookCache
-
 	//-------------------------------------------------------------------------
 	/// @name 構築と代入
 	/// @{
 
-	/// @brief 空の条件挙動器を構築する。
+	/// 空のデリゲート実行器を構築する。
 	public: TDispatcher(
 		/// [in] 監視する状態値のバケット数。
 		std::size_t const InStatusCapacity,
 		/// [in] 監視する条件式のバケット数。
 		std::size_t const InExpressionCapacity,
-		/// [in] 条件挙動キャッシュの予約数。
+		/// [in] デリゲートのキャッシュ予約数。
 		std::size_t const InCacheCapacity,
 		/// [in] メモリ割当子の初期値。
 		typename ThisClass::FAllocator const& InAllocator):
@@ -137,25 +94,25 @@ class Psyque::RulesEngine::_private::TDispatcher
 		typename ThisClass::FExpressionMonitorMap::hasher(),
 		typename ThisClass::FExpressionMonitorMap::key_equal(),
 		InAllocator),
-	CachedHooks(InAllocator),
+	DelegateCaches(InAllocator),
 	DispatchLock(false)
 	{
-		this->CachedHooks.reserve(InCacheCapacity);
+		this->DelegateCaches.reserve(InCacheCapacity);
 	}
 
-	/// @brief コピー構築子。
+	/// コピー構築子。
 	public: TDispatcher(
 		/// [in] コピー元となるインスタンス。
 		ThisClass const& InSource):
 	StatusMonitors(InSource.StatusMonitors),
 	ExpressionMonitors(InSource.ExpressionMonitors),
-	CachedHooks(InSource.CachedHooks._get_allocator()),
+	DelegateCaches(InSource.DelegateCaches.get_allocator()),
 	DispatchLock(false)
 	{
-		this->CachedHooks.reserve(InSource.CachedHooks.capacity());
+		this->DelegateCaches.reserve(InSource.DelegateCaches.capacity());
 	}
 
-	/// @brief ムーブ構築子。
+	/// ムーブ構築子。
 	public: TDispatcher(
 		/// [in,out] ムーブ元となるインスタンス。
 		ThisClass&& OutSource):
@@ -164,11 +121,11 @@ class Psyque::RulesEngine::_private::TDispatcher
 		PSYQUE_ASSERT(!OutSource.DispatchLock),
 		MoveTemp(OutSource.StatusMonitors))),
 	ExpressionMonitors(MoveTemp(OutSource.ExpressionMonitors)),
-	CachedHooks(MoveTemp(OutSource.CachedHooks)),
+	DelegateCaches(MoveTemp(OutSource.DelegateCaches)),
 	DispatchLock(false)
 	{}
 
-	/// @brief コピー代入演算子。
+	/// コピー代入演算子。
 	/// @return *this
 	public: ThisClass& operator=(
 		/// [in] コピー元となるインスタンス。
@@ -178,11 +135,11 @@ class Psyque::RulesEngine::_private::TDispatcher
 		check(!this->DispatchLock && !InSource.DispatchLock);
 		this->StatusMonitors = InSource.StatusMonitors;
 		this->ExpressionMonitors = InSource.ExpressionMonitors;
-		this->CachedHooks.reserve(InSource.CachedHooks.capacity());
+		this->DelegateCaches.reserve(InSource.DelegateCaches.capacity());
 		return *this;
 	}
 
-	/// @brief ムーブ代入演算子。
+	/// ムーブ代入演算子。
 	/// @return *this
 	public: ThisClass& operator=(
 		/// [in,out] ムーブ元となるインスタンス。
@@ -192,31 +149,31 @@ class Psyque::RulesEngine::_private::TDispatcher
 		check(!this->DispatchLock && !OutSource.DispatchLock);
 		this->StatusMonitors = MoveTemp(OutSource.StatusMonitors);
 		this->ExpressionMonitors = MoveTemp(OutSource.ExpressionMonitors);
-		this->CachedHooks = MoveTemp(OutSource.CachedHooks);
+		this->DelegateCaches = MoveTemp(OutSource.DelegateCaches);
 		return *this;
 	}
 
-	/// @brief 条件挙動器を解体する。
+	/// デリゲート実行器を解体する。
 	public: ~TDispatcher()
 	{
 		/// @warning ThisClass::_dispatch 実行中は解体できない。
 		check(!this->DispatchLock);
 	}
 
-	/// @brief 条件挙動器で使われているメモリ割当子を取得する。
+	/// デリゲート実行器で使われているメモリ割当子を取得する。
 	/// @return *this で使われているメモリ割当子のコピー。
 	public: typename ThisClass::FAllocator _get_allocator() const PSYQUE_NOEXCEPT
 	{
 		return this->ExpressionMonitors.get_allocator();
 	}
 
-	/// @brief 条件挙動器を再構築し、メモリ領域を必要最小限にする。
+	/// デリゲート実行器を再構築し、メモリ領域を必要最小限にする。
 	public: void Rebuild(
 		/// [in] 監視する状態値のバケット数。
 		std::size_t const InStatusCapacity,
 		/// [in] 監視する条件式のバケット数。
 		std::size_t const InExpressionCapacity,
-		/// [in] 条件挙動キャッシュの予約数。
+		/// [in] デリゲートのキャッシュ予約数。
 		std::size_t const InCacheCapacity)
 	{
 		using FExpressionMonitor =
@@ -226,7 +183,7 @@ class Psyque::RulesEngine::_private::TDispatcher
 			InExpressionCapacity,
 			[](FExpressionMonitor& OutExpressionMonitor)->bool
 			{
-				return OutExpressionMonitor.ShrinkHooks();
+				return OutExpressionMonitor.IsEmpty();
 			});
 		using FStatusMonitor = typename ThisClass::FStatusMonitorMap::mapped_type;
 		ThisClass::RebuildMonitors(
@@ -237,30 +194,29 @@ class Psyque::RulesEngine::_private::TDispatcher
 				return OutStatusMonitor.ShrinkExpressionKeys(
 					this->ExpressionMonitors);
 			});
-		check(this->CachedHooks.empty());
-		this->CachedHooks = decltype(this->CachedHooks)(
-			this->CachedHooks.get_allocator());
-		this->CachedHooks.reserve(InCacheCapacity);
+		check(this->DelegateCaches.empty());
+		this->DelegateCaches = decltype(this->DelegateCaches)(
+			this->DelegateCaches.get_allocator());
+		this->DelegateCaches.reserve(InCacheCapacity);
 	}
 	/// @}
 	//-------------------------------------------------------------------------
-	/// @name 条件挙動
+	/// @name デリゲート
 	/// @{
 
-	/// @brief 条件挙動を登録する。
-	/// @details
-	///   InExpressionKey が指す条件式の評価が
-	///   ThisClass::_dispatch の呼び出し前後で変化し、遷移状態が
-	///   InTransition と合致すると、 InDelegate が実行される。
+	/// デリゲートを登録する。
+	///
+	/// InExpressionKey が指す条件式の評価が
+	/// ThisClass::_dispatch の呼び出し前後で変化し、その変化が
+	/// InTransition と合致していた場合に、 InDelegate が実行される。
 	/// @sa
-	///   InDelegate が無効になると、対応する
-	///   ThisClass::FHook は自動的に取り除かれる。
-	///   明示的に取り除くには ThisClass::UnregisterHooks を使う。
-	/// @return 登録した ThisClass::FHook が持つデリゲートを指すハンドル。
+	///   InDelegate が無効になると、自動的に取り除かれる。
+	///   明示的に取り除くには ThisClass::UnregisterDelegates を使う。
+	/// @return 登録したデリゲートを指すハンドル。
 	///   ただし登録に失敗した場合は、空のハンドルを戻す。
 	///   - InTransition が無効だと、失敗する。
 	///   - InDelegate が無効だと、失敗する。
-	public: ::FDelegateHandle RegisterHook(
+	public: ::FDelegateHandle RegisterDelegate(
 		/// [in] InDelegate を実行するか判定する、
 		/// TEvaluator::FExpression の識別値。
 		typename ThisClass::FEvaluator::FExpressionKey const InExpressionKey,
@@ -271,7 +227,7 @@ class Psyque::RulesEngine::_private::TDispatcher
 		/// [in] 条件に合致した際に実行するデリゲート。
 		::FPsyqueRulesDelegate const& InDelegate)
 	{
-		return ThisClass::FExpressionMonitorMap::mapped_type::RegisterHook(
+		return ThisClass::FExpressionMonitorMap::mapped_type::RegisterDelegate(
 			this->ExpressionMonitors,
 			InExpressionKey,
 			InTransition,
@@ -279,21 +235,20 @@ class Psyque::RulesEngine::_private::TDispatcher
 			InDelegate);
 	}
 
-	/// @brief 条件挙動を登録する。
-	/// @details
-	///   InExpressionKey が指す条件式の評価が
-	///   ThisClass::_dispatch の呼び出し前後で変化し、
-	///   InBeforeCondition から InLatestCondition へ遷移すると、
-	///   InDelegate が実行される。
+	/// デリゲートを登録する。
+	///
+	/// InExpressionKey が指す条件式の評価が
+	/// ThisClass::_dispatch の呼び出し前後で変化し、それが
+	/// InBeforeCondition から InLatestCondition へ変化していた場合に、
+	/// InDelegate が実行される。
 	/// @sa
-	///   InDelegate が無効になると、対応する
-	///   ThisClass::FHook は自動的に取り除かれる。
-	///   明示的に取り除くには ThisClass::UnregisterHooks を使う。
-	/// @return 登録した ThisClass::FHook が持つデリゲートを指すハンドル。
+	///   InDelegate が無効になると、自動的に取り除かれる。
+	///   明示的に取り除くには ThisClass::UnregisterDelegates を使う。
+	/// @return 登録したデリゲートを指すハンドル。
 	///   ただし登録に失敗した場合は、空のハンドルを戻す。
 	///   - InBeforeCondition と InLatestCondition が等価だと、失敗する。
 	///   - InDelegate が無効だと、失敗する。
-	public: ::FDelegateHandle RegisterHook(
+	public: ::FDelegateHandle RegisterDelegate(
 		/// [in] InDelegate を実行するか判定する、
 		/// TEvaluator::FExpression の識別値。
 		typename ThisClass::FEvaluator::FExpressionKey const InExpressionKey,
@@ -306,7 +261,7 @@ class Psyque::RulesEngine::_private::TDispatcher
 		/// [in] 条件に合致した際に実行するデリゲート。
 		::FPsyqueRulesDelegate const& InDelegate)
 	{
-		return this->RegisterHook(
+		return this->RegisterDelegate(
 			InExpressionKey,
 			ThisClass::FHook::MakeTransition(
 				InBeforeCondition, InLatestCondition),
@@ -314,21 +269,20 @@ class Psyque::RulesEngine::_private::TDispatcher
 			InDelegate);
 	}
 
-	/// @brief 指定した条件式と遷移条件とデリゲートに対応する条件挙動を取り除く。
-	/// @details
-	///   ThisClass::RegisterHook で登録した ThisClass::FHook のうち、
-	///   以下のすべてに合致するものを取り除く。
-	///   - InExpressionKey が指す条件式を参照している。
-	///   - InTransition と同じ遷移条件。
-	///   - InDelegate が指すデリゲートを持つ。
+	/// デリゲートを取り除く。
+	///
+	/// ThisClass::RegisterDelegate で登録したデリゲートのうち、
+	/// 以下のすべてが該当するものを取り除く。
+	/// - InExpressionKey が指す条件式を参照している。
+	/// - InTransition と同じ実行条件。
+	/// - InDelegate が指すデリゲートを持つ。
 	public: template<typename TemplateDelegate>
-	void UnregisterHooks(
-		/// [in] 取り除く ThisClass::FHook に対応する
-		/// TEvaluator::FExpression の識別値。
+	void UnregisterDelegates(
+		/// [in] 取り除くデリゲートに対応する TEvaluator::FExpression の識別値。
 		typename ThisClass::FEvaluator::FExpressionKey const InExpressionKey,
-		/// [in] 取り除く ThisClass::FHook に対応する遷移条件。
+		/// [in] 取り除くデリゲートに対応する実行条件。
 		typename ThisClass::FHook::FTransition const InTransition,
-		/// [in] 取り除く ThisClass::FHook が持つデリゲートを指すインスタンス。
+		/// [in] 取り除くデリゲートを指すインスタンス。
 		/// 以下のいずれかの型のみが対応している。
 		/// - Psyque::RulesEngine::FDelegateIdentifier
 		/// - FPsyqueRulesDelegate
@@ -338,54 +292,51 @@ class Psyque::RulesEngine::_private::TDispatcher
 		auto const LocalFind(this->ExpressionMonitors.find(InExpressionKey));
 		if (LocalFind != this->ExpressionMonitors.end())
 		{
-			LocalFind->second.UnregisterHooks(InTransition, InDelegate);
+			LocalFind->second.UnregisterDelegates(InTransition, InDelegate);
 		}
 	}
 
-	/// @brief 指定した条件式と遷移条件とデリゲートに対応する条件挙動を取り除く。
-	/// @details
-	///   ThisClass::RegisterHook で登録した ThisClass::FHook のうち、
-	///   以下のすべてに合致するものを取り除く。
-	///   - InExpressionKey が指す条件式を参照している。
-	///   - 以前評価が InBeforeCondition で、最新評価が
-	///     InLatestCondition となる遷移条件。
-	///   - InDelegate が指すデリゲートを持つ。
+	/// デリゲートを取り除く。
+	///
+	/// ThisClass::RegisterDelegate で登録したデリゲートのうち、
+	/// 以下のすべてが該当するものを取り除く。
+	/// - InExpressionKey が指す条件式を参照している。
+	/// - 実行条件の古い評価が InBeforeCondition と等値。
+	/// - 実行条件の新しい評価が InLatestCondition と等値。
+	/// - InDelegate が指すデリゲートを持つ。
 	public: template<typename TemplateDelegate>
-	void UnregisterHooks(
-		/// [in] 取り除く ThisClass::FHook に対応する
-		/// TEvaluator::FExpression の識別値。
+	void UnregisterDelegates(
+		/// [in] 取り除くデリゲートに対応する TEvaluator::FExpression の識別値。
 		typename ThisClass::FEvaluator::FExpressionKey const InExpressionKey,
-		/// [in] 取り除く ThisClass::FHook が持つデリゲートを実行する条件となる、
-		/// 条件式の古い評価。
+		/// [in] 取り除くデリゲートに対応する、条件式の古い評価。
 		::EPsyqueKleene const InBeforeCondition,
-		/// [in] 取り除く ThisClass::FHook が持つデリゲートを実行する条件となる、
-		/// 条件式の新しい評価。
+		/// [in] 取り除くデリゲートに対応する、条件式の新しい評価。
 		::EPsyqueKleene const InLatestCondition,
-		/// [in] 取り除く ThisClass::FHook が持つデリゲートを指すインスタンス。
+		/// [in] 取り除くデリゲートを指すインスタンス。
 		/// 以下のいずれかの型のインスタンスのみが対応している。
 		/// - Psyque::RulesEngine::FDelegateIdentifier
 		/// - FPsyqueRulesDelegate
 		/// - FDelegateHandle
 		TemplateDelegate const& InDelegate)
 	{
-		this->UnregisterHooks(
+		this->UnregisterDelegates(
 			InExpressionKey,
 			ThisClass::FHook::MakeTransition(
 				InBeforeCondition, InLatestCondition),
 			InDelegate);
 	}
 
-	/// @brief 指定した条件式とデリゲートに対応する条件挙動をすべて取り除く。
-	/// @details
-	///   ThisClass::RegisterHook で登録した ThisClass::FHook のうち、
-	///   InExpressionKey が指す条件式を参照し、かつ、
-	///   InDelegate が指すデリゲートを持つものを取り除く。
+	/// デリゲートを取り除く。
+	///
+	/// ThisClass::RegisterDelegate で登録したデリゲートのうち、
+	/// 以下のすべてが該当するものをすべて取り除く。
+	/// - InExpressionKey が指す条件式を参照している。
+	/// - InDelegate が指すデリゲートを持つ。
 	public: template<typename TemplateDelegate>
-	void UnregisterHooks(
-		/// [in] 取り除く ThisClass::FHook に対応する
-		/// TEvaluator::FExpression の識別値。
+	void UnregisterDelegates(
+		/// [in] 取り除くデリゲートに対応する TEvaluator::FExpression の識別値。
 		typename ThisClass::FEvaluator::FExpressionKey const InExpressionKey,
-		/// [in] 取り除く ThisClass::FHook が持つデリゲートを指すインスタンス。
+		/// [in] 取り除くデリゲートを指すインスタンス。
 		/// 以下のいずれかの型のインスタンスのみが対応している。
 		/// - Psyque::RulesEngine::FDelegateIdentifier
 		/// - FPsyqueRulesDelegate
@@ -395,17 +346,17 @@ class Psyque::RulesEngine::_private::TDispatcher
 		auto const LocalFind(this->ExpressionMonitors.find(InExpressionKey));
 		if (LocalFind != this->ExpressionMonitors.end())
 		{
-			LocalFind->second.UnregisterHooks(InDelegate);
+			LocalFind->second.UnregisterDelegates(InDelegate);
 		}
 	}
 
-	/// @brief 指定したデリゲートに対応する条件挙動をすべて取り除く。
-	/// @details
-	///   ThisClass::RegisterHook で登録した ThisClass::FHook のうち、
-	///   InDelegate が指すデリゲートを持つ ThisClass::FHook をすべて取り除く。
+	/// デリゲートを取り除く。
+	///
+	/// ThisClass::RegisterDelegate で登録したデリゲートのうち、
+	/// InDelegate が指すデリゲートを持つものをすべて取り除く。
 	public: template<typename TemplateDelegate>
-	void UnregisterHooks(
-		/// [in] 取り除く ThisClass::FHook が持つデリゲートを指すインスタンス。
+	void UnregisterDelegates(
+		/// [in] 取り除くデリゲートを指すインスタンス。
 		/// 以下のいずれかの型のインスタンスのみが対応している。
 		/// - Psyque::RulesEngine::FDelegateIdentifier
 		/// - FPsyqueRulesDelegate
@@ -414,30 +365,61 @@ class Psyque::RulesEngine::_private::TDispatcher
 	{
 		for (auto& LocalExpressionMonitor: this->ExpressionMonitors)
 		{
-			LocalExpressionMonitor.second.UnregisterHooks(InDelegate);
+			LocalExpressionMonitor.second.UnregisterDelegates(InDelegate);
 		}
 	}
 
-	/// @brief 指定した条件式に対応する条件挙動をすべて取り除く。
-	/// @details
-	///   ThisClass::RegisterHook で登録した ThisClass::FHook のうち、
-	///   InExpressionKey が指す条件式を参照する ThisClass::FHook をすべて取り除く。
-	public: void UnregisterHooks(
-		/// [in] 取り除く ThisClass::FHook に対応する
-		/// TEvaluator::FExpression の識別値。
+	/// デリゲートを取り除く。
+	///
+	/// ThisClass::RegisterDelegate で登録したデリゲートのうち、
+	/// InExpressionKey が指す条件式を参照するものをすべて取り除く。
+	public: void UnregisterDelegates(
+		/// [in] 取り除くデリゲートに対応する TEvaluator::FExpression の識別値。
 		typename ThisClass::FEvaluator::FExpressionKey const InExpressionKey)
 	{
 		this->ExpressionMonitors.erase(InExpressionKey);
 	}
 
-	/// @brief Psyque::RulesEngine 管理者以外は、この関数は使用禁止。
-	/// @details 登録されている条件挙動フックを取得する。
+	/// Psyque::RulesEngine 管理者以外は、この関数は使用禁止。
+	///
+	/// 前回の ThisClass::_dispatch と今回の ThisClass::_dispatch
+	/// で条件式の評価が変化した場合に、 ThisClass::RegisterDelegate
+	/// で指定した実行条件と合致していれば、
+	/// ThisClass::FHook::Delegate が実行される。
+	/// @warning
+	///   前回から今回の間（基本的には1フレームの間）で条件式の評価が変化しても、
+	///   前回の時点と今回の時点の評価が同じ場合、デリゲートは実行されない。
+	///   たとえば、前回から今回の間で条件式の評価が
+	///   「true（前回）／false（前回と今回の間）／true（今回）」
+	///   と変化した場合、デリゲートは実行されない。
+	public: void _dispatch(
+		/// [in,out] 条件式の評価で参照する状態貯蔵器。
+		typename ThisClass::FEvaluator::FReservoir& OutReservoir,
+		/// [in] 条件式の評価に使う条件評価器。
+		typename ThisClass::FEvaluator const& InEvaluator)
+	{
+		// 条件式を評価し、実行条件に合致したデリゲートをキャッシュに貯める。
+		if (this->CacheDelegates(OutReservoir, InEvaluator))
+		{
+			// 条件式の評価が済んだので、状態変化フラグを初期化する。
+			OutReservoir._reset_transitions();
+
+			// キャッシュに貯めたデリゲートを実行する。
+			this->ExecuteDelegates();
+		}
+	}
+	/// @}
+	//-------------------------------------------------------------------------
+
+	/// Psyque::RulesEngine 管理者以外は、この関数は使用禁止。
+	///
+	/// 登録されている実行フックを取得する。
 	/// @return
-	///   ThisClass::RegisterHook で登録された、
+	///   ThisClass::RegisterDelegate で登録された、
 	///   InExpressionKey に対応し InDelegateHandle の指すデリゲートを持つ
-	///   ThisClass::FHook の何れかを指すポインタ。
-	public: template<typename TemplateDelegate>
-	typename ThisClass::FHook const* _find_hook(
+	///   ThisClass::FHook を指すポインタ。
+	private: template<typename TemplateDelegate>
+	typename ThisClass::FHook const* FindHook(
 		/// [in] 取得する ThisClass::FHook に対応する
 		/// TEvaluator::FExpression の識別値。
 		typename ThisClass::FEvaluator::FExpressionKey const InExpressionKey,
@@ -454,21 +436,12 @@ class Psyque::RulesEngine::_private::TDispatcher
 			LocalFind->second.FindHook(InDelegate): nullptr;
 	}
 
-	/// @brief Psyque::RulesEngine 管理者以外は、この関数は使用禁止。
-	/// @details
-	///   前回の ThisClass::_dispatch と今回の ThisClass::_dispatch
-	///   で条件式の評価が変化した場合に、 ThisClass::RegisterHook
-	///   で指定した挙動条件と合致していれば、
-	///   ThisClass::FHook に通知して条件挙動関数を呼び出す。
-	/// @warning
-	///   前回から今回の間（基本的には1フレームの間）で条件式の評価が変化しても、
-	///   前回の時点と今回の時点の評価が同じ場合は、条件挙動関数が呼び出されない。
-	///   たとえば、前回から今回の間で条件式の評価が
-	///   「true（前回）／false（前回と今回の間）／true（今回）」
-	///   と変化した場合、条件挙動関数は呼び出されない。
-	public: void _dispatch(
+	/// 条件式を評価し、実行条件に合致したデリゲートをキャッシュに貯める。
+	/// @retval true  成功。
+	/// @retval false 失敗。
+	private: bool CacheDelegates(
 		/// [in,out] 条件式の評価で参照する状態貯蔵器。
-		typename ThisClass::FEvaluator::FReservoir& OutReservoir,
+		typename ThisClass::FEvaluator::FReservoir const& InReservoir,
 		/// [in] 条件式の評価に使う条件評価器。
 		typename ThisClass::FEvaluator const& InEvaluator)
 	{
@@ -476,7 +449,7 @@ class Psyque::RulesEngine::_private::TDispatcher
 		if (this->DispatchLock)
 		{
 			check(false);
-			return;
+			return false;
 		}
 		this->DispatchLock = true;
 
@@ -486,57 +459,46 @@ class Psyque::RulesEngine::_private::TDispatcher
 
 		// 状態値の変化を検知し、条件式監視器へ知らせる。
 		ThisClass::FStatusMonitorMap::mapped_type::NotifyStatusTransitions(
-			this->StatusMonitors, this->ExpressionMonitors, OutReservoir);
+			this->StatusMonitors, this->ExpressionMonitors, InReservoir);
 
-		// 条件挙動フックキャッシュの作業領域を再利用する。
-		check(this->CachedHooks.empty());
-		auto LocalCachedHooks(this->CachedHooks);
-		LocalCachedHooks.swap(this->CachedHooks);
-
-		// 変化した状態値を参照する条件式を評価し、
-		// 遷移条件に合致した条件挙動フックをキャッシュに貯めて、
-		// 優先順位の降順で並び替える。
-		ThisClass::FExpressionMonitorMap::mapped_type::CacheHooks(
-			LocalCachedHooks,
+		// 条件式を評価し、実行条件に合致したデリゲートをキャッシュに貯める。
+		check(this->DelegateCaches.empty());
+		this->DelegateCaches.clear();
+		ThisClass::FExpressionMonitorMap::mapped_type::CacheDelegates(
+			this->DelegateCaches,
 			this->ExpressionMonitors,
-			OutReservoir,
+			InReservoir,
 			InEvaluator);
-		std::sort(
-			LocalCachedHooks.begin(),
-			LocalCachedHooks.end(),
-			[](
-				typename ThisClass::FHookCache const& InLeft,
-				typename ThisClass::FHookCache const& InRight)
-			->bool
-			{
-				return InRight.GetPriority() < InLeft.GetPriority();
-			});
+		return true;
+	}
 
-		// 条件式の評価が済んだので、状態変化フラグを初期化する。
-		OutReservoir._reset_transitions();
+	/// ThisClass::CacheDelegates でキャッシュに貯めたデリゲートを実行する。
+	private: void ExecuteDelegates()
+	{
+		// ThisClass::Rebuild に対応するため、
+		// キャッシュをローカル変数に移し替えた後、デリゲートを実行する。
+		auto LocalDelegateCaches(MoveTemp(this->DelegateCaches));
+		//this->DelegateCaches.clear();
+		ThisClass::FExpressionMonitorMap::mapped_type::ExecuteDelegates(
+			LocalDelegateCaches, this->ExpressionMonitors);
 
-		// キャッシュに貯まった条件挙動関数を呼び出す。
-		for (auto const& LocalCachedHook: LocalCachedHooks)
+		// キャッシュを空にする。
+		if (0 < this->DelegateCaches.capacity())
 		{
-			LocalCachedHook.ExecuteDelegate();
-		}
-
-		// 条件挙動フックキャッシュの作業領域を回収する。
-		if (0 < this->CachedHooks.capacity())
-		{
-			check(this->CachedHooks.empty());
+			check(this->DelegateCaches.empty());
 		}
 		else
 		{
-			LocalCachedHooks.clear();
-			this->CachedHooks = MoveTemp(LocalCachedHooks);
+			this->DelegateCaches = MoveTemp(LocalDelegateCaches);
 		}
+		this->DelegateCaches.clear();
+
+		// ロックを解除する。
 		check(this->DispatchLock);
 		this->DispatchLock = false;
 	}
-	/// @}
-	//-------------------------------------------------------------------------
-	/// @brief 監視器を再構築する。
+
+	/// 監視器を再構築する。
 	private: template<
 		typename TemplateMonitorMap, typename TemplateRebuildFunction>
 	static void RebuildMonitors(
@@ -560,15 +522,16 @@ class Psyque::RulesEngine::_private::TDispatcher
 		}
 		OutMonitors.rehash(InBucketCount);
 	}
-
 	//-------------------------------------------------------------------------
-	/// @brief TStatusMonitor の辞書。
+
+	/// TStatusMonitor の辞書。
 	private: typename ThisClass::FStatusMonitorMap StatusMonitors;
-	/// @brief TExpressionMonitor の辞書。
+	/// TExpressionMonitor の辞書。
 	private: typename ThisClass::FExpressionMonitorMap ExpressionMonitors;
-	/// @brief THookCache の配列。
-	private: typename ThisClass::FHookCache::FArray CachedHooks;
-	/// @brief 多重に ThisClass::_dispatch しないためのロック。
+	/// 実行するデリゲートをキャッシュする配列。
+	private: typename ThisClass::FExpressionMonitorMap::mapped_type::FDelegateCacheArray
+		DelegateCaches;
+	/// 多重に ThisClass::_dispatch しないためのロック。
 	private: bool DispatchLock;
 
 }; // class Psyque::RulesEngine::_private::TDispatcher

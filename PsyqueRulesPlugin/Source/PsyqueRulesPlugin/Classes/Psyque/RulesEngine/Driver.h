@@ -39,8 +39,8 @@ namespace Psyque
 	} // namespace RulesEngine
 } // namespace Psyque
 /// @endcond
-
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+
 template<> struct std::hash<FName>
 {
 	using argument_type = FName;
@@ -61,21 +61,23 @@ template<> struct std::hash<FName>
 		return static_cast<uint32>(InKey.GetDisplayIndex());
 	}
 };
-
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// @brief if-then 規則による有限状態機械の駆動器。
+
+/// if-then 規則による有限状態機械の駆動器。
+///
 /// @par 使い方の概略
 /// - TDriver::TDriver で駆動器を構築する。
-/// - TDriver::ExtendChunk で、状態値と条件式と条件挙動関数を登録する。
+/// - TDriver::ExtendChunk で、状態値と条件式とデリゲートを登録する。
 ///   - 状態値の登録のみしたい場合は ThisClass::RegisterStatus を呼び出す。
 ///   - 条件式の登録のみしたい場合は ThisClass::Evaluator に対して
 ///     ThisClass::FEvaluator::RegisterExpression を呼び出す。
-///   - 条件挙動関数の登録のみしたい場合は TDriver::RegisterHandler を呼び出す。
+///   - デリゲートの登録のみしたい場合は ThisClass::Dispatcher に対して
+///     FDispatcher::RegisterDelegate を呼び出す。
 /// - ThisClass::Accumulator に対して
 ///   ThisClass::FAccumulator::Accumulate を呼び出し、状態値の変更を予約する。
 /// - TDriver::Tick
 ///   を時間フレーム毎に呼び出す。状態値の変更と条件式の評価が行われ、
-///   挙動条件に合致する条件挙動関数が呼び出される。
+///   実行条件に合致するデリゲートが実行される。
 /// .
 /// @tparam TemplateUnsigned  @copydoc FReservoir::FStatusValue::FUnsigned
 /// @tparam TemplateFloat     @copydoc FReservoir::FStatusValue::FFloat
@@ -90,40 +92,39 @@ template<
 	typename TemplateAllocator = std::allocator<void*>>
 class Psyque::RulesEngine::TDriver
 {
-	/// @brief this が指す値の型。
+	/// this が指す値の型。
 	private: using ThisClass = TDriver;
-
 	//-------------------------------------------------------------------------
+
 	// @copydoc Psyque::string::_private::flyweight_factory::FHasher
 	public: using FHasher = TemplateHasher;
-	/// @brief 各種コンテナに用いるメモリ割当子の型。
+	/// 各種コンテナに用いるメモリ割当子の型。
 	public: using FAllocator = TemplateAllocator;
-
 	//-------------------------------------------------------------------------
-	/// @brief 駆動器で用いる状態貯蔵器の型。
+
+	/// 駆動器で用いる状態貯蔵器の型。
 	public: using FReservoir = Psyque::RulesEngine::_private::TReservoir<
 		TemplateUnsigned,
 		TemplateFloat,
 		typename ThisClass::FHasher::result_type,
 		typename ThisClass::FHasher::result_type,
 		typename ThisClass::FAllocator>;
-	/// @brief 駆動器で用いる状態変更器の型。
+	/// 駆動器で用いる状態変更器の型。
 	public: using FAccumulator = Psyque::RulesEngine::_private::TAccumulator<
 		typename ThisClass::FReservoir>;
-	/// @brief 駆動器で用いる条件評価器の型。
+	/// 駆動器で用いる条件評価器の型。
 	public: using FEvaluator = Psyque::RulesEngine::_private::TEvaluator<
 		typename ThisClass::FReservoir, typename ThisClass::FHasher::result_type>;
-	/// @brief 駆動器で用いる条件挙動器の型。
+	/// 駆動器で用いるデリゲート実行器の型。
 	public: using FDispatcher = Psyque::RulesEngine::_private::TDispatcher<
 		typename ThisClass::FEvaluator, TemplatePriority>;
-	/// @brief チャンクの識別値を表す型。
+	/// チャンクの識別値を表す型。
 	public: using FChunkKey = typename ThisClass::FReservoir::FChunkKey;
-
 	//-------------------------------------------------------------------------
 	/// @name 構築と代入
 	/// @{
 
-	/// @brief 空の駆動器を構築する。
+	/// 空の駆動器を構築する。
 	public: TDriver():
 	Reservoir(
 		PSYQUE_RULES_ENGINE_DRIVER_CHUNK_CAPACITY_DEFAULT,
@@ -142,7 +143,7 @@ class Psyque::RulesEngine::TDriver
 		ThisClass::FAllocator())
 	{}
 
-	/// @brief 空の駆動器を構築する。
+	/// 空の駆動器を構築する。
 	public: TDriver(
 		/// [in] チャンク辞書の予約容量。
 		std::size_t const InChunkCapacity,
@@ -164,7 +165,7 @@ class Psyque::RulesEngine::TDriver
 	HashFunction(MoveTemp(InHashFunction))
 	{}
 
-	/// @brief 駆動器を再構築する。
+	/// 駆動器を再構築する。
 	public: void Rebuild(
 		/// [in] チャンク辞書の予約容量。
 		std::size_t const InChunkCapacity,
@@ -187,7 +188,7 @@ class Psyque::RulesEngine::TDriver
 	/// @name チャンク
 	/// @{
 
-	/// @brief 状態値と条件式と条件挙動ハンドラを、チャンクへ追加する。
+	/// 状態値と条件式とデリゲートを、チャンクへ追加する。
 	public: template<
 		typename TemplateStatusBuilder,
 		typename TemplateStatusIntermediation,
@@ -202,7 +203,7 @@ class Psyque::RulesEngine::TDriver
 		/// [in] 状態値を状態貯蔵器に登録する関数オブジェクト。
 		/// 以下に相当するメンバ関数を使えること。
 		/// @code
-		///   // brief 中間表現を解析して状態値を構築し、状態貯蔵器に登録する。
+		///   // 中間表現を解析して状態値を構築し、状態貯蔵器に登録する。
 		///   void TemplateStatusBuilder::operator()(
 		///     // [in,out] 状態値を登録する状態貯蔵器。
 		///     TDriver::FReservoir& OutReservoir,
@@ -221,7 +222,7 @@ class Psyque::RulesEngine::TDriver
 		/// [in] 条件式を条件評価器に登録する関数オブジェクト。
 		/// 以下に相当するメンバ関数を使えること。
 		/// @code
-		///   // brief 文字列表を解析して条件式を構築し、条件評価器に登録する。
+		///   // 文字列表を解析して条件式を構築し、条件評価器に登録する。
 		///   void TemplateExpressionBuilder::operator()(
 		///     // [in,out] 条件式を登録する条件評価器。
 		///     TDriver::FEvaluator& OutEvaluator,
@@ -239,27 +240,27 @@ class Psyque::RulesEngine::TDriver
 		/// [in] 解析する条件式の中間表現。
 		TemplateExpressionIntermediation const& InExpressionIntermediation,
 
-		/// [in] 条件挙動ハンドラを条件挙動器に登録する関数オブジェクト。
+		/// [in] デリゲートをデリゲート実行器に登録する関数オブジェクト。
 		/// 以下に相当するメンバ関数を使えること。
 		/// @code
-		///   // brief 文字列表から条件挙動ハンドラを構築し、条件挙動器に登録する。
+		///   // 文字列表からデリゲートを構築し、デリゲート実行器に登録する。
 		///   // return
-		///   //   条件挙動器に登録した条件挙動ハンドラに対応する関数を指す、
+		///   //   デリゲート実行器に登録したデリゲートに対応する関数を指す、
 		///   //   スマートポインタのコンテナ。
 		///   template<typename template_function_shared_ptr_container>
 		///   template_function_shared_ptr_container TemplateHandlerBuilder::operator()(
-		///     // [in,out] 条件挙動ハンドラを登録する条件挙動器。
+		///     // [in,out] デリゲートを登録するデリゲート実行器。
 		///     TDriver::FDispatcher& OutDispatcher,
 		///     // [in] 文字列から識別値を生成する関数オブジェクト。
 		///     TDriver::FHasher const& InHashFunction,
-		///     // [in,out] 条件挙動ハンドラで使う状態変更器。
+		///     // [in,out] デリゲートで使う状態変更器。
 		///     TDriver::FAccumulator& OutAccumulator,
 		///     // [in] 解析する中間表現。
 		///     TemplateRelationTable const& InIntermediation)
 		///   const;
 		/// @endcode
 		TemplateHandlerBuilder const& InHandlerBuilder,
-		/// [in] 解析する条件挙動ハンドラの中間表現。
+		/// [in] 解析するデリゲートの中間表現。
 		TemplateHandlerIntermediation const& InHandlerIntermediation)
 	{
 		InStatusBuilder(
@@ -285,7 +286,7 @@ class Psyque::RulesEngine::TDriver
 */
 	}
 /*
-	/// @brief 状態値と条件式と条件挙動ハンドラを、チャンクへ追加する。
+	/// 状態値と条件式とデリゲートを、チャンクへ追加する。
 	public: template<typename TemplateString>
 	void ExtendChunk(
 		/// [out] 文字列表の構築の作業領域として使う文字列。
@@ -313,12 +314,12 @@ class Psyque::RulesEngine::TDriver
 				const& in_expression_csv,
 		/// [in] 条件式CSVの属性の行番号。
 		std::size_t const in_expression_attribute,
-		/// [in] 条件挙動CSV文字列。空文字列の場合は、条件挙動ハンドラを追加しない。
+		/// [in] デリゲートCSV文字列。空文字列の場合は、デリゲートを追加しない。
 		Psyque::String::TView<
 			typename TemplateString::value_type,
 			typename TemplateString::traits_type>
 				const& in_handler_csv,
-		/// [in] 条件挙動CSVの属性の行番号。
+		/// [in] デリゲートCSVの属性の行番号。
 		std::size_t const in_handler_attribute)
 	{
 		using csv_table = Psyque::string::csv_table<
@@ -347,7 +348,7 @@ class Psyque::RulesEngine::TDriver
 				in_handler_attribute));
 	}
 */
-	/// @brief チャンクを削除する。
+	/// チャンクを削除する。
 	public: void RemoveChunk(
 		/// [in] 削除するチャンクの識別値。
 		typename ThisClass::FChunkKey const InChunkKey)
@@ -360,7 +361,7 @@ class Psyque::RulesEngine::TDriver
 	/// @name 状態値
 	/// @{
 
-	/// @brief 状態貯蔵器を取得する。
+	/// 状態貯蔵器を取得する。
 	/// @return *this が持つ状態貯蔵器。
 	public: typename ThisClass::FReservoir const& GetReservoir()
 	const PSYQUE_NOEXCEPT
@@ -368,7 +369,7 @@ class Psyque::RulesEngine::TDriver
 		return this->Reservoir;
 	}
 
-	/// @brief 状態値を登録する。
+	/// 状態値を登録する。
 	/// @sa
 	/// - 登録した状態値を取得するには、 ThisClass::GetReservoir から
 	///   FReservoir::FindStatus を呼び出す。
@@ -393,7 +394,7 @@ class Psyque::RulesEngine::TDriver
 		return this->Reservoir.RegisterStatus(InChunkKey, InStatusKey, InValue);
 	}
 
-	/// @brief 整数型の状態値を登録する。
+	/// 整数型の状態値を登録する。
 	/// @sa
 	/// - 登録した状態値を取得するには、 ThisClass::GetReservoir から
 	///   FReservoir::FindStatus を呼び出す。
@@ -423,7 +424,7 @@ class Psyque::RulesEngine::TDriver
 			InChunkKey, InStatusKey, InValue, InBitWidth);
 	}
 
-	/// @brief 状態値を更新し、条件式を評価して、条件挙動関数を呼び出す。
+	/// 状態値を更新し、条件式を評価して、条件に合致するデリゲートを実行する。
 	/// @details 基本的には、時間フレーム毎に呼び出すこと。
 	public: void Tick()
 	{
@@ -432,19 +433,20 @@ class Psyque::RulesEngine::TDriver
 	}
 	/// @}
 	//-------------------------------------------------------------------------
-	/// @brief 駆動器で用いる状態貯蔵器。
+
+	/// 駆動器で用いる状態貯蔵器。
 	private: typename ThisClass::FReservoir Reservoir;
 
-	/// @brief 駆動器で用いる状態変更器。
+	/// 駆動器で用いる状態変更器。
 	public: typename ThisClass::FAccumulator Accumulator;
 
-	/// @brief 駆動器で用いる条件評価器。
+	/// 駆動器で用いる条件評価器。
 	public: typename ThisClass::FEvaluator Evaluator;
 
-	/// @brief 駆動器で用いる条件挙動器。
+	/// 駆動器で用いるデリゲート実行器。
 	public: typename ThisClass::FDispatcher Dispatcher;
 
-	/// @brief 駆動器で用いる文字列ハッシュ関数オブジェクト。
+	/// 駆動器で用いる文字列ハッシュ関数オブジェクト。
 	public: typename ThisClass::FHasher HashFunction;
 
 }; // class Psyque::RulesEngine::TDriver

@@ -6,6 +6,7 @@
 
 #include <cstdint>
 #include <bitset>
+#include <tuple>
 #include <vector>
 
 /// @cond
@@ -22,54 +23,64 @@ namespace Psyque
 /// @endcond
 
 //ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
-/// @brief 条件式監視器。条件式の評価の変化を検知し、条件挙動フックに通知する。
+/// 条件式監視器。条件式の評価の変化を検知し、実行フックに通知する。
 /// @tparam TemplateHookArray @copydoc TExpressionMonitor::FHookArray
 template<typename TemplateHookArray>
 class Psyque::RulesEngine::_private::TExpressionMonitor
 {
 	/// @copydoc TDispatcher::ThisClass
 	private: using ThisClass = TExpressionMonitor;
-
 	//-------------------------------------------------------------------------
-	/// @brief TDispatcher で保持する THook のコンテナ。
+
+	/// TDispatcher で保持する THook のコンテナ。
 	private: using FHookArray = TemplateHookArray;
-	/// @brief TDispatcher で保持する THook 。
+	/// TDispatcher で保持する THook 。
 	private: using FHook = typename TemplateHookArray::value_type;
 
+	/// デリゲートのキャッシュ。
+	public: using FDelegateCacheArray = std::vector<
+		std::tuple<
+			// デリゲートに対応する条件式の識別値。
+			typename ThisClass::FHook::FExpressionKey,
+			// デリゲートに対応する実行フックのあるインデクス番号。
+			typename ThisClass::FHookArray::size_type,
+			// デリゲートの実行優先順位。
+			typename ThisClass::FHook::FPriority>,
+		typename TemplateHookArray::allocator_type>;
 	//-------------------------------------------------------------------------
-	/// @brief ThisClass::Flags の構成。
-	private: struct EFlag
+
+	/// ThisClass::Flags の型。
+	private: using FFlags = std::bitset<8>;
+	/// ThisClass::Flags の構成。
+	private: enum EFlag: uint8
 	{
-		enum Type: uint8
-		{
-			ValidTransition,   ///< 状態変化の取得に成功。
-			InvalidTransition, ///< 状態変化の取得に失敗。
-			BeforeEvaluation,  ///< 条件式の前回の評価の成功／失敗。
-			BeforeCondition,   ///< 条件式の前回の評価。
-			FlushCondition,    ///< 条件式の前回の評価を無視する。
-			IsRegistered,      ///< 条件式の登録済みフラグ。
-		};
+		StatusValidation,     ///< 状態変化の取得に成功。
+		StatusInvalidation,   ///< 状態変化の取得に失敗。
+		ExpressionValidation, ///< 条件式の前回の評価の成功／失敗。
+		LatestEvaluation,     ///< 条件式の前回の評価。
+		FlushEvaluation,      ///< 条件式の前回の評価を無視する。
+		IsRegistered,         ///< 条件式の登録済みフラグ。
 	};
 
 	//-------------------------------------------------------------------------
-	/// @brief 条件式監視器を構築する。
+
+	/// 条件式監視器を構築する。
 	public: explicit TExpressionMonitor(
 		/// [in] メモリ割当子の初期値。
 		typename ThisClass::FHookArray::allocator_type const& InAllocator):
 	Hooks(InAllocator)
 	{}
-
 	//-------------------------------------------------------------------------
-	/// @copydoc TDispatcher::RegisterHook
+
+	/// @copydoc TDispatcher::RegisterDelegate
 	/// @todo
 	///   TDispatcher::_dispatch の呼び出し前後で変化しなくても、遷移状態が
 	///   InTransition と合致すれば、 InDelegate が実行されるようにしたい。
 	public: template<typename TemplateExpressionMonitorMap>
-	static ::FDelegateHandle RegisterHook(
-		/// [in,out] ThisClass::FHook を登録する TExpressionMonitor の辞書。
+	static ::FDelegateHandle RegisterDelegate(
+		/// [in,out] InDelegate を登録する TExpressionMonitor の辞書。
 		TemplateExpressionMonitorMap& OutExpressionMonitors,
-		/// [in] InDelegate を実行するか判定する、
-		/// TEvaluator::FExpression の識別値。
+		/// [in] InDelegate を実行するか判定する TEvaluator::FExpression の識別値。
 		typename ThisClass::FHook::FExpressionKey const InExpressionKey,
 		/// [in] InDelegate を実行する条件となる、条件式の評価の遷移状態。
 		typename ThisClass::FHook::FTransition const InTransition,
@@ -84,7 +95,7 @@ class Psyque::RulesEngine::_private::TExpressionMonitor
 			return ::FDelegateHandle();
 		}
 
-		// 条件式監視器を取得し、条件とデリゲートが等価なフックを探す。
+		// 条件式監視器を取得し、実行条件とデリゲートが等価な実行フックを探す。
 		auto const LocalEmplace(
 			OutExpressionMonitors.emplace(
 				InExpressionKey,
@@ -93,101 +104,85 @@ class Psyque::RulesEngine::_private::TExpressionMonitor
 		auto const& LocalDelegateHandle(InDelegate.GetHandle());
 		Psyque::RulesEngine::FDelegateIdentifier const
 			LocalDelegateIdentifier(InDelegate);
-		for (std::size_t i(0); i < LocalHooks.size();)
+		for (auto i(LocalHooks.size()); 0 < i;)
 		{
+			--i;
 			auto& LocalHook(LocalHooks[i]);
-			if (LocalHook.GetDelegate().IsBound())
+			if (LocalHook.GetTransition() == InTransition
+				&& LocalHook.GetDelegate().IsBound())
 			{
-				// 等価な条件か判定する。
-				if (LocalHook.GetTransition() == InTransition)
+				auto const& LocalHandle(LocalHook.GetDelegate().GetHandle());
+				if (LocalHandle == LocalDelegateHandle
+					|| LocalHook.IsEqualDelegate(LocalDelegateIdentifier))
 				{
-					// 等価なデリゲートか判定する。
-					auto const LocalHandle(LocalHook.GetDelegate().GetHandle());
-					if (LocalHandle == LocalDelegateHandle
-						|| LocalHook.IsEqualDelegate(LocalDelegateIdentifier))
-					{
-						// 条件とデリゲートが等価なフックがすでにあるので、
-						// 優先順位だけ書き換える。
-						LocalHook.Priority = InPriority;
-						return LocalHandle;
-					}
+					// 実行条件とデリゲートが等価な実行フックがすでにあるので、
+					// 優先順位だけ書き換える。
+					LocalHook.Priority = InPriority;
+					return LocalHandle;
 				}
-				++i;
-			}
-			else
-			{
-				LocalHooks.erase(LocalHooks.begin() + i);
 			}
 		}
 
-		// 条件とデリゲートが等価なフックがないので、新たに追加する。
+		// 実行条件とデリゲートが等価な実行フックがないので、新たに追加する。
 		LocalHooks.emplace_back(InTransition, InPriority, InDelegate);
 		check(LocalDelegateHandle == LocalHooks.back().GetDelegate().GetHandle());
 		return LocalDelegateHandle;
 	}
 
-	/// @brief 遷移条件とデリゲートに対応する条件挙動を取り除く。
-	/// @details ThisClass::RegisterHook で登録した ThisClass::FHook のうち、
-	///   以下のすべてに合致するものを取り除く。
-	///   - InTransition と同じ遷移条件。
-	///   - InDelegate が指すデリゲートを持つ。
+	/// 遷移条件に対応するデリゲートを取り除く。
+	///
+	/// ThisClass::RegisterDelegate で登録したデリゲートのうち、
+	/// 以下のすべてに合致するものを取り除く。
+	/// - InTransition と同じ遷移条件。
+	/// - InDelegate が指すデリゲートを持つ。
 	public: template<typename TemplateDelegate>
-	void UnregisterHooks(
+	void UnregisterDelegates(
 		/// [in] 取り除く ThisClass::FHook に対応する遷移条件。
 		typename ThisClass::FHook::FTransition const InTransition,
 		/// [in] 取り除く ThisClass::FHook が持つデリゲートを指すインスタンス。
+		/// 以下のいずれかの型のみが対応している。
+		/// - Psyque::RulesEngine::FDelegateIdentifier
+		/// - FPsyqueRulesDelegate
+		/// - FDelegateHandle
 		TemplateDelegate const& InDelegate)
 	{
-		if (ThisClass::FHook::IsValidDelegate(InDelegate))
+		for (auto& LocalHook: this->Hooks)
 		{
-			this->EraseHooks(
-				[&InDelegate, InTransition](
-					typename ThisClass::FHook const& InHook)
-				->bool
-				{
-					return !InHook.GetDelegate().IsBound()
-						|| (InHook.GetTransition() == InTransition
-							&& InHook.IsEqualDelegate(InDelegate));
-				});
-		}
-	}
-
-	/// @brief デリゲートに対応する条件挙動を取り除く。
-	/// @details ThisClass::RegisterHook で登録した ThisClass::FHook のうち、
-	///   InDelegate が指すデリゲートを持つものを取り除く。
-	public: template<typename TemplateDelegate>
-	void UnregisterHooks(
-		/// [in] 取り除く ThisClass::FHook が持つデリゲートを指すインスタンス。
-		TemplateDelegate const& InDelegate)
-	{
-		if (ThisClass::FHook::IsValidDelegate(InDelegate))
-		{
-			this->EraseHooks(
-				[&InDelegate](typename ThisClass::FHook const& InHook)->bool
-				{
-					return !InHook.GetDelegate().IsBound()
-						|| InHook.IsEqualDelegate(InDelegate);
-				});
-		}
-	}
-
-	/// @brief 条件挙動フックを整理する。
-	/// @retval true  ThisClass::FHook がなくなった。
-	/// @retval false ThisClass::FHook はまだある。
-	public: bool ShrinkHooks()
-	{
-		this->EraseHooks(
-			[](typename ThisClass::FHook const& InHook)->bool
+			if (LocalHook.GetTransition() == InTransition
+				&& LocalHook.IsEqualDelegate(InDelegate))
 			{
-				return !InHook.GetDelegate().IsBound();
-			});
-		this->Hooks.shrink_to_fit();
-		return this->Hooks.empty();
+				LocalHook.UnbindDelegate();
+				break;
+			}
+		}
 	}
 
-	/// @brief デリゲートに対応する条件挙動を取得する。
-	/// @details ThisClass::RegisterHook で登録した ThisClass::FHook のうち、
-	///   InDelegate が指すデリゲートを持つ何れかを取得する。
+	/// デリゲートを取り除く。
+	///
+	/// ThisClass::RegisterDelegate で登録したデリゲートのうち、
+	/// InDelegate が指すものを取り除く。
+	public: template<typename TemplateDelegate>
+	void UnregisterDelegates(
+		/// [in] 取り除くデリゲートを指すインスタンス。
+		/// 以下のいずれかの型のみが対応している。
+		/// - Psyque::RulesEngine::FDelegateIdentifier
+		/// - FPsyqueRulesDelegate
+		/// - FDelegateHandle
+		TemplateDelegate const& InDelegate)
+	{
+		for (auto& LocalHook: this->Hooks)
+		{
+			if (LocalHook.IsEqualDelegate(InDelegate))
+			{
+				LocalHook.UnbindDelegate();
+			}
+		}
+	}
+
+	/// デリゲートに対応する実行フックを取得する。
+	///
+	/// ThisClass::RegisterDelegate で登録した ThisClass::FHook のうち、
+	/// InDelegate が指すデリゲートを持つ何れかを取得する。
 	public: template<typename TemplateDelegate>
 	typename ThisClass::FHook const* FindHook(
 		/// [in] 取得する ThisClass::FHook が持つデリゲートを指すインスタンス。
@@ -207,12 +202,18 @@ class Psyque::RulesEngine::_private::TExpressionMonitor
 		return nullptr
 	}
 
+	public: bool IsEmpty() const
+	{
+		return this->Hooks.empty();
+	}
+
 	//-------------------------------------------------------------------------
-	/// @brief 条件式を状態監視器へ登録する。
-	/// @details
-	///   OutExpressionMonitors の要素が監視している条件式から参照する
-	///   状態値が変化した際に通知されるよう、監視している条件式を
-	///   FStatusMonitor へ登録する。
+
+	/// 条件式を状態監視器へ登録する。
+	///
+	/// OutExpressionMonitors の要素が監視している条件式から参照する
+	/// 状態値が変化した際に通知されるよう、監視している条件式を
+	/// OutStatusMonitors へ登録する。
 	public: template<
 		typename TemplateStatusMonitorMap,
 		typename TemplateExpressionMonitorMap,
@@ -241,16 +242,15 @@ class Psyque::RulesEngine::_private::TExpressionMonitor
 				{
 					LocalFlags.set(ThisClass::EFlag::IsRegistered);
 					LocalFlags.set(
-						ThisClass::EFlag::FlushCondition,
+						ThisClass::EFlag::FlushEvaluation,
 						LocalRegisterExpression < 0);
 				}
 			}
 		}
 	}
 
-	/// @brief 状態値の変化を条件式監視器へ通知する。
-	public: template<
-		typename TemplateExpressionMap, typename TemplateKeyArray>
+	/// 状態値の変化を条件式監視器へ通知する。
+	public: template<typename TemplateExpressionMap, typename TemplateKeyArray>
 	static void NotifyStatusTransition(
 		/// [in,out] 状態変化の通知を受け取る TExpressionMonitor の辞書。
 		TemplateExpressionMap& OutExpressionMonitors,
@@ -261,8 +261,8 @@ class Psyque::RulesEngine::_private::TExpressionMonitor
 	{
 		auto const LocalFlagKey(
 			InStatusExistence?
-				ThisClass::EFlag::ValidTransition:
-				ThisClass::EFlag::InvalidTransition);
+				ThisClass::EFlag::StatusValidation:
+				ThisClass::EFlag::StatusInvalidation);
 		for (std::size_t i(0); i < OutExpressionKeys.size();)
 		{
 			// 状態変化を通知する条件式監視器を取得する。
@@ -285,48 +285,9 @@ class Psyque::RulesEngine::_private::TExpressionMonitor
 			}
 		}
 	}
-
-	/// @brief 条件式の評価の変化を検知し、条件挙動フックをキャッシュに貯める。
-	/// @details
-	///   TEvaluator::FExpression の評価が最新と前回で異なっており、且つ
-	///   ThisClass::RegisterHook で登録した ThisClass::FHook::FTransition
-	///   と合致するなら、 ThisClass::FHook を OutCachedHooks に貯める。
-	public: template<
-		typename TemplateHookCacheArray,
-		typename TemplateExpressionMonitorMap,
-		typename TemplateEvaluator>
-	static void CacheHooks(
-		/// [in,out] 挙動条件に合致した FHook::FCache を貯めるコンテナ。
-		TemplateHookCacheArray& OutCachedHooks,
-		/// [in,out] FEvaluator::FExpression の評価の変化を検知する
-		/// TExpressionMonitor の辞書。
-		TemplateExpressionMonitorMap& OutExpressionMonitors,
-		/// [in] 評価する FEvaluator::FExpression から参照する
-		/// TReservoir インスタンス。
-		typename TemplateEvaluator::FReservoir const& InReservoir,
-		/// [in] 評価する FEvaluator::FExpression を持つ
-		/// TEvaluator インスタンス。
-		TemplateEvaluator const& InEvaluator)
-	{
-		for (auto& LocalElement: OutExpressionMonitors)
-		{
-			// 条件式の評価の要求を検知する。
-			auto const LocalExpressionKey(LocalElement.first);
-			auto& LocalExpressionMonitor(LocalElement.second);
-			if (LocalExpressionMonitor.DetectTransition(InEvaluator, LocalExpressionKey))
-			{
-				// 条件挙動フックをキャッシュに貯める。
-				LocalExpressionMonitor.CacheHooks(
-					OutCachedHooks,
-					InReservoir,
-					InEvaluator,
-					LocalExpressionKey);
-			}
-		}
-	}
-
 	//-------------------------------------------------------------------------
-	/// @brief 条件式が参照する状態値を状態監視器へ登録する。
+
+	/// 条件式が参照する状態値を状態監視器へ登録する。
 	/// @retval 正 成功。条件式の評価を維持する。
 	/// @retval 負 成功。条件式の評価を維持しない。
 	/// @retval 0  失敗。
@@ -397,7 +358,7 @@ class Psyque::RulesEngine::_private::TExpressionMonitor
 		}
 	}
 
-	/// @brief 複合条件式を状態監視器へ登録する。
+	/// 複合条件式を状態監視器へ登録する。
 	/// @retval 正 成功。条件式の評価を維持する。
 	/// @retval 負 成功。条件式の評価を維持しない。
 	/// @retval 0  失敗。
@@ -449,153 +410,210 @@ class Psyque::RulesEngine::_private::TExpressionMonitor
 		}
 		return LocalResult;
 	}
+	//-------------------------------------------------------------------------
 
-	/// @brief 条件挙動フックを削除する。
-	private: template<typename TemplateFunction>
-	void EraseHooks(
-		/// [in] 削除する条件挙動フックを判定する関数オブジェクト。
-		TemplateFunction const& InFunction)
+	/// ThisClass::CacheDelegates でキャッシュしたデリゲートを実行する。
+	public: template<typename TemplateExpressionMonitorMap>
+	static void ExecuteDelegates(
+		/// [in] 実行するデリゲートをキャッシュしているコンテナ。
+		typename ThisClass::FDelegateCacheArray const& InCaches,
+		/// [in] 実行するデリゲートを保持する辞書。
+		TemplateExpressionMonitorMap const& InExpressionMonitors)
 	{
-		for (std::size_t i(0); i < this->Hooks.size();)
+		// キャッシュしたデリゲートを実行する。
+		for (auto& LocalCache: InCaches)
 		{
-			auto& LocalHook(this->Hooks[i]);
-			if (InFunction(LocalHook))
+			auto const LocalFind(
+				InExpressionMonitors.find(std::get<0>(LocalCache)));
+			if (LocalFind != InExpressionMonitors.end()
+				&& std::get<1>(LocalCache) < LocalFind->second.Hooks.size())
 			{
-				this->Hooks.erase(this->Hooks.begin() + i);
-			}
-			else
-			{
-				++i;
+				auto& LocalHook(
+					LocalFind->second.Hooks[std::get<1>(LocalCache)]);
+				LocalHook.GetDelegate().ExecuteIfBound(
+					std::get<0>(LocalCache),
+					LocalHook.GetBeforeCondition(),
+					LocalHook.GetLatestCondition());
 			}
 		}
 	}
 
-	/// @copydoc ThisClass::CacheHooks
-	private: template<
-		typename TemplateHookCacheArray, typename TemplateEvaluator>
-	void CacheHooks(
-		/// [in,out] FHook::FCache を貯めるコンテナ。
-		TemplateHookCacheArray& OutCachedHooks,
-		/// [in] 評価する FEvaluator::FExpression から参照する TReservoir インスタンス。
+	/// 条件式の評価の変化を検知し、条件に合致したデリゲートをキャッシュに貯める。
+	///
+	/// TEvaluator::FExpression の評価が最新と前回で異なっており、且つ
+	/// ThisClass::RegisterDelegate で登録した ThisClass::FHook::FTransition
+	/// と合致するなら、デリゲートを OutCaches に貯める。
+	public: template<
+		typename TemplateExpressionMonitorMap,
+		typename TemplateEvaluator>
+	static void CacheDelegates(
+		/// [in,out] 実行条件に合致したデリゲートをキャッシュするコンテナ。
+		typename ThisClass::FDelegateCacheArray& OutCaches,
+		/// [in,out] FEvaluator::FExpression の評価の変化を検知する
+		/// TExpressionMonitor の辞書。
+		TemplateExpressionMonitorMap& OutExpressionMonitors,
+		/// [in] 評価する FEvaluator::FExpression から参照する
+		/// TReservoir インスタンス。
 		typename TemplateEvaluator::FReservoir const& InReservoir,
-		/// [in] 評価する FEvaluator::FExpression を持つ TEvaluator インスタンス。
+		/// [in] 評価する FEvaluator::FExpression を持つ
+		/// TEvaluator インスタンス。
+		TemplateEvaluator const& InEvaluator)
+	{
+		// 条件式の評価の要求を検知し、デリゲートをキャッシュに貯める。
+		for (auto& LocalElement: OutExpressionMonitors)
+		{
+			LocalElement.second.CacheDelegates(
+				OutCaches,
+				InReservoir,
+				InEvaluator,
+				LocalElement.first);
+		}
+
+		// デリゲートのキャッシュを、優先順位の降順で並び替える。
+		std::sort(
+			OutCaches.begin(),
+			OutCaches.end(),
+			[](
+				typename ThisClass::FDelegateCacheArray::value_type const& InLeft,
+				typename ThisClass::FDelegateCacheArray::value_type const& InRight)
+			->bool
+			{
+				return std::get<2>(InRight) < std::get<2>(InLeft);
+			});
+	}
+
+	/// 条件式の評価の変化を検知し、実行フックをキャッシュに貯める。
+	///
+	/// TEvaluator::FExpression の評価が最新と前回で異なっており、且つ
+	/// ThisClass::RegisterDelegate で登録した ThisClass::FHook::FTransition
+	/// と合致するなら、デリゲートを OutCaches にキャッシュする。
+	private: template<typename TemplateEvaluator>
+	void CacheDelegates(
+		/// [in,out] デリゲートをキャッシュするコンテナ。
+		typename ThisClass::FDelegateCacheArray& OutCaches,
+		/// [in] 評価する FEvaluator::FExpression から参照する
+		/// TReservoir インスタンス。
+		typename TemplateEvaluator::FReservoir const& InReservoir,
+		/// [in] 評価する FEvaluator::FExpression を持つ
+		/// TEvaluator インスタンス。
 		TemplateEvaluator const& InEvaluator,
 		/// [in] 評価する FEvaluator::FExpression の識別値。
 		typename TemplateEvaluator::FExpressionKey const InExpressionKey)
 	{
-		// 条件式を評価し、古い評価から新しい評価への遷移状態を取得する。
-		auto const LocalFlushCondition(
-			this->Flags.test(ThisClass::EFlag::FlushCondition));
-		auto const LocalBeforeEvaluation(
-			this->GetBeforeEvaluation(LocalFlushCondition));
+		// 条件式の、古い評価から新しい評価への遷移状態を取得する。
 		auto const LocalTransition(
-			ThisClass::FHook::MakeTransition(
-				LocalBeforeEvaluation,
-				this->EvaluateExpression(
-					InReservoir,
-					InEvaluator,
-					InExpressionKey,
-					LocalFlushCondition)));
+			ThisClass::UpdateEvaluation(
+				this->Flags, InReservoir, InEvaluator, InExpressionKey));
 
-		// 条件式の評価の遷移状態が条件と合致すれば、
-		// 条件挙動フックをキャッシュに貯める。
-		if (ThisClass::FHook::IsValidTransition(LocalTransition))
+		// 実行フックの配列を走査する。
+		typename ThisClass::FHookArray::size_type LocalHookCount(0);
+		for (auto& LocalHook: this->Hooks)
 		{
-			for (auto const& LocalHook: this->Hooks)
+			if (LocalHook.GetDelegate().IsBound())
 			{
+				// 条件式の評価の遷移状態が条件と合致したら、
+				// デリゲートをキャッシュに貯める。
+				check(ThisClass::FHook::IsValidTransition(LocalHook.GetTransition()));
 				if (LocalHook.GetTransition() == LocalTransition)
 				{
-					OutCachedHooks.emplace_back(LocalHook, InExpressionKey);
+					OutCaches.emplace_back(
+						InExpressionKey, LocalHookCount, LocalHook.Priority);
 				}
+
+				// デリゲートが空になったフックを詰める。
+				if (&this->Hooks[LocalHookCount] != &LocalHook)
+				{
+					this->Hooks[LocalHookCount] = MoveTemp(LocalHook);
+				}
+				++LocalHookCount;
 			}
 		}
-	}
-
-	/// @brief 条件式を評価する。
-	/// @return 条件式の評価結果。
-	private: template<typename TemplateEvaluator>
-	typename ::EPsyqueKleene EvaluateExpression(
-		/// [in] 条件式から参照する TReservoir インスタンス。
-		typename TemplateEvaluator::FReservoir const& InReservoir,
-		/// [in] 評価する条件式を持つ TEvaluator インスタンス。
-		TemplateEvaluator const& InEvaluator,
-		/// [in] 評価する条件式の識別値。
-		typename TemplateEvaluator::FExpressionKey const InExpressionKey,
-		/// [in] 前回の評価を無視するかどうか。
-		bool const InFlush)
-	{
-		// 状態変化フラグを更新する。
-		auto const LocalInvalidTransition(
-			this->Flags.test(ThisClass::EFlag::InvalidTransition));
-		this->Flags.reset(ThisClass::EFlag::ValidTransition);
-		this->Flags.reset(ThisClass::EFlag::InvalidTransition);
-
-		// 状態値の取得の失敗を検知したら、条件式の評価も失敗とみなす。
-		if (LocalInvalidTransition)
-		//if (InFlush && LocalInvalidTransition)
+		if (LocalHookCount < this->Hooks.size())
 		{
-			this->Flags.reset(ThisClass::EFlag::BeforeEvaluation);
-			this->Flags.reset(ThisClass::EFlag::BeforeCondition);
-			return ::EPsyqueKleene::Unknown;
+			this->Hooks.erase(
+				this->Hooks.begin() + LocalHookCount, this->Hooks.end());
 		}
-
-		// 条件式を評価し、結果を記録する。
-		auto const LocalEvaluateExpression(
-			InEvaluator.EvaluateExpression(InExpressionKey, InReservoir));
-		this->Flags.set(
-			ThisClass::EFlag::BeforeEvaluation,
-			LocalEvaluateExpression != ::EPsyqueKleene::Unknown);
-		this->Flags.set(
-			ThisClass::EFlag::BeforeCondition,
-			LocalEvaluateExpression == ::EPsyqueKleene::IsTrue);
-		return this->GetBeforeEvaluation(false);
 	}
 
-	/// @brief 条件式の評価要求を検知する。
+	/// 条件式の評価を更新し、古い評価から新しい評価への遷移状態を取得する。
+	/// @return 条件式の、古い評価から新しい評価への遷移状態。
 	private: template<typename TemplateEvaluator>
-	bool DetectTransition(
+	static typename ThisClass::FHook::FTransition UpdateEvaluation(
+		/// [in,out] 条件式の評価を記録しているフラグ集合。
+		typename ThisClass::FFlags& OutFlags,
+		/// [in] 評価する FEvaluator::FExpression から参照する
+		/// TReservoir インスタンス。
+		typename TemplateEvaluator::FReservoir const& InReservoir,
 		/// [in] 条件式の評価に使う TEvaluator インスタンス。
 		TemplateEvaluator const& InEvaluator,
 		/// [in] 評価する条件式の識別値。
 		typename TemplateEvaluator::FExpressionKey const InExpressionKey)
 	{
-		if (this->Flags.test(ThisClass::EFlag::InvalidTransition)
-			|| this->Flags.test(ThisClass::EFlag::ValidTransition))
+		// 状態変化フラグを更新する。
+		auto const LocalStatusInvalidation(
+			OutFlags.test(ThisClass::EFlag::StatusInvalidation));
+		auto const LocalStatusValidation(
+			OutFlags.test(ThisClass::EFlag::StatusValidation));
+		OutFlags.reset(ThisClass::EFlag::StatusValidation);
+		OutFlags.reset(ThisClass::EFlag::StatusInvalidation);
+
+		// 条件式の新しい評価を決定する。
+		auto const LocalOldExpressionValidation(
+			OutFlags.test(ThisClass::EFlag::ExpressionValidation));
+		auto const LocalOldEvaluation(
+			LocalOldExpressionValidation?
+				static_cast<EPsyqueKleene>(
+					OutFlags.test(ThisClass::EFlag::LatestEvaluation)):
+				::EPsyqueKleene::Unknown);
+		auto const LocalFlushEvaluation(
+			OutFlags.test(ThisClass::EFlag::FlushEvaluation)
+			&& LocalOldEvaluation == ::EPsyqueKleene::IsTrue);
+		if (LocalStatusInvalidation)
 		{
-			return true;
+			OutFlags.reset(ThisClass::EFlag::ExpressionValidation);
+			OutFlags.reset(ThisClass::EFlag::LatestEvaluation);
+			return ThisClass::FHook::MakeTransition(
+				LocalOldEvaluation, ::EPsyqueKleene::Unknown);
 		}
+		if (!LocalStatusValidation && !LocalFlushEvaluation)
+		{
+			auto const LocalNewExpressionValidation(
+				InEvaluator.FindExpression(InExpressionKey) != nullptr);
+			if (LocalOldExpressionValidation == LocalNewExpressionValidation)
+			{
+				// 条件式の評価は変化しないので、以前の評価を流用する。
+				return ThisClass::FHook::MakeTransition(
+					LocalOldEvaluation, LocalOldEvaluation);
+			}
+			if (!LocalNewExpressionValidation)
+			{
+				OutFlags.reset(ThisClass::EFlag::ExpressionValidation);
+				OutFlags.reset(ThisClass::EFlag::LatestEvaluation);
+				return ThisClass::FHook::MakeTransition(
+					LocalOldEvaluation, ::EPsyqueKleene::Unknown);
+			}
+		}
+		auto const LocalNewEvaluation(
+			InEvaluator.EvaluateExpression(InExpressionKey, InReservoir));
 
-		// 条件式の生成と削除を検知する。
-		auto const LocalExistence(
-			InEvaluator.FindExpression(InExpressionKey) != nullptr);
-		auto const LocalBeforeEvaluation(
-			this->Flags.test(ThisClass::EFlag::BeforeEvaluation));
-		auto const LocalInvalid(!LocalExistence && LocalBeforeEvaluation);
-		auto const LocalValid(LocalExistence && !LocalBeforeEvaluation);
-		this->Flags.set(ThisClass::EFlag::InvalidTransition, LocalInvalid);
-		this->Flags.set(ThisClass::EFlag::ValidTransition, LocalValid);
-		return LocalInvalid || LocalValid;
+		// 条件式の新しい評価を記録する。
+		OutFlags.set(
+			ThisClass::EFlag::ExpressionValidation,
+			LocalNewEvaluation != ::EPsyqueKleene::Unknown);
+		OutFlags.set(
+			ThisClass::EFlag::LatestEvaluation,
+			LocalNewEvaluation == ::EPsyqueKleene::IsTrue);
+
+		// 条件式の、古い評価から新しい評価への遷移状態を決定する。
+		return ThisClass::FHook::MakeTransition(
+			LocalFlushEvaluation? ::EPsyqueKleene::IsFalse: LocalOldEvaluation,
+			LocalNewEvaluation);
 	}
-
-	/// @brief 監視している条件式の古い評価を取得する。
-	/// @return 監視している条件式の古い評価。
-	private: ::EPsyqueKleene GetBeforeEvaluation(
-		/// [in] 前回の評価を無視する。
-		bool const InFlush)
-	const PSYQUE_NOEXCEPT
-	{
-		return this->Flags.test(ThisClass::EFlag::BeforeEvaluation)?
-			static_cast<EPsyqueKleene>(
-				!InFlush && this->Flags.test(ThisClass::EFlag::BeforeCondition)):
-			::EPsyqueKleene::Unknown;
-	}
-
 	//-------------------------------------------------------------------------
+
 	/// @copydoc ThisClass::FHookArray
 	private: typename ThisClass::FHookArray Hooks;
-	/// @brief 条件式の評価結果を記録するフラグの集合。
-	private: std::bitset<8> Flags;
+	/// 条件式の評価結果を記録するフラグの集合。
+	private: typename ThisClass::FFlags Flags;
 
 }; // class Psyque::RulesEngine::_private::TExpressionMonitor
-
-// vim: set noexpandtab:
